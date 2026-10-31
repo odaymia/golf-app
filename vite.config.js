@@ -2,12 +2,17 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+// Production builds are served from GitHub Pages at /golf-app/.
+// Set BASE_PATH=/ to build for a root domain instead.
+const base = process.env.BASE_PATH ?? '/golf-app/';
+
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? base : '/',
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Golf App',
         short_name: 'Golf',
@@ -16,9 +21,12 @@ export default defineConfig({
         background_color: '#f6f7f2',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        // start_url and scope default to the base path
         icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
       workbox: {
@@ -29,4 +37,4 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
-});
+}));
