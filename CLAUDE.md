@@ -33,6 +33,21 @@ npm run build      # production build + service worker into dist/
 npm run preview    # serve dist/
 ```
 
+## Deploy
+
+Live at https://odaymia.github.io/golf-app/ (public repo
+`odaymia/golf-app`). Every push to `main` runs
+`.github/workflows/deploy.yml`: `npm ci`, `npm test`, `npm run build`, then
+deploys `dist/` to GitHub Pages (repo Settings → Pages → Source: GitHub
+Actions). A failing test blocks the deploy.
+
+- Builds use the base path `/golf-app/` (`vite.config.js`); the dev server
+  stays at `/`. Set `BASE_PATH=/` to build for a root domain.
+- The PWA manifest's `start_url`/`scope` and the service worker scope follow
+  the base path. Icons: `public/icon.svg`, `icon-192.png`, `icon-512.png`,
+  `apple-touch-icon.png` (iPhone home screen needs the PNG).
+- Install on iPhone: open the URL in Safari → Share → Add to Home Screen.
+
 ## Structure
 
 ```
