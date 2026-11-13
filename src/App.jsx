@@ -5,6 +5,27 @@ import Play from './components/Play.jsx';
 import Settle from './components/Settle.jsx';
 import { getRound, saveRound } from './lib/storage.js';
 
+// Where the player is, kept across reloads (an app update reloads the page)
+// so they land back on the same round instead of the home screen.
+const PLACE_KEY = 'golf-app:place';
+
+function readPlace() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PLACE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function writePlace(place) {
+  try {
+    if (place) sessionStorage.setItem(PLACE_KEY, JSON.stringify(place));
+    else sessionStorage.removeItem(PLACE_KEY);
+  } catch {
+    // storage blocked: nothing to restore later, which is fine
+  }
+}
+
 export default function App() {
   const [screen, setScreen] = useState('home');
   const [round, setRound] = useState(null);
@@ -17,6 +38,23 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
+
+  useEffect(() => {
+    const place = readPlace();
+    if (!place?.roundId) return;
+    getRound(place.roundId)
+      .then((r) => {
+        if (!r) return;
+        setRound(r);
+        setScreen(place.screen === 'settle' ? 'settle' : 'play');
+      })
+      .catch(() => {});
+  }, []);
+
+  const roundId = round?.id;
+  useEffect(() => {
+    writePlace(roundId && (screen === 'play' || screen === 'settle') ? { roundId, screen } : null);
+  }, [roundId, screen]);
 
   async function openRound(id) {
     const r = await getRound(id);

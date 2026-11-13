@@ -47,6 +47,10 @@ Actions). A failing test blocks the deploy.
   the base path. Icons: `public/icon.svg`, `icon-192.png`, `icon-512.png`,
   `apple-touch-icon.png` (iPhone home screen needs the PNG).
 - Install on iPhone: open the URL in Safari → Share → Add to Home Screen.
+- Updates: the service worker auto-updates, and `main.jsx` checks for a new
+  version whenever the app returns to the foreground (iPhone home-screen apps
+  resume rather than relaunch) and every 30 min. An update reloads the page;
+  `App.jsx` keeps the open round in sessionStorage and reopens it.
 
 ## Structure
 
