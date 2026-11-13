@@ -11,6 +11,7 @@ import {
   teamOptions,
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
+import CourseSearch from './CourseSearch.jsx';
 
 const newPlayer = () => ({ id: makeId(), name: '', indexText: '' });
 
@@ -22,6 +23,7 @@ export default function Setup({ onStart, onCancel }) {
   const [players, setPlayers] = useState(() => [newPlayer(), newPlayer()]);
   const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState([]);
+  const [courseNotes, setCourseNotes] = useState([]);
 
   useEffect(() => {
     listCourses()
@@ -45,6 +47,21 @@ export default function Setup({ onStart, onCancel }) {
     setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, [field]: value } : p)));
   const setGame = (type, field, value) =>
     setSettings((s) => ({ ...s, [type]: { ...s[type], [field]: value } }));
+
+  function pickImported({ course: imported, warnings }) {
+    // A course already saved on this phone keeps any fixes made to it.
+    const saved = courses.find((c) => c.id === imported.id);
+    setCourse(saved ?? imported);
+    setTeeIdx(0);
+    setCourseNotes(saved ? [] : warnings);
+    setShowHoles(!saved && warnings.some((w) => /hole handicaps|pars/.test(w)));
+  }
+
+  function chooseCourse(c) {
+    setCourse(c);
+    setTeeIdx(0);
+    setCourseNotes([]);
+  }
 
   function addTee() {
     setCourse((c) => ({ ...c, tees: [...c.tees, { name: `Tee ${c.tees.length + 1}`, rating: 72, slope: 113 }] }));
@@ -92,29 +109,32 @@ export default function Setup({ onStart, onCancel }) {
 
       <section className="card">
         <h2>Course</h2>
+        <CourseSearch onPick={pickImported} />
         {courses.length > 0 && (
           <div className="chips">
             {courses.map((c) => (
               <button
                 key={c.id}
                 className={`chip ${c.id === course.id ? 'on' : ''}`}
-                onClick={() => {
-                  setCourse(c);
-                  setTeeIdx(0);
-                }}
+                onClick={() => chooseCourse(c)}
               >
                 {c.name}
               </button>
             ))}
             <button
               className={`chip ${courses.every((c) => c.id !== course.id) ? 'on' : ''}`}
-              onClick={() => {
-                setCourse(blankCourse());
-                setTeeIdx(0);
-              }}
+              onClick={() => chooseCourse(blankCourse())}
             >
               + New course
             </button>
+          </div>
+        )}
+        {course.place && <p className="muted">{course.place}</p>}
+        {courseNotes.length > 0 && (
+          <div className="warn-box course-notes">
+            {courseNotes.map((n) => (
+              <p key={n}>{n}</p>
+            ))}
           </div>
         )}
         <label className="field">

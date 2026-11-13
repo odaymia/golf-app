@@ -67,8 +67,11 @@ src/
       round.js      computeRound(round): strokes, every game, totals, payments
       *.test.js     Tests live next to each module; test-helpers.js builds cards
     roundSetup.js   Setup defaults, plain-English rules, settings -> engine configs
+    courseSearch.js The only OpenGolfAPI network code (search + course detail)
+    courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
-  components/       Home, Setup, Play (Score/Money/Card tabs), Settle, summaries
+  components/       Home, Setup (+ CourseSearch), Play (Score/Money/Card tabs),
+                    Settle, summaries
   App.jsx           Screen switching; saves the round on every change
 ```
 
@@ -92,12 +95,28 @@ src/
   - Vegas: a score of 10+ goes first; birdie flips the other team unless both
     teams birdie; net scores below 1 count as 1.
 
+## Course data
+
+Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
+called straight from the phone (CORS is open).
+- No API key in the app: search and detail work without one (per-device daily
+  limit), and anything shipped in a public PWA is readable by anyone. Keep the
+  user's key out of the repo; it's only useful later from a server.
+- Data is ODbL 1.0. Show the attribution `© OpenStreetMap contributors (ODbL
+  1.0) via OpenGolfAPI` wherever results appear. A shared course database
+  built from it (e.g. in Supabase) must also be ODbL.
+- Data is community-maintained: `courseImport.js` drops stray holes past 18,
+  plays 9-hole courses twice (stroke index n -> 2n-1 out, 2n in), doubles
+  9-hole ratings, and fills missing pars/handicaps/ratings with defaults plus a
+  warning shown in setup. Picked courses save to IndexedDB with id `oga-<id>`,
+  so a course you've fixed keeps your fixes and works offline.
+
 ## Rules
 
 - The game/money engine (Nassau, presses, skins, Wolf, Vegas, handicap strokes)
   is pure functions with tests. Money math must never be wrong.
 - The app tracks and settles bets; it never holds or moves money. Venmo-style
   links only.
-- Course data and GHIN handicaps need licensing; until then, user-entered
-  courses and self-reported indexes.
+- GHIN handicaps need licensing; until then, self-reported indexes. Courses
+  come from OpenGolfAPI search or are entered by hand.
 - Setup in under 60 seconds. Big touch targets. Plain-English game rules.

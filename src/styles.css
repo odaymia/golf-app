@@ -812,3 +812,59 @@ button.sticky-bottom.btn {
 .settle-card h2 {
   text-align: center;
 }
+
+/* Course search */
+.course-search {
+  margin-bottom: 8px;
+}
+
+.search-results {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.search-results li + li {
+  border-top: 1px solid var(--line);
+}
+
+.search-results button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  min-height: 56px;
+  background: #fff;
+  border: none;
+  text-align: left;
+}
+
+.search-results button:active {
+  background: var(--green-soft);
+}
+
+.search-error {
+  color: var(--down);
+  font-size: 14px;
+}
+
+.attribution {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 6px 0 0;
+}
+
+.course-notes {
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+
+.course-notes p {
+  margin: 4px 0;
+}
