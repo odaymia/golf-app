@@ -8,6 +8,8 @@ import Profile from './components/Profile.jsx';
 import League from './components/League.jsx';
 import LeagueBuilder from './components/LeagueBuilder.jsx';
 import { createLeague } from './lib/leagueApi.js';
+import BottomNav from './components/BottomNav.jsx';
+import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
 import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 
@@ -40,6 +42,7 @@ export default function App() {
   const [round, setRound] = useState(null);
   const [leagueId, setLeagueId] = useState(null);
   const [newKind, setNewKind] = useState('league');
+  const [socialStart, setSocialStart] = useState({ name: 'feed', params: {} });
 
   // Signed in? The session is kept on the phone, so this works offline.
   useEffect(() => {
@@ -104,6 +107,22 @@ export default function App() {
     setScreen('home');
   }
 
+  // Bottom tabs. A new object each tap resets that tab to its first screen.
+  function onTab(tab) {
+    if (tab === 'golf') return goHome();
+    const name = tab === 'me' ? 'user' : tab === 'new' ? 'new' : 'feed';
+    setSocialStart({ name, params: tab === 'me' ? { userId } : {} });
+    setScreen('social');
+  }
+  const activeTab =
+    screen === 'social' ? (socialStart.name === 'user' ? 'me' : socialStart.name === 'new' ? 'new' : 'feed') : 'golf';
+  const withNav = (content) => (
+    <>
+      {content}
+      <BottomNav active={activeTab} onTab={onTab} />
+    </>
+  );
+
   if (session === undefined) return <div className="screen" />;
   if (!session) return <SignIn />;
   if (profileError && !profile)
@@ -133,17 +152,21 @@ export default function App() {
         }}
       />
     );
+  if (screen === 'social')
+    return withNav(
+      <Social start={socialStart} user={user} account={profile} onTab={onTab} onSettings={() => setScreen('profile')} />,
+    );
   if (screen === 'profile')
-    return <Profile user={user} profile={profile} onSaved={setProfile} onBack={goHome} />;
+    return <Profile user={user} profile={profile} onSaved={setProfile} onBack={() => onTab('me')} />;
   if (screen === 'setup') return <Setup profile={profile} onStart={startRound} onCancel={goHome} />;
   if (screen === 'play' && round)
     return <Play round={round} setRound={setRound} onSettle={() => setScreen('settle')} onHome={goHome} />;
   if (screen === 'settle' && round)
     return <Settle round={round} setRound={setRound} onBack={() => setScreen('play')} onHome={goHome} />;
-  return (
+  return withNav(
     <Home
       profile={profile}
-      onProfile={() => setScreen('profile')}
+      onProfile={() => onTab('me')}
       onNew={() => setScreen('setup')}
       onOpen={openRound}
       onOpenLeague={(id) => {

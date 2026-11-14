@@ -117,6 +117,7 @@ supabase/schema.sql   Profiles + saved players; paste into the SQL Editor
 supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
 supabase/league_tiers.sql  Adds league_events.tier (regular/major)
 supabase/groups.sql   Adds league_events.groups + can_score() score policies
+supabase/social.sql   Social tables, policies and the `media` storage bucket
 ```
 
 ### Engine conventions
@@ -219,6 +220,28 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
   gross with stroke dots, the team row (best ball / both added, net), the
   team ball for one-ball formats, and a running match row. Matches expose
   `sideScores` and `running` (league/event.js and games/match.js) for it.
+
+## Social feed
+
+- Bottom tab bar (`BottomNav`): Golf (rounds/leagues/tournaments), Feed, +
+  (new post), Profile. Social screens live in `components/social/` under
+  `Social.jsx`, which keeps its own back stack.
+- Data (`lib/social.js`, the only code touching these tables and the
+  `media` storage bucket): `public_profiles` (username, display name, bio,
+  avatar, home course; readable by all signed-in users; handicap/GHIN stay
+  private in `profiles`), `posts` (caption + course tag), `post_media`,
+  `post_likes`, `post_comments`, `follows`, `post_reports` (write-only;
+  review in the Supabase dashboard). Schema + RLS + bucket in
+  supabase/social.sql. Members can only upload/delete in their own
+  `<userId>/` folder.
+- Media: photos are shrunk on the phone to 1440px JPEG (`lib/media.js`),
+  avatars to 480px; videos upload as-is (50 MB cap) with a frame grabbed as
+  the grid cover. Public URLs, newest first everywhere.
+- Location pages: posts tagged with a searched course share its
+  `oga-<id>` key, so `CoursePage` gathers everyone's photos of that course.
+- A username is required before using social; the profile page asks.
+- Before App Store submission: add blocking users and a way to act on
+  reports (Apple requires report + block for user-generated content).
 
 ## Course data
 

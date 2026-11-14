@@ -1,0 +1,247 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  follow,
+  getPublicProfile,
+  listUserPosts,
+  profileStats,
+  savePublicProfile,
+  unfollow,
+  uploadAvatar,
+} from '../../lib/social.js';
+import { cleanUsername, compactCount, suggestUsername, usernameProblem } from '../../lib/socialFormat.js';
+import Avatar from './Avatar.jsx';
+import PostGrid from './PostGrid.jsx';
+
+// Instagram-style profile: photo, counts, bio, follow, and the post grid.
+// Your own profile also edits itself, and links to Settings.
+export default function ProfilePage({ userId, meId, account, nav, back, onSettings, onProfileSaved }) {
+  const mine = userId === meId;
+  const [profile, setProfile] = useState(undefined);
+  const [stats, setStats] = useState(null);
+  const [posts, setPosts] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const [p, s, list] = await Promise.all([getPublicProfile(userId), profileStats(userId, meId), listUserPosts(userId, meId)]);
+      setProfile(p);
+      setStats(s);
+      setPosts(list);
+      if (mine && !p?.username) setEditing(true);
+    } catch (e) {
+      setError(e.message);
+      setProfile(null);
+    }
+  }, [userId, meId, mine]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function toggleFollow() {
+    const next = !stats.iFollow;
+    setStats((s) => ({ ...s, iFollow: next, followers: s.followers + (next ? 1 : -1) }));
+    try {
+      if (next) await follow(userId);
+      else await unfollow(meId, userId);
+    } catch (e) {
+      setError(e.message);
+      load();
+    }
+  }
+
+  if (editing) {
+    return (
+      <EditProfile
+        meId={meId}
+        profile={profile}
+        account={account}
+        firstTime={!profile?.username}
+        onSaved={(p) => {
+          setProfile(p);
+          setEditing(false);
+          onProfileSaved?.(p);
+          load();
+        }}
+        onCancel={profile?.username ? () => setEditing(false) : back}
+      />
+    );
+  }
+
+  return (
+    <div className="screen">
+      <div className="topbar">
+        {back ? (
+          <button className="btn btn-ghost" onClick={back}>
+            ‹ Back
+          </button>
+        ) : (
+          <span />
+        )}
+        <h1>{profile?.username ? `@${profile.username}` : 'Profile'}</h1>
+        {mine ? (
+          <button className="btn btn-ghost" onClick={onSettings}>
+            Settings
+          </button>
+        ) : (
+          <span />
+        )}
+      </div>
+      {error && <div className="card warn-box">{error}</div>}
+      {profile === undefined && <p className="muted center">Loading…</p>}
+      {profile === null && !error && <p className="muted center">This golfer hasn&apos;t set up a profile yet.</p>}
+      {profile && (
+        <>
+          <section className="profile-head">
+            <Avatar profile={profile} size={86} />
+            <div className="profile-counts">
+              <div>
+                <strong>{compactCount(stats?.posts ?? 0)}</strong>
+                <span>Posts</span>
+              </div>
+              <div>
+                <strong>{compactCount(stats?.followers ?? 0)}</strong>
+                <span>Followers</span>
+              </div>
+              <div>
+                <strong>{compactCount(stats?.following ?? 0)}</strong>
+                <span>Following</span>
+              </div>
+            </div>
+          </section>
+          <section className="profile-bio">
+            <strong>{profile.displayName}</strong>
+            {profile.homeCourse && <span className="muted">⛳ {profile.homeCourse}</span>}
+            {profile.bio && <p>{profile.bio}</p>}
+          </section>
+          <div className="profile-buttons">
+            {mine ? (
+              <button className="btn btn-ghost full outline" onClick={() => setEditing(true)}>
+                Edit profile
+              </button>
+            ) : (
+              <button className={`btn full ${stats?.iFollow ? 'btn-ghost outline' : 'btn-primary'}`} onClick={toggleFollow} disabled={!stats}>
+                {stats?.iFollow ? 'Following' : 'Follow'}
+              </button>
+            )}
+          </div>
+          {posts === null ? (
+            <p className="muted center">Loading…</p>
+          ) : (
+            <PostGrid
+              posts={posts}
+              onOpen={(p) => nav('post', { postId: p.id })}
+              empty={mine ? 'Share your first round: tap + below.' : 'No posts yet.'}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function EditProfile({ meId, profile, account, firstTime, onSaved, onCancel }) {
+  const [form, setForm] = useState(() => ({
+    displayName: profile?.displayName || account?.name || '',
+    username: profile?.username || suggestUsername(account?.name),
+    bio: profile?.bio ?? '',
+    homeCourse: profile?.homeCourse || account?.homeCourse || '',
+    avatarPath: profile?.avatarPath ?? null,
+    avatarUrl: profile?.avatarUrl ?? null,
+  }));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const fileInput = useRef(null);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  async function pickAvatar(file) {
+    if (!file) return;
+    setBusy(true);
+    setError('');
+    try {
+      const path = await uploadAvatar(meId, file);
+      setForm((f) => ({ ...f, avatarPath: path, avatarUrl: URL.createObjectURL(file) }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save() {
+    const username = cleanUsername(form.username);
+    const problem = usernameProblem(username);
+    if (problem) return setError(problem);
+    if (!form.displayName.trim()) return setError('Add your name.');
+    setBusy(true);
+    setError('');
+    try {
+      onSaved(await savePublicProfile(meId, { ...form, username }));
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="screen">
+      <div className="topbar">
+        <button className="btn btn-ghost" onClick={onCancel} disabled={busy}>
+          {firstTime ? '‹ Back' : 'Cancel'}
+        </button>
+        <h1>{firstTime ? 'Your golf profile' : 'Edit profile'}</h1>
+        <span />
+      </div>
+      {firstTime && (
+        <p className="muted center">Pick a username so other golfers can find you, follow you and see your posts.</p>
+      )}
+      <section className="card">
+        <div className="avatar-edit">
+          <Avatar profile={{ avatarUrl: form.avatarUrl, displayName: form.displayName }} size={86} />
+          <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => pickAvatar(e.target.files[0])} />
+          <button className="btn btn-ghost" onClick={() => fileInput.current.click()} disabled={busy}>
+            {form.avatarUrl ? 'Change photo' : 'Add a photo'}
+          </button>
+        </div>
+        <label className="field">
+          <span>Name</span>
+          <input value={form.displayName} onChange={(e) => set('displayName', e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Username</span>
+          <div className="username-input">
+            <span>@</span>
+            <input
+              value={form.username}
+              autoCapitalize="none"
+              autoCorrect="off"
+              onChange={(e) => set('username', cleanUsername(e.target.value).slice(0, 24))}
+            />
+          </div>
+        </label>
+        <label className="field">
+          <span>Bio</span>
+          <textarea
+            className="caption-input"
+            rows={3}
+            maxLength={300}
+            value={form.bio}
+            placeholder="Weekend hacker. Chasing single digits."
+            onChange={(e) => set('bio', e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Home course</span>
+          <input value={form.homeCourse} placeholder="Optional" onChange={(e) => set('homeCourse', e.target.value)} />
+        </label>
+        <p className="hint">Everyone in Scribble can see your profile and posts. Your handicap index and GHIN number stay private.</p>
+        {error && <p className="search-error">{error}</p>}
+        <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : firstTime ? 'Create profile' : 'Save'}
+        </button>
+      </section>
+    </div>
+  );
+}
