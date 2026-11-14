@@ -37,8 +37,12 @@ create table if not exists public.league_events (
   course jsonb not null,
   matchups jsonb not null default '[]'::jsonb,
   status text not null default 'scheduled' check (status in ('scheduled', 'final')),
+  tier text not null default 'regular' check (tier in ('regular', 'major')),
   created_at timestamptz not null default now()
 );
+-- For databases created before tiers existed.
+alter table public.league_events
+  add column if not exists tier text not null default 'regular' check (tier in ('regular', 'major'));
 create index if not exists league_events_league_idx on public.league_events (league_id);
 
 create table if not exists public.event_scores (

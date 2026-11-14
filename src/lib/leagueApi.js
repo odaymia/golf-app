@@ -64,6 +64,7 @@ const toEvent = (r) => ({
   course: r.course,
   matchups: r.matchups ?? [],
   status: r.status,
+  tier: r.tier ?? 'regular',
 });
 
 const toLeague = (r) => ({ id: r.id, name: r.name, code: r.invite_code, settings: r.settings, createdAt: r.created_at });
@@ -174,11 +175,11 @@ export function removeMember(id) {
 
 // --- Events ----------------------------------------------------------------
 
-export async function createEvent(leagueId, { name, date, course }) {
+export async function createEvent(leagueId, { name, date, course, tier = 'regular' }) {
   const row = await call(
     supabase
       .from('league_events')
-      .insert({ league_id: leagueId, name, event_date: date || null, course })
+      .insert({ league_id: leagueId, name, event_date: date || null, course, ...(tier !== 'regular' ? { tier } : {}) })
       .select()
       .single(),
   );
@@ -192,6 +193,7 @@ export function updateEvent(id, patch) {
   if ('matchups' in patch) row.matchups = patch.matchups;
   if ('status' in patch) row.status = patch.status;
   if ('course' in patch) row.course = patch.course;
+  if ('tier' in patch) row.tier = patch.tier;
   return call(supabase.from('league_events').update(row).eq('id', id));
 }
 

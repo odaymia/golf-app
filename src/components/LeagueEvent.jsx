@@ -5,6 +5,7 @@ import { entityKey } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
 import { matchText } from './gameSummary.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
+import { Seg } from './controls.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -29,7 +30,8 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
         <span />
       </div>
       <p className="muted center">
-        {event.date} · {event.course.name} · {event.course.tee.name} {event.course.tee.rating}/{event.course.tee.slope}
+        {event.tier === 'major' && settings.season === 'points' && <span className="major-tag">Major</span>} {event.date} ·{' '}
+        {event.course.name} · {event.course.tee.name} {event.course.tee.rating}/{event.course.tee.slope}
         {final ? ' · Final' : ''}
       </p>
 
@@ -397,6 +399,20 @@ function Manage({ data, event, computed, reload, onDeleted }) {
           <button className="btn btn-primary full" disabled={busy} onClick={addMatch}>
             Add match
           </button>
+        </section>
+      )}
+
+      {settings.season === 'points' && (
+        <section className="card">
+          <h3>Round type</h3>
+          <Seg
+            value={event.tier}
+            options={[
+              ['regular', 'Regular round'],
+              ['major', `Major (${settings.majorMultiplier}× points)`],
+            ]}
+            onChange={(tier) => act(() => updateEvent(event.id, { tier }))}
+          />
         </section>
       )}
 

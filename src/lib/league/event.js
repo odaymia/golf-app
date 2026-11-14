@@ -2,6 +2,7 @@
 import { strokesOnHole } from '../games/handicap.js';
 import { holeResults, matchStatus } from '../games/match.js';
 import { playingHandicap } from './leagueHandicap.js';
+import { tableForTier } from './format.js';
 
 export function stablefordPoints(score, par) {
   return Math.max(0, 2 - (score - par));
@@ -174,7 +175,7 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
     entries.filter((e) => e.complete),
     stableford ? (a, b) => b.value - a.value : (a, b) => a.value - b.value,
   );
-  result.points = awardPoints(finished, settings.pointsTable ?? []);
+  result.points = awardPoints(finished, tableForTier(settings, event.tier));
   for (const e of finished) result.values[e.key] = e.value;
   result.board = result.board.map((e) => ({ ...e, points: result.points[e.key] ?? null }));
   return result;

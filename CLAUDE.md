@@ -96,6 +96,7 @@ src/
                     round on every change
 supabase/schema.sql   Profiles + saved players; paste into the SQL Editor
 supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
+supabase/league_tiers.sql  Adds league_events.tier (regular/major)
 ```
 
 ### Engine conventions
@@ -139,7 +140,10 @@ supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
 - `leagues.settings` (jsonb) holds the format; `normalizeSettings` fills
   defaults and drops invalid combos. Units: individual / teams (2 or 4) /
   ryder (two named sides). Scoring: stroke / stableford / match, net or
-  gross. Season: points (by finish, ties split, optional best-N weeks) /
+  gross. Season: points (by finish, ties split, optional best-N weeks;
+  FedEx Cup style: each round is `tier` regular or major, majors pay
+  `majorMultiplier`x; `fieldSize` = players in the league sets one points
+  row per place, from a preset (fedex/even) or custom) /
   cumulative (Stableford total, stroke lowest average) / record (W-L-T,
   win 2 tie 1 by default) / ryder (win 1, halve ½).
 - Members: app users join with the 6-character invite code (`join_league`

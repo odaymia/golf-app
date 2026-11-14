@@ -1055,3 +1055,70 @@ button.sticky-bottom.btn {
   letter-spacing: 3px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+.count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.count-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.count-input {
+  width: 64px;
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  padding: 4px;
+}
+
+.points-setup .label {
+  font-weight: 600;
+  margin: 14px 0 0;
+}
+
+.points-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.points-table th,
+.points-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.points-table th:first-child,
+.points-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
+.points-table input {
+  width: 90px;
+  text-align: center;
+  min-height: 44px;
+  padding: 6px;
+}
+
+.major-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}

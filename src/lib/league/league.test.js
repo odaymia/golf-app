@@ -3,13 +3,22 @@ import { PARS, HCPS } from '../games/test-helpers.js';
 import { stablefordPoints, rank, awardPoints, computeEvent } from './event.js';
 import { standings, computeLeague, roundRobinWeek } from './season.js';
 import { adjustedGross, differential, leagueIndexFrom, indexesByEvent, playingHandicap } from './leagueHandicap.js';
-import { defaultLeagueSettings, normalizeSettings, seasonOptions, scoringOptions } from './format.js';
+import {
+  defaultLeagueSettings,
+  leagueSettings,
+  normalizeSettings,
+  placesFor,
+  presetTable,
+  seasonOptions,
+  scoringOptions,
+  tableForTier,
+} from './format.js';
 
 const course = { holes: PARS.map((par, i) => ({ par, hcp: HCPS[i] })), tee: { rating: 72, slope: 113 } };
 const card = (overrides = {}, played = 18) =>
   PARS.map((par, i) => (i >= played ? null : overrides[i + 1] ?? par));
 
-const settings = (patch = {}) => normalizeSettings({ ...defaultLeagueSettings(), ...patch });
+const settings = (patch = {}) => leagueSettings(patch);
 const mem = (id, extra = {}) => ({ id, name: id.toUpperCase(), index: 0, ...extra });
 
 describe('stableford', () => {
@@ -343,6 +352,46 @@ describe('formats', () => {
     expect(seasonOptions('teams', 'stableford')).toEqual(['points', 'cumulative']);
     const s = normalizeSettings({ ...defaultLeagueSettings(), unit: 'ryder', scoring: 'stroke', season: 'points' });
     expect([s.scoring, s.season]).toEqual(['match', 'ryder']);
+  });
+});
+
+describe('points presets and majors', () => {
+  it('FedEx style: 500 to win, steep at the top, one row per place', () => {
+    expect(presetTable('fedex', 6)).toEqual([500, 300, 190, 135, 110, 100]);
+    const big = presetTable('fedex', 40);
+    expect(big).toHaveLength(40);
+    expect(big.every((p, i) => i === 0 || p <= big[i - 1])).toBe(true);
+    expect(big.at(-1)).toBeGreaterThan(0);
+  });
+
+  it('even steps', () => {
+    expect(presetTable('even', 4)).toEqual([40, 30, 20, 10]);
+  });
+
+  it('places follow the league size (teams = players / team size)', () => {
+    expect(placesFor(leagueSettings({ fieldSize: 12 }))).toBe(12);
+    expect(placesFor(leagueSettings({ fieldSize: 12, unit: 'teams', teamSize: 2 }))).toBe(6);
+    expect(leagueSettings({ fieldSize: 12, unit: 'teams', teamSize: 4 }).pointsTable).toHaveLength(3);
+  });
+
+  it('custom tables keep their numbers when the league size changes', () => {
+    const s = leagueSettings({ pointsPreset: 'custom', pointsTable: [9, 5, 1], fieldSize: 5 });
+    expect(s.pointsTable).toEqual([9, 5, 1, 0, 0]);
+  });
+
+  it('old leagues without a preset keep their table', () => {
+    const s = leagueSettings({ pointsTable: [25, 20, 16] });
+    expect(s.pointsPreset).toBe('custom');
+    expect(s.pointsTable).toEqual([25, 20, 16]);
+  });
+
+  it('majors pay the multiplier, and a major round awards it', () => {
+    const s = leagueSettings({ pointsPreset: 'fedex', fieldSize: 3, majorMultiplier: 1.5 });
+    expect(tableForTier(s, 'major')).toEqual([750, 450, 285]);
+    const members = [mem('a'), mem('b')];
+    const scores = { a: card({ 1: 3 }), b: card() };
+    expect(computeEvent({ settings: s, event: { course }, members, scores }).points).toEqual({ a: 500, b: 300 });
+    expect(computeEvent({ settings: s, event: { course, tier: 'major' }, members, scores }).points).toEqual({ a: 750, b: 450 });
   });
 });
 

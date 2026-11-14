@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import {
-  defaultLeagueSettings,
   describeLeague,
+  leagueSettings,
+  MAJOR_MULTIPLIERS,
   normalizeSettings,
+  placesFor,
+  POINT_PRESETS,
   scoringOptions,
+  tableForTier,
   seasonOptions,
   SCORING,
   SEASONS,
@@ -20,8 +24,7 @@ const numberOrNull = (text) => {
 // onSave({ name, settings }) may throw; its message is shown.
 export default function LeagueBuilder({ league, onSave, onCancel }) {
   const [name, setName] = useState(league?.name ?? '');
-  const [s, setS] = useState(() => normalizeSettings({ ...defaultLeagueSettings(), ...(league?.settings ?? {}) }));
-  const [pointsText, setPointsText] = useState(() => s.pointsTable.join(', '));
+  const [s, setS] = useState(() => leagueSettings(league?.settings));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,12 +33,7 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
 
   async function save() {
     if (!name.trim()) return setError('Give the league a name.');
-    const table = pointsText
-      .split(/[\s,]+/)
-      .filter(Boolean)
-      .map(Number);
-    if (s.season === 'points' && (table.length === 0 || table.some((n) => !Number.isFinite(n) || n < 0)))
-      return setError('Points by finish should be numbers like 25, 20, 16.');
+    if (s.season === 'points' && !s.pointsTable.some((n) => n > 0)) return setError('Give at least 1st place some points.');
     if (s.unit === 'ryder' && (!s.sides[0].trim() || !s.sides[1].trim() || s.sides[0].trim() === s.sides[1].trim()))
       return setError('Give the two sides different names.');
     setBusy(true);
@@ -43,7 +41,7 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
     try {
       await onSave({
         name: name.trim(),
-        settings: { ...s, pointsTable: table.length ? table : s.pointsTable, sides: s.sides.map((x) => x.trim()) },
+        settings: { ...s, sides: s.sides.map((x) => x.trim()) },
       });
     } catch (e) {
       setError(e.message);
@@ -72,6 +70,33 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
       <section className="card">
         <h2>1. Who plays</h2>
         <OptionCards value={s.unit} options={UNITS} onChange={(unit) => set({ unit })} />
+        <div className="count-row">
+          <div>
+            <strong>How many players?</strong>
+            <span className="muted">
+              {s.unit === 'teams'
+                ? `${placesFor(s)} teams of ${s.teamSize}`
+                : s.unit === 'ryder'
+                  ? `About ${Math.ceil(s.fieldSize / 2)} a side`
+                  : 'Sets how many places earn points'}
+            </span>
+          </div>
+          <div className="stepper">
+            <button type="button" className="step" aria-label="Fewer players" onClick={() => set({ fieldSize: Math.max(2, s.fieldSize - 1) })}>
+              −
+            </button>
+            <input
+              className="count-input"
+              inputMode="numeric"
+              aria-label="Number of players"
+              value={s.fieldSize}
+              onChange={(e) => set({ fieldSize: Math.min(200, Math.max(2, Number(e.target.value.replace(/\D/g, '')) || 2)) })}
+            />
+            <button type="button" className="step" aria-label="More players" onClick={() => set({ fieldSize: Math.min(200, s.fieldSize + 1) })}>
+              +
+            </button>
+          </div>
+        </div>
         {s.unit === 'teams' && (
           <>
             <p className="hint">Players per team</p>
@@ -127,12 +152,7 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
           only={seasonOptions(s.unit, s.scoring)}
           onChange={(season) => set({ season })}
         />
-        {s.season === 'points' && (
-          <label className="field">
-            <span>Points by finish (1st, 2nd, 3rd…)</span>
-            <input value={pointsText} onChange={(e) => setPointsText(e.target.value)} />
-          </label>
-        )}
+        {s.season === 'points' && <PointsTable s={s} set={set} />}
         {(s.season === 'points' || s.season === 'cumulative') && (
           <label className="field">
             <span>Count only the best weeks</span>
@@ -230,6 +250,75 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
       <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
         {busy ? 'Saving…' : league ? 'Save format' : 'Create league'}
       </button>
+    </div>
+  );
+}
+
+const ordinal = (n) => {
+  const t = n % 100;
+  const suffix = t >= 11 && t <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
+  return `${n}${suffix}`;
+};
+
+// Points by finish: a preset, how much majors are worth, and one row per place.
+function PointsTable({ s, set }) {
+  const [showAll, setShowAll] = useState(false);
+  const major = tableForTier(s, 'major');
+  const rows = showAll ? s.pointsTable.length : Math.min(10, s.pointsTable.length);
+  const setPlace = (i, text) => {
+    const v = Math.max(0, Math.min(10000, Number(text.replace(/\D/g, '')) || 0));
+    set({ pointsPreset: 'custom', pointsTable: s.pointsTable.map((p, j) => (j === i ? v : p)) });
+  };
+  return (
+    <div className="points-setup">
+      <p className="hint">
+        Like the FedEx Cup: every round is a <strong>Regular</strong> event or a <strong>Major</strong>, and majors pay
+        more. You choose which rounds are majors when you add them.
+      </p>
+      <p className="label">Points style</p>
+      <Seg
+        value={s.pointsPreset}
+        options={Object.entries(POINT_PRESETS).map(([k, v]) => [k, v.label])}
+        onChange={(pointsPreset) => set({ pointsPreset })}
+      />
+      <p className="hint">{POINT_PRESETS[s.pointsPreset].help}</p>
+      <p className="label">Majors are worth</p>
+      <Seg
+        value={s.majorMultiplier}
+        options={MAJOR_MULTIPLIERS.map((m) => [m, `${m}×`])}
+        onChange={(majorMultiplier) => set({ majorMultiplier })}
+      />
+      <table className="points-table">
+        <thead>
+          <tr>
+            <th>Finish</th>
+            <th>Regular</th>
+            <th>Major</th>
+          </tr>
+        </thead>
+        <tbody>
+          {s.pointsTable.slice(0, rows).map((p, i) => (
+            <tr key={i}>
+              <td>{ordinal(i + 1)}</td>
+              <td>
+                <input
+                  inputMode="numeric"
+                  aria-label={`Points for ${ordinal(i + 1)}`}
+                  value={p}
+                  onChange={(e) => setPlace(i, e.target.value)}
+                />
+              </td>
+              <td className="muted">{major[i]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {s.pointsTable.length > 10 && (
+        <button type="button" className="btn btn-ghost full" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'Show top 10' : `Show all ${s.pointsTable.length} places`}
+        </button>
+      )}
+      <p className="hint">Ties split the points for the places they cover. Type in any box to make your own table.</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { joinLeague, listMyLeagues } from '../lib/leagueApi.js';
-import { describeLeague, defaultLeagueSettings, normalizeSettings } from '../lib/league/format.js';
+import { describeLeague, leagueSettings } from '../lib/league/format.js';
 
 // "My leagues" on the home screen: open, create, or join with a code.
 export default function LeaguesSection({ profile, onOpen, onCreate }) {
@@ -38,7 +38,7 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
           <li key={l.id} className="card round-item">
             <button className="round-open" onClick={() => onOpen(l.id)}>
               <strong>{l.name}</strong>
-              <span className="muted">{describeLeague(normalizeSettings({ ...defaultLeagueSettings(), ...l.settings }))}</span>
+              <span className="muted">{describeLeague(leagueSettings(l.settings))}</span>
             </button>
           </li>
         ))}

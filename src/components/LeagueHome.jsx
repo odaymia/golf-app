@@ -160,7 +160,10 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
           return (
             <li key={ev.id} className="card round-item">
               <button className="round-open" onClick={() => onOpenEvent(ev.id)}>
-                <strong>{ev.name}</strong>
+                <strong>
+                  {ev.name}
+                  {ev.tier === 'major' && computed.settings.season === 'points' && <span className="major-tag">Major</span>}
+                </strong>
                 <span className="muted">
                   {fmtDate(ev.date)} · {ev.course.name}
                   {ev.course.tee?.name ? ` (${ev.course.tee.name})` : ''}
@@ -178,6 +181,7 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
         (adding ? (
           <AddRound
             leagueId={data.league.id}
+            usesTiers={computed.settings.season === 'points'}
             count={events.length}
             onDone={async (ev) => {
               setAdding(false);
@@ -194,12 +198,13 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
   );
 }
 
-function AddRound({ leagueId, count, onDone }) {
+function AddRound({ leagueId, usesTiers, count, onDone }) {
   const [name, setName] = useState(`Week ${count + 1}`);
   const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA')); // local YYYY-MM-DD
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(null);
   const [teeIdx, setTeeIdx] = useState(0);
+  const [tier, setTier] = useState('regular');
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -225,6 +230,7 @@ function AddRound({ leagueId, count, onDone }) {
       const ev = await createEvent(leagueId, {
         name: name.trim() || `Week ${count + 1}`,
         date,
+        tier: usesTiers ? tier : 'regular',
         course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
       });
       onDone(ev);
@@ -247,6 +253,16 @@ function AddRound({ leagueId, count, onDone }) {
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
       </div>
+      {usesTiers && (
+        <Seg
+          value={tier}
+          options={[
+            ['regular', 'Regular round'],
+            ['major', 'Major'],
+          ]}
+          onChange={setTier}
+        />
+      )}
       <CourseSearch
         onPick={({ course: c, warnings }) => {
           const saved = courses.find((x) => x.id === c.id);
