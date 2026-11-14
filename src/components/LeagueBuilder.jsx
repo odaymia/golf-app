@@ -9,14 +9,12 @@ import {
   scoringOptions,
   tableForTier,
   seasonOptions,
-  BONUS_RESULTS,
   SCORING,
   SEASONS,
-  STABLEFORD_PRESETS,
-  STABLEFORD_RESULTS,
   UNITS,
 } from '../lib/league/format.js';
 import { OptionCards, Seg, Toggle } from './controls.jsx';
+import StablefordScoring from './StablefordScoring.jsx';
 
 const numberOrNull = (text) => {
   const n = Number(String(text).trim());
@@ -125,7 +123,9 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
         <h2>2. How each round is scored</h2>
         <OptionCards value={s.scoring} options={SCORING} only={scoringOptions(s.unit)} onChange={(scoring) => set({ scoring })} />
         <Seg value={s.net} options={[[true, 'Net (handicaps)'], [false, 'Gross']]} onChange={(net) => set({ net })} />
-        {s.scoring === 'stableford' && <StablefordSetup s={s} set={set} />}
+        {s.scoring === 'stableford' && (
+          <StablefordScoring value={s.stableford} net={s.net} onChange={(stableford) => set({ stableford })} />
+        )}
         {s.unit === 'teams' && s.scoring !== 'match' && (
           <>
             <p className="hint">Team score each hole</p>
@@ -323,83 +323,6 @@ function PointsTable({ s, set }) {
         </button>
       )}
       <p className="hint">Ties split the points for the places they cover. Type in any box to make your own table.</p>
-    </div>
-  );
-}
-
-function PointStepper({ value, onChange, label }) {
-  return (
-    <div className="mini-stepper">
-      <button type="button" aria-label={`${label} minus one`} onClick={() => onChange(value - 1)}>
-        −
-      </button>
-      <span className={value < 0 ? 'down' : value > 0 ? 'up' : ''}>{value > 0 ? `+${value}` : value}</span>
-      <button type="button" aria-label={`${label} plus one`} onClick={() => onChange(value + 1)}>
-        +
-      </button>
-    </div>
-  );
-}
-
-// Stableford points per result, plus bonuses for natural (no-stroke) scores.
-function StablefordSetup({ s, set }) {
-  const sf = s.stableford;
-  const setSf = (patch) => set({ stableford: { ...sf, ...patch } });
-  const setPoint = (key, v) =>
-    setSf({ preset: 'custom', points: { ...sf.points, [key]: Math.max(-20, Math.min(20, v)) } });
-  const setBonus = (key, v) => setSf({ bonus: { ...sf.bonus, [key]: Math.max(0, Math.min(20, v)) } });
-  return (
-    <div className="points-setup">
-      <p className="label">Stableford points</p>
-      <Seg
-        value={sf.preset}
-        options={Object.entries(STABLEFORD_PRESETS).map(([k, v]) => [k, v.label])}
-        onChange={(preset) => setSf({ preset })}
-      />
-      <p className="hint">{STABLEFORD_PRESETS[sf.preset].help}</p>
-      <table className="points-table">
-        <tbody>
-          {STABLEFORD_RESULTS.map(([key, label]) => (
-            <tr key={key}>
-              <td>{label}</td>
-              <td>
-                <PointStepper label={label} value={sf.points[key]} onChange={(v) => setPoint(key, v)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="hint">
-        {s.net ? 'Scored on net score (after handicap strokes).' : 'Scored on gross score.'} Change any row to make your
-        own.
-      </p>
-
-      <Toggle
-        label="Bonus points for natural scores"
-        checked={sf.bonusOn}
-        onChange={(bonusOn) => setSf({ bonusOn })}
-      />
-      {sf.bonusOn && (
-        <>
-          <p className="hint">
-            Extra points for a real birdie or better, without handicap strokes, on top of the Stableford points. A
-            net birdie made with a stroke doesn&apos;t count.
-          </p>
-          <table className="points-table">
-            <tbody>
-              {BONUS_RESULTS.map(([key, label]) => (
-                <tr key={key}>
-                  <td>{label}</td>
-                  <td>
-                    <PointStepper label={label} value={sf.bonus[key]} onChange={(v) => setBonus(key, v)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="hint">A hole-in-one gets the hole-in-one bonus instead of the eagle or albatross bonus.</p>
-        </>
-      )}
     </div>
   );
 }

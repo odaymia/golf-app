@@ -63,6 +63,17 @@ export function gameLines(result, players) {
         lines.push({ text: `${result.carry} unclaimed after 18`, sub: true });
       return lines;
     }
+    case 'stableford': {
+      if (result.teamTotals) {
+        const [a, b] = game.teams.map((t) => side(names, t));
+        const [ta, tb] = result.teamTotals;
+        const lead = ta === tb ? 'All square' : `${ta > tb ? a : b} up ${Math.abs(ta - tb)}`;
+        return [{ text: `${a} ${ta} pts · ${b} ${tb} pts` }, { text: `${lead}${result.thru < 18 ? ` thru ${result.thru}` : ''}`, sub: true }];
+      }
+      return result.standings.map((s, i) => ({
+        text: `${i + 1}. ${names[s.id]}: ${s.total} pts${s.thru < 18 ? ` thru ${s.thru}` : ''}`,
+      }));
+    }
     case 'stroke':
       return result.standings.map((s, i) => ({
         text: `${i + 1}. ${names[s.id]}: ${s.total}${s.thru < 18 ? ` thru ${s.thru}` : ''}`,

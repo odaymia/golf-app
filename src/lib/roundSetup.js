@@ -1,5 +1,6 @@
 // Pure helpers for building a round from the setup screen. No React here.
 import { dollarsToCents } from './games/money.js';
+import { defaultStablefordScoring, normalizeScoring } from './games/stableford.js';
 
 // A typical stroke-index layout: odd numbers on the front, even on the back.
 export const DEFAULT_HCPS = [7, 15, 3, 11, 1, 17, 5, 13, 9, 8, 16, 4, 12, 2, 18, 6, 14, 10];
@@ -93,6 +94,11 @@ export const GAME_INFO = {
     name: 'Stroke play',
     rules: 'Lowest total score wins. You collect from every player you beat; ties push.',
   },
+  stableford: {
+    name: 'Stableford',
+    rules:
+      'Points for every hole instead of strokes: bogey 1, par 2, birdie 3, eagle 4 (or your own points). Most points wins. Play it every player for themselves or as 2 vs 2 teams.',
+  },
   wolf: {
     name: 'Wolf',
     rules:
@@ -113,6 +119,15 @@ export function defaultSettings() {
     skins: { on: true, stake: 1, net: true, carryover: true, validate: false },
     match: { on: false, stake: 5, net: true, format: 'teams' },
     stroke: { on: false, stake: 5, net: true, mode: 'perOpponent' },
+    stableford: {
+      on: false,
+      stake: 1,
+      net: true,
+      mode: 'perPoint',
+      format: 'each', // each | teams (2 vs 2, four players)
+      teamScore: 'bestBall',
+      scoring: defaultStablefordScoring(),
+    },
     wolf: { on: false, stake: 1, net: true, loneMult: 2, blindMult: 3 },
     vegas: { on: false, stake: 0.1, net: true, birdieFlip: true },
   };
@@ -170,6 +185,20 @@ export function buildGames(settings, players) {
   if (on('stroke')) {
     const s = settings.stroke;
     games.push({ id: 'stroke', type: 'stroke', net: s.net, mode: s.mode, stake: dollarsToCents(s.stake) });
+  }
+  if (on('stableford')) {
+    const s = settings.stableford;
+    const asTeams = s.format === 'teams' && n === 4 && teams;
+    games.push({
+      id: 'stableford',
+      type: 'stableford',
+      net: s.net,
+      stake: dollarsToCents(s.stake),
+      mode: s.mode,
+      scoring: normalizeScoring(s.scoring),
+      teams: asTeams ? teams : null,
+      teamScore: s.teamScore,
+    });
   }
   if (on('wolf')) {
     const s = settings.wolf;

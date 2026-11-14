@@ -69,6 +69,9 @@ src/
       skins.js      Gross/net, carryovers, validation, per-skin or pot
       wolf.js       4-player rotation, partner / lone (2x) / blind (3x)
       vegas.js      Team numbers, double digits high-first, birdie flip
+      stableford.js Stableford rules (presets, custom, natural bonuses) shared
+                    with leagues, plus the casual game: individual or 2v2
+                    team (best ball / both balls), per point or flat stake
       settle.js     Fewest-payments settle-up (exact bitmask search)
       round.js      computeRound(round): strokes, every game, totals, payments
       *.test.js     Tests live next to each module; test-helpers.js builds cards
@@ -146,7 +149,8 @@ supabase/league_tiers.sql  Adds league_events.tier (regular/major)
   row per place, from a preset (fedex/even) or custom) /
   cumulative (Stableford total, stroke lowest average) / record (W-L-T,
   win 2 tie 1 by default) / ryder (win 1, halve ½).
-- Stableford (`settings.stableford`): points per result from a preset
+- Stableford (`settings.stableford`, rules in `games/stableford.js`, UI in
+  `components/StablefordScoring.jsx`, shared with casual rounds): points per result from a preset
   (standard 5/4/3/2/1/0, modified 8/5/2/0/-1/-3) or custom, applied to net or
   gross per `net`. Optional natural bonus (`bonusOn`) adds points for a gross
   birdie/eagle/albatross/ace regardless of strokes; an ace takes the ace bonus

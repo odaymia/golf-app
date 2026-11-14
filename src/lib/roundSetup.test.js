@@ -68,13 +68,27 @@ describe('buildGames', () => {
     expect(vegas.stake).toBe(10);
   });
 
+  it('stableford: individual, or team with the chosen teams', () => {
+    const s = defaultSettings();
+    s.stableford.on = true;
+    s.stableford.scoring = { preset: 'modified' };
+    const solo = buildGames(s, four).find((g) => g.type === 'stableford');
+    expect(solo).toMatchObject({ teams: null, mode: 'perPoint', stake: 100 });
+    expect(solo.scoring.points.double).toBe(-3);
+    s.stableford.format = 'teams';
+    s.teamsIndex = 2;
+    expect(buildGames(s, four).find((g) => g.type === 'stableford').teams).toEqual(teamOptions(four)[2]);
+    // three players can't play teams: falls back to every player
+    expect(buildGames(s, four.slice(0, 3)).find((g) => g.type === 'stableford').teams).toBe(null);
+  });
+
   it('a new round computes with every game on', () => {
     const s = defaultSettings();
-    for (const k of ['match', 'stroke', 'wolf', 'vegas']) s[k].on = true;
+    for (const k of ['match', 'stroke', 'wolf', 'vegas', 'stableford']) s[k].on = true;
     const course = { ...blankCourse(), name: 'Home' };
     const round = newRound({ course, tee: course.tees[0], players: four, settings: s });
     const r = computeRound(round);
-    expect(r.games).toHaveLength(6);
+    expect(r.games).toHaveLength(7);
     expect(r.payments).toEqual([]);
     expect(r.holesComplete).toBe(0);
   });

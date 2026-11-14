@@ -3,35 +3,13 @@ import { strokesOnHole } from '../games/handicap.js';
 import { holeResults, matchStatus } from '../games/match.js';
 import { playingHandicap } from './leagueHandicap.js';
 import { tableForTier } from './format.js';
+import { holePoints, naturalBonus, stablefordPoints } from '../games/stableford.js';
 
-const STANDARD = { albatross: 5, eagle: 4, birdie: 3, par: 2, bogey: 1, double: 0 };
-
-export function stablefordPoints(score, par, table = STANDARD) {
-  const d = score - par;
-  if (d <= -3) return table.albatross;
-  if (d === -2) return table.eagle;
-  if (d === -1) return table.birdie;
-  if (d === 0) return table.par;
-  if (d === 1) return table.bogey;
-  return table.double;
-}
-
-// Bonus for a natural (gross) score, no handicap strokes involved.
-export function naturalBonus(gross, par, bonus) {
-  if (gross === 1) return bonus.ace ?? 0;
-  const d = gross - par;
-  if (d <= -3) return bonus.albatross ?? 0;
-  if (d === -2) return bonus.eagle ?? 0;
-  if (d === -1) return bonus.birdie ?? 0;
-  return 0;
-}
+export { stablefordPoints, naturalBonus };
 
 // One player's Stableford points on a hole, bonus included.
 export function holeStableford(settings, gross, strokes, par) {
-  const sf = settings.stableford ?? {};
-  const score = settings.net ? gross - strokes : gross;
-  const pts = stablefordPoints(score, par, sf.points ?? STANDARD);
-  return pts + (sf.bonusOn ? naturalBonus(gross, par, sf.bonus ?? {}) : 0);
+  return holePoints(settings.stableford ?? {}, settings.net ? gross - strokes : gross, gross, par);
 }
 
 // Team (or side) name for a member; individual leagues key by member id.

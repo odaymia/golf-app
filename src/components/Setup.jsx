@@ -14,6 +14,7 @@ import {
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
 import { Switch, Toggle } from './controls.jsx';
+import StablefordScoring from './StablefordScoring.jsx';
 import { listSavedPlayers } from '../lib/account.js';
 
 const newPlayer = (from) => ({
@@ -313,7 +314,7 @@ export default function Setup({ profile, onStart, onCancel }) {
       {teams.length > 0 && (
         <section className="card">
           <h2>Teams</h2>
-          <p className="hint">Used for team Nassau, match play and Vegas.</p>
+          <p className="hint">Used for team Nassau, match play, Stableford and Vegas.</p>
           <div className="stack">
             {teams.map(([a, b], i) => (
               <button
@@ -375,6 +376,12 @@ function GameOptions({ type, s, set, playerCount }) {
     skins: 'Per skin, from each player',
     match: 'Per match',
     stroke: s.mode === 'perStroke' ? 'Per stroke' : 'Per player you beat',
+    stableford:
+      s.mode === 'perPoint'
+        ? 'Per point'
+        : s.format === 'teams' && playerCount === 4
+          ? 'Per player, to the winning team'
+          : 'Per player you beat',
     wolf: 'Per hole',
     vegas: 'Per point',
   }[type];
@@ -434,6 +441,42 @@ function GameOptions({ type, s, set, playerCount }) {
             Per stroke
           </button>
         </div>
+      )}
+      {type === 'stableford' && (
+        <>
+          {playerCount === 4 && (
+            <div className="seg wide">
+              <button className={s.format === 'each' ? 'on' : ''} onClick={() => set('format', 'each')}>
+                Every player
+              </button>
+              <button className={s.format === 'teams' ? 'on' : ''} onClick={() => set('format', 'teams')}>
+                2 vs 2 teams
+              </button>
+            </div>
+          )}
+          {s.format === 'teams' && playerCount === 4 && (
+            <>
+              <div className="seg wide">
+                <button className={s.teamScore === 'bestBall' ? 'on' : ''} onClick={() => set('teamScore', 'bestBall')}>
+                  Best ball
+                </button>
+                <button className={s.teamScore === 'aggregate' ? 'on' : ''} onClick={() => set('teamScore', 'aggregate')}>
+                  Both balls count
+                </button>
+              </div>
+              <p className="hint">Teams are the ones picked above.</p>
+            </>
+          )}
+          <div className="seg wide">
+            <button className={s.mode === 'perPoint' ? 'on' : ''} onClick={() => set('mode', 'perPoint')}>
+              Per point
+            </button>
+            <button className={s.mode === 'perOpponent' ? 'on' : ''} onClick={() => set('mode', 'perOpponent')}>
+              {s.format === 'teams' && playerCount === 4 ? 'Winner takes stake' : 'Per player beaten'}
+            </button>
+          </div>
+          <StablefordScoring value={s.scoring} net={s.net} onChange={(v) => set('scoring', v)} />
+        </>
       )}
       {type === 'wolf' && (
         <p className="hint">Wolf order is the player order above. Lone wolf 2×, blind wolf 3×.</p>

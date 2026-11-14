@@ -7,5 +7,6 @@ export * from './nassau.js';
 export * from './skins.js';
 export * from './wolf.js';
 export * from './vegas.js';
+export * from './stableford.js';
 export * from './settle.js';
 export * from './round.js';
