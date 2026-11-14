@@ -43,6 +43,8 @@ const toProfile = (r) =>
     avatarUrl: mediaUrl(r.avatar_path),
     avatarPath: r.avatar_path ?? null,
     homeCourse: r.home_course ?? '',
+    homeCourseKey: r.home_course_key ?? null,
+    homeCoursePlace: r.home_course_place ?? '',
   };
 
 export async function getPublicProfile(id) {
@@ -64,12 +66,30 @@ export async function savePublicProfile(id, p) {
         bio: p.bio?.trim() ?? '',
         avatar_path: p.avatarPath ?? null,
         home_course: p.homeCourse?.trim() || null,
+        home_course_key: p.homeCourse?.trim() ? p.homeCourseKey ?? null : null,
+        home_course_place: p.homeCourse?.trim() ? p.homeCoursePlace || null : null,
         updated_at: new Date().toISOString(),
       })
       .select()
       .single(),
   );
   return toProfile(row);
+}
+
+// Account settings changed the home course: mirror it onto the public
+// profile. Does nothing until the golfer has set up their golf profile.
+export function syncHomeCourse(userId, home) {
+  return call(
+    supabase
+      .from('public_profiles')
+      .update({
+        home_course: home?.name || null,
+        home_course_key: home?.key ?? null,
+        home_course_place: home?.place || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId),
+  );
 }
 
 export async function uploadAvatar(userId, file) {

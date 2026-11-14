@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { deletePlayer, listSavedPlayers, saveProfile, savePlayer, signOut } from '../lib/account.js';
 import { formatIndex, parseIndex } from '../lib/roundSetup.js';
+import { getPublicProfile, syncHomeCourse } from '../lib/social.js';
+import HomeCoursePicker from './HomeCoursePicker.jsx';
 
 const indexText = (n) => (n == null ? '' : formatIndex(n));
 
@@ -10,7 +12,7 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
     name: profile?.name ?? '',
     ghinNumber: profile?.ghinNumber ?? '',
     indexText: indexText(profile?.index),
-    homeCourse: profile?.homeCourse ?? '',
+    home: profile?.homeCourse ? { name: profile.homeCourse, key: profile.homeCourseKey ?? null, place: '' } : null,
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -20,6 +22,17 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
     setForm((f) => ({ ...f, [field]: value }));
   };
 
+  // The golf profile may already have a home course (with its course link).
+  useEffect(() => {
+    if (firstTime) return;
+    getPublicProfile(user.id)
+      .then((p) => {
+        if (p?.homeCourse)
+          setForm((f) => ({ ...f, home: { name: p.homeCourse, key: p.homeCourseKey, place: p.homeCoursePlace } }));
+      })
+      .catch(() => {});
+  }, [user.id, firstTime]);
+
   async function submit(e) {
     e.preventDefault();
     if (!form.name.trim()) return setError('Enter your name.');
@@ -28,7 +41,13 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
     setBusy(true);
     setError('');
     try {
-      const p = await saveProfile(user, { ...form, index: form.indexText.trim() === '' ? null : index });
+      const p = await saveProfile(user, {
+        ...form,
+        homeCourse: form.home?.name ?? '',
+        index: form.indexText.trim() === '' ? null : index,
+      });
+      // Keep the golf profile's home course the same (if one exists yet).
+      syncHomeCourse(user.id, form.home).catch(() => {});
       setSaved(true);
       onSaved(p);
     } catch (err) {
@@ -76,10 +95,10 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
             />
           </label>
         </div>
-        <label className="field">
+        <div className="field">
           <span>Home course</span>
-          <input value={form.homeCourse} placeholder="Optional" onChange={(e) => set('homeCourse', e.target.value)} />
-        </label>
+          <HomeCoursePicker value={form.home} onChange={(home) => set('home', home)} disabled={busy} />
+        </div>
         <p className="hint">
           Your handicap index is self-reported for now. Live GHIN handicaps come once the USGA approves the app.
         </p>

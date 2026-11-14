@@ -2253,3 +2253,32 @@ tr.clickable {
   color: var(--green);
   font-weight: 700;
 }
+
+/* Home course picker */
+.home-course {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf7;
+  color: var(--text);
+}
+
+.home-course-pick .course-search {
+  margin-bottom: 0;
+}
+
+.home-course-pick .field {
+  margin: 0;
+}
+
+.home-course-type {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-course-link {
+  align-self: flex-start;
+  text-align: left;
+  font-size: 14px;
+}

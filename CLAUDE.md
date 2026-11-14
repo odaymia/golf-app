@@ -118,6 +118,7 @@ supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
 supabase/league_tiers.sql  Adds league_events.tier (regular/major)
 supabase/groups.sql   Adds league_events.groups + can_score() score policies
 supabase/social.sql   Social tables, policies and the `media` storage bucket
+supabase/home_course.sql  public_profiles.home_course_key / _place
 ```
 
 ### Engine conventions
@@ -240,6 +241,11 @@ supabase/social.sql   Social tables, policies and the `media` storage bucket
 - Location pages: posts tagged with a searched course share its
   `oga-<id>` key, so `CoursePage` gathers everyone's photos of that course.
 - A username is required before using social; the profile page asks.
+- Home course (golf profile and account Settings) uses `HomeCoursePicker`:
+  the same course search as rounds/tags, saved with its course key
+  (`public_profiles.home_course_key/place`, supabase/home_course.sql) so it
+  links to the course page; a typed name (no key) is allowed. Settings
+  mirrors its choice onto the public profile (`syncHomeCourse`).
 - Before App Store submission: add blocking users and a way to act on
   reports (Apple requires report + block for user-generated content).
 

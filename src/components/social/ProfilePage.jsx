@@ -10,6 +10,7 @@ import {
 } from '../../lib/social.js';
 import { cleanUsername, compactCount, suggestUsername, usernameProblem } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
+import HomeCoursePicker from '../HomeCoursePicker.jsx';
 import PostGrid from './PostGrid.jsx';
 
 // Instagram-style profile: photo, counts, bio, follow, and the post grid.
@@ -113,7 +114,19 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
           </section>
           <section className="profile-bio">
             <strong>{profile.displayName}</strong>
-            {profile.homeCourse && <span className="muted">⛳ {profile.homeCourse}</span>}
+            {profile.homeCourse &&
+              (profile.homeCourseKey ? (
+                <button
+                  className="link home-course-link"
+                  onClick={() =>
+                    nav('course', { course: { key: profile.homeCourseKey, name: profile.homeCourse, place: profile.homeCoursePlace } })
+                  }
+                >
+                  ⛳ {profile.homeCourse}
+                </button>
+              ) : (
+                <span className="muted">⛳ {profile.homeCourse}</span>
+              ))}
             {profile.bio && <p>{profile.bio}</p>}
           </section>
           <div className="profile-buttons">
@@ -147,7 +160,11 @@ function EditProfile({ meId, profile, account, firstTime, onSaved, onCancel }) {
     displayName: profile?.displayName || account?.name || '',
     username: profile?.username || suggestUsername(account?.name),
     bio: profile?.bio ?? '',
-    homeCourse: profile?.homeCourse || account?.homeCourse || '',
+    home: profile?.homeCourse
+      ? { name: profile.homeCourse, key: profile.homeCourseKey, place: profile.homeCoursePlace }
+      : account?.homeCourse
+        ? { name: account.homeCourse, key: account.homeCourseKey ?? null, place: '' }
+        : null,
     avatarPath: profile?.avatarPath ?? null,
     avatarUrl: profile?.avatarUrl ?? null,
   }));
@@ -178,7 +195,15 @@ function EditProfile({ meId, profile, account, firstTime, onSaved, onCancel }) {
     setBusy(true);
     setError('');
     try {
-      onSaved(await savePublicProfile(meId, { ...form, username }));
+      onSaved(
+        await savePublicProfile(meId, {
+          ...form,
+          username,
+          homeCourse: form.home?.name ?? '',
+          homeCourseKey: form.home?.key ?? null,
+          homeCoursePlace: form.home?.place ?? '',
+        }),
+      );
     } catch (e) {
       setError(e.message);
       setBusy(false);
@@ -232,10 +257,10 @@ function EditProfile({ meId, profile, account, firstTime, onSaved, onCancel }) {
             onChange={(e) => set('bio', e.target.value)}
           />
         </label>
-        <label className="field">
+        <div className="field">
           <span>Home course</span>
-          <input value={form.homeCourse} placeholder="Optional" onChange={(e) => set('homeCourse', e.target.value)} />
-        </label>
+          <HomeCoursePicker value={form.home} onChange={(home) => set('home', home)} disabled={busy} />
+        </div>
         <p className="hint">Everyone in Scribble can see your profile and posts. Your handicap index and GHIN number stay private.</p>
         {error && <p className="search-error">{error}</p>}
         <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
