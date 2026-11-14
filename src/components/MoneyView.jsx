@@ -1,6 +1,8 @@
 import { formatMoney } from '../lib/games/money.js';
 import { gameLines, gameTitle, nameMap } from './gameSummary.js';
+import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
+import MatchScorecard from './MatchScorecard.jsx';
 
 export function Totals({ players, totals }) {
   return (
@@ -32,6 +34,7 @@ export function Payments({ players, payments }) {
 
 export default function MoneyView({ round, computed }) {
   const { players } = round;
+  const [open, setOpen] = useState(null);
   return (
     <div>
       <Totals players={players} totals={computed.totals} />
@@ -48,6 +51,7 @@ export default function MoneyView({ round, computed }) {
                 names={m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & '))}
                 status={m.status}
                 results={m.results}
+                onOpen={() => setOpen({ ...m, names: m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & ')), net: g.game.net })}
               />
             ))}
           <ul className="lines">
@@ -70,6 +74,16 @@ export default function MoneyView({ round, computed }) {
         <h3>If we stopped now</h3>
         <Payments players={players} payments={computed.payments} />
       </section>
+      {open && (
+        <MatchScorecard
+          match={{ ...open, strokes: computed.strokes }}
+          holes={round.course.holes}
+          grossOf={(id) => round.scores[id]}
+          nameOf={(id) => nameMap(players)[id]}
+          net={open.net}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </div>
   );
 }

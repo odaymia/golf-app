@@ -2,12 +2,23 @@ import { matchSummary } from '../lib/games/match.js';
 
 // Live match-play scoreboard: who's up, by how much, and who won each hole.
 // names: [sideA, sideB]; status: matchStatus(); results: per-hole 1 / -1 / 0 / null.
-export default function MatchCard({ names, status, results = [], label, compact = false }) {
+export default function MatchCard({ names, status, results = [], label, compact = false, onOpen }) {
   const s = matchSummary(status);
   const leaderClass = s.leader === 0 ? 'side-a' : s.leader === 1 ? 'side-b' : '';
   const shown = s.small === 'final' ? status.played : results.length;
   return (
-    <div className={`match-card ${compact ? 'compact' : ''} ${s.small === 'final' ? 'done' : ''}`}>
+    <div
+      className={`match-card ${compact ? 'compact' : ''} ${s.small === 'final' ? 'done' : ''} ${onOpen ? 'tappable' : ''}`}
+      {...(onOpen
+        ? {
+            role: 'button',
+            tabIndex: 0,
+            onClick: onOpen,
+            onKeyDown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen()),
+            'aria-label': `${names[0]} vs ${names[1]}: open scorecard`,
+          }
+        : {})}
+    >
       {label && <p className="match-format">{label}</p>}
       <div className="match-sides">
         <span className={`match-name side-a ${s.leader === 0 ? 'leading' : ''}`}>{names[0]}</span>
@@ -33,6 +44,7 @@ export default function MatchCard({ names, status, results = [], label, compact 
           ))}
         </div>
       )}
+      {onOpen && !compact && <p className="tap-hint">Tap for scorecard</p>}
     </div>
   );
 }

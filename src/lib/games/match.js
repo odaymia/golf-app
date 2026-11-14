@@ -67,11 +67,14 @@ export function scoreMatchPlay(ctx, game) {
     const status = matchStatus(results, 0, holeCount(ctx) - 1, { stopAtCloseout: true });
     if (status.winner === 0) payTeamBet(balances, a, b, game.stake);
     if (status.winner === 1) payTeamBet(balances, b, a, game.stake);
+    let up = 0;
     return {
       sides: [a, b],
       label: `${sideLabel(ctx, a)} vs ${sideLabel(ctx, b)}`,
       status,
       results,
+      running: results.map((r, h) => (h >= status.played || r == null ? null : (up += r))),
+      sideScores: [a, b].map((side) => ctx.holes.map((_, h) => bestBall(ctx, side, h, game.net))),
       text: describeMatch(status),
     };
   });

@@ -1,6 +1,8 @@
 import { orderEvents } from '../lib/league/season.js';
 import { MATCH_FORMATS } from '../lib/league/event.js';
+import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
+import MatchScorecard from './MatchScorecard.jsx';
 import { useLiveRefresh } from './useLiveRefresh.js';
 
 const toParText = (n) => (n == null ? '–' : n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`);
@@ -17,7 +19,18 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
   if (!events.length) {
     return <p className="muted center">Add the first round under Rounds, and the leaderboard starts here.</p>;
   }
-  if (settings.unit === 'ryder') return <RyderBoard settings={settings} standings={standings} events={events} results={results} open={open} onOpenEvent={onOpenEvent} />;
+  if (settings.unit === 'ryder')
+    return (
+      <RyderBoard
+        settings={settings}
+        standings={standings}
+        events={events}
+        results={results}
+        members={data.members}
+        open={open}
+        onOpenEvent={onOpenEvent}
+      />
+    );
 
   const stableford = settings.scoring === 'stableford';
   const multi = events.length > 1;
@@ -78,7 +91,8 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
 
 const roundFormats = (matches) => [...new Set(matches.map((m) => MATCH_FORMATS[m.format].short))].join(' + ');
 
-function RyderBoard({ settings, standings, events, results, open, onOpenEvent }) {
+function RyderBoard({ settings, standings, events, results, members, open, onOpenEvent }) {
+  const [card, setCard] = useState(null); // { eventId, index }
   const bySide = Object.fromEntries(standings.map((r) => [r.key, r]));
   const [a, b] = settings.sides.map((s) => bySide[s]);
   const live = [...events].reverse().find((e) => results[e.id]?.matches.some((m) => !m.result && m.status.played > 0));
@@ -145,11 +159,30 @@ function RyderBoard({ settings, standings, events, results, open, onOpenEvent })
         <section>
           <p className="section-title">On the course · {live.name}</p>
           {results[live.id].matches.map((m, i) => (
-            <MatchCard key={i} names={m.names} status={m.status} results={m.results} label={MATCH_FORMATS[m.format].label} />
+            <MatchCard
+              key={i}
+              names={m.names}
+              status={m.status}
+              results={m.results}
+              label={MATCH_FORMATS[m.format].label}
+              onOpen={() => setCard({ eventId: live.id, index: i })}
+            />
           ))}
         </section>
       )}
       {open && <p className="hint center">Live: updates every 20 seconds as groups enter scores.</p>}
+      {card && results[card.eventId]?.matches[card.index] && (
+        <MatchScorecard
+          match={results[card.eventId].matches[card.index]}
+          holes={events.find((e) => e.id === card.eventId).course.holes}
+          grossOf={(id) => results[card.eventId].players[id]?.gross ?? []}
+          nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
+          net={settings.net}
+          label={MATCH_FORMATS[results[card.eventId].matches[card.index].format].label}
+          sideNames={settings.sides}
+          onClose={() => setCard(null)}
+        />
+      )}
     </>
   );
 }

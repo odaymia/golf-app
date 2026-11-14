@@ -215,6 +215,10 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
   handicap (scramble 35% low + 15% high; foursomes half the total) off the
   low team; the team score is saved on every partner's card and score entry
   shows one row per team.
+- Tapping a match card opens `MatchScorecard` (bottom sheet): every player's
+  gross with stroke dots, the team row (best ball / both added, net), the
+  team ball for one-ball formats, and a running match row. Matches expose
+  `sideScores` and `running` (league/event.js and games/match.js) for it.
 
 ## Course data
 

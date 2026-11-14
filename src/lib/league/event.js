@@ -248,9 +248,9 @@ function scoreMatch(settings, members, players, holes, mu) {
     if (sc.some((x) => x == null)) return null;
     return format === 'shamble' ? sc.reduce((x, y) => x + y, 0) : Math.min(...sc);
   };
+  const sideScores = [a, b].map((side) => holes.map((_, h) => sideScore(side, h)));
   const holeByHole = holes.map((_, h) => {
-    const sa = sideScore(a, h);
-    const sb = sideScore(b, h);
+    const [sa, sb] = [sideScores[0][h], sideScores[1][h]];
     if (sa == null || sb == null) return null;
     return sa < sb ? 1 : sa > sb ? -1 : 0;
   });
@@ -265,7 +265,20 @@ function scoreMatch(settings, members, players, holes, mu) {
     names: [a, b].map((side) => side.map((id) => members.find((m) => m.id === id)?.name ?? '?').join(' & ')),
     status,
     results: holeByHole,
+    running: runningStatus(holeByHole, status.played),
+    sideScores,
     strokes,
     result,
   };
+}
+
+// Margin after each hole from side A's view (2 = 2 up, -1 = 1 down), up to
+// the holes that counted; null after that.
+export function runningStatus(results, played) {
+  let up = 0;
+  return results.map((r, h) => {
+    if (h >= played || r == null) return null;
+    up += r;
+    return up;
+  });
 }

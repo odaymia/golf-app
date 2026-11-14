@@ -4,6 +4,7 @@ import { roundRobinWeek } from '../lib/league/season.js';
 import { computeEvent, entityKey, MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
 import MatchCard from './MatchCard.jsx';
+import MatchScorecard from './MatchScorecard.jsx';
 import { useLiveRefresh } from './useLiveRefresh.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { Seg } from './controls.jsx';
@@ -50,7 +51,14 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
       </div>
 
       {tab === 'results' && (
-        <Results settings={settings} result={result} members={data.members} live={!final} reload={reload} />
+        <Results
+          settings={settings}
+          result={result}
+          members={data.members}
+          holes={event.course.holes}
+          live={!final}
+          reload={reload}
+        />
       )}
       {tab === 'score' &&
         (canScore ? (
@@ -73,8 +81,9 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
   );
 }
 
-function Results({ settings, result, members, live, reload }) {
+function Results({ settings, result, members, holes, live, reload }) {
   useLiveRefresh(live, reload);
+  const [open, setOpen] = useState(null);
   if (settings.scoring === 'match') {
     if (!result.matches.length) return <p className="muted center">No matches set yet. The commissioner sets them under Manage.</p>;
     // Ryder Cup: points won so far, plus where the matches still out on the course stand.
@@ -114,8 +123,21 @@ function Results({ settings, result, members, live, reload }) {
             status={m.status}
             results={m.results}
             label={settings.unit === 'individual' ? null : MATCH_FORMATS[m.format].label}
+            onOpen={() => setOpen(i)}
           />
         ))}
+        {open != null && result.matches[open] && (
+          <MatchScorecard
+            match={result.matches[open]}
+            holes={holes}
+            grossOf={(id) => result.players[id]?.gross ?? holes.map(() => null)}
+            nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
+            net={settings.net}
+            label={settings.unit === 'individual' ? null : MATCH_FORMATS[result.matches[open].format].label}
+            sideNames={settings.unit === 'ryder' ? settings.sides : null}
+            onClose={() => setOpen(null)}
+          />
+        )}
         <p className="match-legend">
           <span>
             <i className="mh a" />

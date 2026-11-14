@@ -109,3 +109,23 @@ describe('mixed formats over a Ryder Cup tournament', () => {
     expect([usa.total, eur.total]).toEqual([1.5, 2.5]);
   });
 });
+
+describe('scorecard data', () => {
+  it('team score per hole and the running margin', () => {
+    // shamble: hole 1 USA 3+6=9 vs 8 (Europe wins), hole 2 USA 3+4=7 vs 8 (USA wins)
+    const m = play('shamble', { a: card({ 1: 3, 2: 3 }), b: card({ 1: 6 }), c: card(), d: card() });
+    expect(m.sideScores[0].slice(0, 3)).toEqual([9, 7, 6]); // hole 3 is a par 3
+    expect(m.sideScores[1].slice(0, 3)).toEqual([8, 8, 6]);
+    expect(m.running.slice(0, 3)).toEqual([-1, 0, 0]);
+    expect(m.running[17]).toBe(0);
+  });
+
+  it('running margin stops at the closeout', () => {
+    const won = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, PARS[i] - 1]));
+    const m = play('fourball', { a: card(won), b: card(), c: card(), d: card() });
+    // 10 up after 10 with 8 left: closed out on hole 10
+    expect(m.status.played).toBe(10);
+    expect(m.running[9]).toBe(10);
+    expect(m.running[10]).toBe(null);
+  });
+});

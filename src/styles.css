@@ -1644,3 +1644,96 @@ tr.clickable {
   font-size: 20px;
   color: var(--green-deep);
 }
+
+/* Bottom sheet */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgb(20 30 22 / 45%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 18px 18px 0 0;
+  padding: 14px 14px max(20px, env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 20%);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-head h2 {
+  margin: 0;
+}
+
+/* Match scorecard */
+.match-sc td.after {
+  opacity: 0.35;
+}
+
+.match-sc tr.team td,
+.match-sc tr.team-ball td {
+  font-weight: 800;
+  background: #f7f2e4;
+}
+
+.match-sc tr.team .sc-name {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.match-sc tr.side-a .sc-name {
+  border-left: 4px solid var(--green);
+}
+
+.match-sc tr.side-b .sc-name {
+  border-left: 4px solid #b8466f;
+}
+
+.match-sc .status-row td {
+  font-weight: 800;
+  font-size: 12px;
+  background: #fff;
+}
+
+.match-sc .status-row .lead-a {
+  background: var(--green);
+  color: #fff;
+}
+
+.match-sc .status-row .lead-b {
+  background: #b8466f;
+  color: #fff;
+}
+
+.match-sc .status-row .as {
+  background: #ece5d2;
+}
+
+.match-card.tappable {
+  cursor: pointer;
+}
+
+.match-card.tappable:active {
+  transform: scale(0.99);
+}
+
+.tap-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
