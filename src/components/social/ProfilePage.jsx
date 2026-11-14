@@ -191,7 +191,7 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
           ) : (
             <PostGrid
               posts={posts}
-              onOpen={(p) => nav('post', { postId: p.id })}
+              onOpen={(p) => nav('posts', { posts, startId: p.id, title: profile?.username ? `@${profile.username}` : 'Posts' })}
               empty={mine ? 'Share your first round: tap + below.' : 'No posts yet.'}
             />
           )}

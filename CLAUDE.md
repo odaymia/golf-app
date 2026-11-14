@@ -292,6 +292,14 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   review in the Supabase dashboard). Schema + RLS + bucket in
   supabase/social.sql. Members can only upload/delete in their own
   `<userId>/` folder.
+- Viewing: tapping a grid tile (profile or course page) opens `PostList`,
+  every post of that grid in one scrolling list starting at the tapped one;
+  Back returns to the same scroll spot. Grid tiles are square crops; in the
+  feed and lists each post box takes its first item's shape (saved
+  width/height, else measured on load), between 9:16 and 1.91:1 and never
+  taller than the screen, never cropped. Videos (`FeedVideo`) autoplay muted
+  and loop while 60% on screen, pause off screen; a tap toggles sound for
+  all videos (`feedSound.js`), double-tap likes.
 - Media: photos are shrunk on the phone to 1440px JPEG (`lib/media.js`),
   avatars to 480px; videos upload as-is (50 MB cap) with a frame grabbed as
   the grid cover. Public URLs, newest first everywhere.

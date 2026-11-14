@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Feed from './Feed.jsx';
 import NewPost from './NewPost.jsx';
 import PostDetail from './PostDetail.jsx';
+import PostList from './PostList.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import CoursePage from './CoursePage.jsx';
 import { getPublicProfile } from '../../lib/social.js';
@@ -24,14 +25,25 @@ export default function Social({ start, user, account, onTab, onSettings }) {
   }, [user.id]);
   const onProfileSaved = (p) => setReady(!!p?.username);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [stack]);
-
+  // New screens open at the top; going back returns to where you were.
+  // (The post list scrolls itself to the tapped post.)
   const top = stack[stack.length - 1];
+  useEffect(() => {
+    if (top.name === 'posts') return;
+    const y = top.scrollY ?? 0;
+    window.scrollTo(0, y);
+    if (!y) return;
+    // The screen reloads its posts, so keep trying until it is tall enough.
+    const timers = [100, 300, 600, 1000].map((ms) =>
+      setTimeout(() => Math.abs(window.scrollY - y) > 2 && window.scrollTo(0, y), ms),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [top]);
+
   const nav = (name, params = {}) => {
     if (name === 'new') return onTab('new');
-    setStack((s) => [...s, { name, params }]);
+    const scrollY = window.scrollY;
+    setStack((s) => [...s.slice(0, -1), { ...s.at(-1), scrollY }, { name, params }]);
   };
   const back = stack.length > 1 ? () => setStack((s) => s.slice(0, -1)) : null;
   const meId = user.id;
@@ -70,6 +82,8 @@ export default function Social({ start, user, account, onTab, onSettings }) {
       );
     case 'course':
       return <CoursePage course={top.params.course} meId={meId} nav={nav} back={back} />;
+    case 'posts':
+      return <PostList key={top.params.startId} {...top.params} meId={meId} nav={nav} back={back} />;
     case 'post':
       return <PostDetail key={top.params.postId} postId={top.params.postId} meId={meId} nav={nav} back={back} />;
     default:

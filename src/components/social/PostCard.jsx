@@ -2,6 +2,13 @@ import { useRef, useState } from 'react';
 import { likePost, unlikePost, deletePost, reportPost, blockUser } from '../../lib/social.js';
 import { countLabel, timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
+import FeedVideo from './FeedVideo.jsx';
+import { toggleSound } from './feedSound.js';
+
+// Tallest and widest shapes a post box takes (width / height); media
+// outside that range is fitted inside without cropping.
+const TALLEST = 9 / 16;
+const WIDEST = 1.91;
 
 // One post: author, location, photos/videos (swipe), like, comments, caption.
 export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
@@ -12,6 +19,10 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
   const [error, setError] = useState('');
   const track = useRef(null);
   const lastTap = useRef(0);
+  // The box takes the first item's shape: from upload, or measured on load.
+  const first = post.media[0];
+  const [size, setSize] = useState(first?.width && first?.height ? [first.width, first.height] : null);
+  const ratio = size ? Math.min(WIDEST, Math.max(TALLEST, size[0] / size[1])) : 4 / 5;
   const mine = post.userId === meId;
 
   async function toggleLike(force) {
@@ -30,11 +41,15 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
     }
   }
 
-  // Double-tap a photo to like it.
-  function onMediaTap() {
+  // Tap a video for sound (on or off); double-tap anything to like it.
+  // Sound flips on the first tap, inside the tap itself, because phones only
+  // allow sound from a tap; a double tap flips it back.
+  function onMediaTap(m) {
     const now = Date.now();
-    if (now - lastTap.current < 300) toggleLike(true);
-    lastTap.current = now;
+    const double = now - lastTap.current < 300;
+    lastTap.current = double ? 0 : now;
+    if (m.kind === 'video') toggleSound();
+    if (double) toggleLike(true);
   }
 
   async function remove() {
@@ -125,11 +140,16 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
             onScroll={(e) => setSlide(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
           >
             {post.media.map((m, i) => (
-              <div className="media-slide" key={i} onClick={onMediaTap}>
+              <div className="media-slide" key={i} onClick={() => onMediaTap(m)} style={{ aspectRatio: ratio }}>
                 {m.kind === 'video' ? (
-                  <video src={m.url} poster={m.posterUrl ?? undefined} controls playsInline preload="metadata" />
+                  <FeedVideo src={m.url} poster={m.posterUrl} onSize={i === 0 && !size ? (w, h) => w && h && setSize([w, h]) : undefined} />
                 ) : (
-                  <img src={m.url} alt="" loading="lazy" />
+                  <img
+                    src={m.url}
+                    alt=""
+                    loading="lazy"
+                    onLoad={i === 0 && !size ? (e) => setSize([e.currentTarget.naturalWidth, e.currentTarget.naturalHeight]) : undefined}
+                  />
                 )}
               </div>
             ))}

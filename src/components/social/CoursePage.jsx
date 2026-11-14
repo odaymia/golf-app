@@ -51,7 +51,7 @@ export default function CoursePage({ course, meId, nav, back }) {
       ) : (
         <PostGrid
           posts={posts}
-          onOpen={(p) => nav('post', { postId: p.id })}
+          onOpen={(p) => nav('posts', { posts, startId: p.id, title: course.name })}
           empty="Nobody has posted from here yet. Playing it soon? Share how it looks."
         />
       )}
