@@ -6,6 +6,7 @@ import { listCourses, saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
 import CourseSearch from './CourseSearch.jsx';
 import { Seg } from './controls.jsx';
+import TournamentBoard from './TournamentBoard.jsx';
 
 const fmtPts = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''));
 const fmtDate = (d) =>
@@ -63,9 +64,9 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
 
       <div className="tabs wide-tabs" role="tablist">
         {[
-          ['standings', 'Standings'],
+          ['standings', computed.settings.kind === 'tournament' ? 'Leaderboard' : 'Standings'],
           ['rounds', 'Rounds'],
-          ['members', 'Members'],
+          ['members', computed.settings.kind === 'tournament' ? 'Players' : 'Members'],
         ].map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
             {label}
@@ -73,13 +74,20 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
         ))}
       </div>
 
-      {tab === 'standings' && <Standings computed={computed} events={events} />}
+      {tab === 'standings' &&
+        (computed.settings.kind === 'tournament' ? (
+          <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} />
+        ) : (
+          <Standings computed={computed} events={events} />
+        ))}
       {tab === 'rounds' && (
         <Rounds data={data} computed={computed} isAdmin={isAdmin} reload={reload} onOpenEvent={onOpenEvent} />
       )}
       {tab === 'members' && <Members data={data} computed={computed} me={me} isAdmin={isAdmin} reload={reload} />}
       {members.length < 2 && tab !== 'members' && (
-        <p className="hint center">Invite players with the code above, or add them under Members.</p>
+        <p className="hint center">
+          Invite players with the code above, or add them under {computed.settings.kind === 'tournament' ? 'Players' : 'Members'}.
+        </p>
       )}
     </div>
   );
@@ -162,6 +170,9 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
               <button className="round-open" onClick={() => onOpenEvent(ev.id)}>
                 <strong>
                   {ev.name}
+                  {computed.settings.kind === 'tournament' && (
+                    <span className="muted small"> of {Math.max(computed.settings.rounds, events.length)}</span>
+                  )}
                   {ev.tier === 'major' && computed.settings.season === 'points' && <span className="major-tag">Major</span>}
                 </strong>
                 <span className="muted">
@@ -183,6 +194,7 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
             leagueId={data.league.id}
             usesTiers={computed.settings.season === 'points'}
             count={events.length}
+            label={computed.settings.kind === 'tournament' ? 'Round' : 'Week'}
             onDone={async (ev) => {
               setAdding(false);
               await reload();
@@ -198,8 +210,8 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
   );
 }
 
-function AddRound({ leagueId, usesTiers, count, onDone }) {
-  const [name, setName] = useState(`Week ${count + 1}`);
+function AddRound({ leagueId, usesTiers, count, label, onDone }) {
+  const [name, setName] = useState(`${label} ${count + 1}`);
   const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA')); // local YYYY-MM-DD
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(null);
@@ -228,7 +240,7 @@ function AddRound({ leagueId, usesTiers, count, onDone }) {
     try {
       await saveCourse(course).catch(() => {});
       const ev = await createEvent(leagueId, {
-        name: name.trim() || `Week ${count + 1}`,
+        name: name.trim() || `${label} ${count + 1}`,
         date,
         tier: usesTiers ? tier : 'regular',
         course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },

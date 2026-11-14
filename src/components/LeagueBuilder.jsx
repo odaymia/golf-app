@@ -23,9 +23,11 @@ const numberOrNull = (text) => {
 
 // Create a league (league = null) or edit an existing league's format.
 // onSave({ name, settings }) may throw; its message is shown.
-export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
+export default function LeagueBuilder({ league, kind: newKind = 'league', onSave, onCancel, onDelete }) {
   const [name, setName] = useState(league?.name ?? '');
-  const [s, setS] = useState(() => leagueSettings(league?.settings));
+  const [s, setS] = useState(() => leagueSettings(league?.settings ?? { kind: newKind }));
+  const isTournament = s.kind === 'tournament';
+  const noun = isTournament ? 'tournament' : 'league';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,7 +35,7 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
   const setH = (patch) => setS((prev) => ({ ...prev, handicap: { ...prev.handicap, ...patch } }));
 
   async function save() {
-    if (!name.trim()) return setError('Give the league a name.');
+    if (!name.trim()) return setError(`Give the ${noun} a name.`);
     if (s.season === 'points' && !s.pointsTable.some((n) => n > 0)) return setError('Give at least 1st place some points.');
     if (s.unit === 'ryder' && (!s.sides[0].trim() || !s.sides[1].trim() || s.sides[0].trim() === s.sides[1].trim()))
       return setError('Give the two sides different names.');
@@ -56,14 +58,18 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
         <button className="btn btn-ghost" onClick={onCancel}>
           ‹ Back
         </button>
-        <h1>{league ? 'League format' : 'New league'}</h1>
+        <h1>{league ? (isTournament ? 'Tournament format' : 'League format') : isTournament ? 'New tournament' : 'New league'}</h1>
         <span />
       </div>
 
       <section className="card">
         <label className="field">
-          <span>League name</span>
-          <input value={name} placeholder="e.g. Tuesday Night League" onChange={(e) => setName(e.target.value)} />
+          <span>{isTournament ? 'Tournament name' : 'League name'}</span>
+          <input
+            value={name}
+            placeholder={isTournament ? 'e.g. Member-Guest 2027' : 'e.g. Tuesday Night League'}
+            onChange={(e) => setName(e.target.value)}
+          />
         </label>
         <p className="hint">{describeLeague(s)}</p>
       </section>
@@ -121,7 +127,7 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
 
       <section className="card">
         <h2>2. How each round is scored</h2>
-        <OptionCards value={s.scoring} options={SCORING} only={scoringOptions(s.unit)} onChange={(scoring) => set({ scoring })} />
+        <OptionCards value={s.scoring} options={SCORING} only={scoringOptions(s.unit, s.kind)} onChange={(scoring) => set({ scoring })} />
         <Seg value={s.net} options={[[true, 'Net (handicaps)'], [false, 'Gross']]} onChange={(net) => set({ net })} />
         {s.scoring === 'stableford' && (
           <StablefordScoring value={s.stableford} net={s.net} onChange={(stableford) => set({ stableford })} />
@@ -148,6 +154,32 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
         )}
       </section>
 
+      {isTournament ? (
+        <section className="card">
+          <h2>3. Rounds</h2>
+          <div className="count-row first">
+            <div>
+              <strong>How many rounds?</strong>
+              <span className="muted">{s.rounds === 1 ? 'A one-day event' : `${s.rounds} rounds, totals add up`}</span>
+            </div>
+            <div className="stepper">
+              <button type="button" className="step" aria-label="Fewer rounds" onClick={() => set({ rounds: s.rounds - 1 })}>
+                −
+              </button>
+              <span className="count-value">{s.rounds}</span>
+              <button type="button" className="step" aria-label="More rounds" onClick={() => set({ rounds: s.rounds + 1 })}>
+                +
+              </button>
+            </div>
+          </div>
+          <p className="hint">
+            {s.unit === 'ryder'
+              ? 'Each round is a session of matches (singles or four-ball). Points add up across rounds, and the board shows every round plus the total, live.'
+              : 'The leaderboard is live: every hole entered moves the standings, with each round and the total.'}{' '}
+            You add each round&apos;s course and date after creating the tournament.
+          </p>
+        </section>
+      ) : (
       <section className="card">
         <h2>3. Season</h2>
         <OptionCards
@@ -185,6 +217,7 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
           </div>
         )}
       </section>
+      )}
 
       <section className="card">
         <h2>4. Handicaps</h2>
@@ -198,6 +231,7 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
               help: 'Worked out from league rounds: average of the best scores of their recent rounds. New players use their own index until they have enough rounds.',
             },
           }}
+          only={isTournament ? ['index'] : undefined}
           onChange={(mode) => setH({ mode })}
         />
         {s.handicap.mode === 'league' && (
@@ -252,14 +286,14 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
 
       {error && <div className="card error-box">{error}</div>}
       <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
-        {busy ? 'Saving…' : league ? 'Save format' : 'Create league'}
+        {busy ? 'Saving…' : league ? 'Save format' : `Create ${noun}`}
       </button>
 
       {league && onDelete && (
         <section className="card danger-zone">
-          <h3>Delete league</h3>
+          <h3>Delete {noun}</h3>
           <p className="hint">
-            Removes the league for everyone: members, rounds, scores and standings. This can&apos;t be undone.
+            Removes the {noun} for everyone: players, rounds, scores and standings. This can&apos;t be undone.
           </p>
           <button
             className="btn btn-ghost full danger"
@@ -277,7 +311,7 @@ export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
               }
             }}
           >
-            Delete this league
+            Delete this {noun}
           </button>
         </section>
       )}

@@ -14,6 +14,8 @@ deploy, own Supabase project.
 2. Leagues: season schedule, pairings, standings, points, league handicaps.
    **Built:** league builder, invite codes, rounds, matches, standings.
 3. Tournaments: flights, shotgun/tee times, big leaderboard, side pots, payouts.
+   **Built:** tournaments (one-day or multi-round; stroke, Stableford, teams,
+   Ryder Cup) with live leaderboards. Not yet: flights, tee times, payouts.
 4. Business: club/organizer accounts, branding, paid tiers, App Store builds.
 
 ## Stack
@@ -107,6 +109,7 @@ src/
   components/       SignIn, Profile (+ My players), Home (+ LeaguesSection),
                     Setup (+ CourseSearch), Play (Score/Money/Card tabs), Settle,
                     League -> LeagueHome / LeagueEvent / LeagueBuilder,
+                    TournamentBoard, MatchCard, useLiveRefresh,
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
   App.jsx           Sign-in gate -> first-time profile -> screens; saves the
                     round on every change
@@ -185,6 +188,21 @@ supabase/league_tiers.sql  Adds league_events.tier (regular/major)
   strokes off the low player per match.
 - Scores go to a localStorage queue first and are sent when online
   (`flushScores`); refused cards are dropped so they can't block the queue.
+
+## Tournaments
+
+- A tournament is a league with `settings.kind = 'tournament'` (same tables,
+  invite codes, rounds, scoring screens; no schema change). `rounds` is the
+  planned number of rounds. Scoring: stroke or Stableford for players/teams,
+  match play for Ryder Cup. Handicaps: own index + allowance/max/off-low (no
+  league-handicap mode).
+- Standings are live: `tournamentStandings` counts every round as it is
+  played, final or not. Stroke/Stableford rows: total (to par or points),
+  today, thru, and each round (a round in progress shows score so far with
+  holes played). Ryder Cup: points per round, total, and a projection that
+  adds matches on the course (leading = 1, all square = ½).
+- `TournamentBoard` renders it and refreshes every 20 s while any round is
+  open. Matches in team formats need every player assigned a team/side.
 
 ## Course data
 

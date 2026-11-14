@@ -15,7 +15,83 @@ export function computeLeague({ settings, members, events, scores }) {
       indexes: indexes[ev.id],
     });
   }
-  return { indexes, results, standings: standings(settings, members, events, results) };
+  const ordered = orderEvents(events);
+  return {
+    indexes,
+    results,
+    standings:
+      settings.kind === 'tournament'
+        ? tournamentStandings(settings, members, ordered, results)
+        : standings(settings, members, events, results),
+  };
+}
+
+export function orderEvents(events) {
+  return [...events].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+}
+
+// Tournament leaderboard: every round counts live, finished or not.
+// Stroke/Stableford: [{ key, name, rounds: [{ value, toPar, thru, complete } | null],
+//   total, toPar, today, thru, position }] best first. Players with no
+//   scores yet sort to the bottom without a position.
+// Ryder Cup: [{ key, name, rounds: [points], total, projected, position }],
+//   where projected adds the matches still on the course (leading = 1,
+//   all square = ½).
+export function tournamentStandings(settings, members, events, results) {
+  if (settings.unit === 'ryder') return ryderStandings(settings, events, results);
+  const stableford = settings.scoring === 'stableford';
+  const keys = settings.unit === 'individual' ? members.map((m) => m.id) : [...new Set(members.map((m) => m.team).filter(Boolean))];
+  // "Today" is the latest round anyone has scored.
+  const live = [...events].reverse().find((ev) => results[ev.id]?.board.length);
+  const rows = keys.map((key) => {
+    const rounds = events.map((ev) => {
+      const e = results[ev.id]?.board.find((b) => b.key === key);
+      return e ? { value: e.value, toPar: e.toPar, thru: e.thru, complete: e.complete } : null;
+    });
+    const played = rounds.filter(Boolean);
+    const todayEntry = live ? results[live.id].board.find((b) => b.key === key) : null;
+    return {
+      key,
+      name: entityName(settings, members, key),
+      rounds,
+      started: played.length > 0,
+      total: played.reduce((s, r) => s + r.value, 0),
+      toPar: stableford ? null : played.reduce((s, r) => s + r.toPar, 0),
+      today: todayEntry ? (stableford ? todayEntry.value : todayEntry.toPar) : null,
+      thru: todayEntry ? (todayEntry.complete ? 'F' : todayEntry.thru) : null,
+    };
+  });
+  const compare = stableford ? (a, b) => b.total - a.total : (a, b) => a.toPar - b.toPar;
+  const started = rows.filter((r) => r.started).sort(compare);
+  let pos = 0;
+  const ranked = started.map((r, i) => {
+    if (i === 0 || compare(started[i - 1], r) !== 0) pos = i + 1;
+    return { ...r, position: pos };
+  });
+  return [...ranked, ...rows.filter((r) => !r.started).map((r) => ({ ...r, position: null }))];
+}
+
+function ryderStandings(settings, events, results) {
+  const rows = settings.sides.map((side) => {
+    const rounds = events.map((ev) => results[ev.id]?.cup[side] ?? 0);
+    let onCourse = 0;
+    for (const ev of events) {
+      for (const m of results[ev.id]?.matches ?? []) {
+        if (m.result || m.status.played === 0) continue;
+        const i = m.keys.indexOf(side);
+        if (i < 0) continue;
+        if (m.status.up === 0) onCourse += 0.5;
+        else if ((m.status.up > 0 ? 0 : 1) === i) onCourse += 1;
+      }
+    }
+    const total = rounds.reduce((s, x) => s + x, 0);
+    return { key: side, name: side, rounds, total, projected: total + onCourse };
+  });
+  const sorted = [...rows].sort((a, b) => b.total - a.total || b.projected - a.projected);
+  return sorted.map((r, i) => ({
+    ...r,
+    position: i > 0 && sorted[i - 1].total === r.total && sorted[i - 1].projected === r.projected ? 1 : i + 1,
+  }));
 }
 
 const sumBest = (list, bestOf, higherIsBetter = true) => {

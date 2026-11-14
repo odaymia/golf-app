@@ -4,6 +4,7 @@ import { roundRobinWeek } from '../lib/league/season.js';
 import { computeEvent, entityKey } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
 import MatchCard from './MatchCard.jsx';
+import { useLiveRefresh } from './useLiveRefresh.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { Seg } from './controls.jsx';
 
@@ -24,7 +25,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
     <div className="screen">
       <div className="topbar">
         <button className="btn btn-ghost" onClick={onBack}>
-          ‹ League
+          ‹ {settings.kind === 'tournament' ? 'Tournament' : 'League'}
         </button>
         <h1>{event.name}</h1>
         <span />
@@ -68,23 +69,6 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
       )}
     </div>
   );
-}
-
-// While a round is open, pull everyone's latest scores every 20 seconds so
-// the board moves live. Paused when the screen isn't visible.
-function useLiveRefresh(live, reload) {
-  useEffect(() => {
-    if (!live) return;
-    const tick = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) reload({ quiet: true });
-    };
-    const id = setInterval(tick, 20000);
-    document.addEventListener('visibilitychange', tick);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', tick);
-    };
-  }, [live, reload]);
 }
 
 function Results({ settings, result, members, live, reload }) {
@@ -173,7 +157,9 @@ function Results({ settings, result, members, live, reload }) {
           ))}
         </tbody>
       </table>
-      <p className="hint">Season points go to finished rounds once the commissioner marks the round final.</p>
+      {settings.season === 'points' && (
+        <p className="hint">Season points go to finished rounds once the commissioner marks the round final.</p>
+      )}
     </section>
   );
 }
@@ -411,6 +397,9 @@ function Manage({ data, event, computed, reload, onDeleted }) {
     if (!sideA.length || !sideB.length) return setError('Pick players for both sides.');
     if (sideA.length !== sideB.length) return setError('Both sides need the same number of players.');
     if (settings.unit !== 'individual') {
+      const word = settings.unit === 'ryder' ? 'side' : 'team';
+      const noTeam = [...sideA, ...sideB].map((id) => members.find((m) => m.id === id)).filter((m) => !m?.team);
+      if (noTeam.length) return setError(`Give ${noTeam.map((m) => m.name).join(' and ')} a ${word} under Players first.`);
       const ka = entityKey(settings, members, sideA);
       const kb = entityKey(settings, members, sideB);
       if (ka === kb) return setError(`Both sides are on ${ka}. Pick players from different ${settings.unit === 'ryder' ? 'sides' : 'teams'}.`);

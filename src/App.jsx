@@ -39,6 +39,7 @@ export default function App() {
   const [screen, setScreen] = useState('home');
   const [round, setRound] = useState(null);
   const [leagueId, setLeagueId] = useState(null);
+  const [newKind, setNewKind] = useState('league');
 
   // Signed in? The session is kept on the phone, so this works offline.
   useEffect(() => {
@@ -123,6 +124,7 @@ export default function App() {
   if (screen === 'newLeague')
     return (
       <LeagueBuilder
+        kind={newKind}
         onCancel={goHome}
         onSave={async ({ name, settings }) => {
           const id = await createLeague({ name, settings, profile });
@@ -148,7 +150,10 @@ export default function App() {
         setLeagueId(id);
         setScreen('league');
       }}
-      onCreateLeague={() => setScreen('newLeague')}
+      onCreateLeague={(kind) => {
+        setNewKind(kind);
+        setScreen('newLeague');
+      }}
     />
   );
 }

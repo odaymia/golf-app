@@ -34,6 +34,7 @@ export const SEASONS = {
     help: 'Every match is a win, loss or tie. Standings by points (win 2, tie 1 by default).',
   },
   ryder: { label: 'Cup points', help: 'Match points add up for each side over the season. Most points wins the Cup.' },
+  total: { label: 'Tournament total', help: 'Every round adds up, live, as it is played.' },
 };
 
 // Points by finish, modeled on the FedEx Cup: the winner gets 500 at a
@@ -76,18 +77,24 @@ export function tableForTier(settings, tier) {
 }
 
 // Which scoring and season choices fit each unit.
-export function scoringOptions(unit) {
-  return unit === 'ryder' ? ['match'] : ['stroke', 'stableford', 'match'];
+// Tournaments play stroke play or Stableford (or a Ryder Cup of matches),
+// and their standings are the running total across rounds.
+export function scoringOptions(unit, kind = 'league') {
+  if (unit === 'ryder') return ['match'];
+  return kind === 'tournament' ? ['stroke', 'stableford'] : ['stroke', 'stableford', 'match'];
 }
 
-export function seasonOptions(unit, scoring) {
+export function seasonOptions(unit, scoring, kind = 'league') {
   if (unit === 'ryder') return ['ryder'];
+  if (kind === 'tournament') return ['total'];
   if (scoring === 'match') return ['record'];
   return ['points', 'cumulative'];
 }
 
 export function defaultLeagueSettings() {
   return {
+    kind: 'league', // league | tournament
+    rounds: 1, // tournaments: how many rounds (days) are planned
     unit: 'individual',
     teamSize: 2,
     sides: ['USA', 'Europe'],
@@ -125,8 +132,13 @@ export function leagueSettings(raw = {}) {
 export function normalizeSettings(s) {
   const out = { ...s, handicap: { ...s.handicap }, record: { ...s.record } };
   out.stableford = normalizeScoring(s.stableford);
-  if (!scoringOptions(out.unit).includes(out.scoring)) out.scoring = scoringOptions(out.unit)[0];
-  if (!seasonOptions(out.unit, out.scoring).includes(out.season)) out.season = seasonOptions(out.unit, out.scoring)[0];
+  const kind = out.kind === 'tournament' ? 'tournament' : 'league';
+  out.kind = kind;
+  if (!scoringOptions(out.unit, kind).includes(out.scoring)) out.scoring = scoringOptions(out.unit, kind)[0];
+  if (!seasonOptions(out.unit, out.scoring, kind).includes(out.season))
+    out.season = seasonOptions(out.unit, out.scoring, kind)[0];
+  out.rounds = Math.max(1, Math.min(10, Math.round(out.rounds ?? 1)));
+  if (kind === 'tournament' && out.handicap.mode === 'league') out.handicap.mode = 'index';
   if (out.unit !== 'teams') out.teamSize = 2;
   if (![2, 4].includes(out.teamSize)) out.teamSize = 2;
   // Keep one points row per finishing place.
@@ -142,6 +154,10 @@ export function describeLeague(s) {
   const who =
     s.unit === 'ryder' ? `Ryder Cup: ${s.sides[0]} vs ${s.sides[1]}` : s.unit === 'teams' ? `${s.teamSize}-player teams` : 'Single players';
   const how = `${s.net ? 'Net' : 'Gross'} ${SCORING[s.scoring].label.toLowerCase()}`;
+  if (s.kind === 'tournament') {
+    const rounds = s.rounds > 1 ? `${s.rounds} rounds` : 'One day';
+    return `${who} · ${how} · ${rounds}`;
+  }
   const season = SEASONS[s.season].label;
   return `${who} · ${how} · ${season}`;
 }
