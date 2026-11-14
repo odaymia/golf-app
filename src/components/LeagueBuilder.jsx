@@ -23,7 +23,7 @@ const numberOrNull = (text) => {
 
 // Create a league (league = null) or edit an existing league's format.
 // onSave({ name, settings }) may throw; its message is shown.
-export default function LeagueBuilder({ league, onSave, onCancel }) {
+export default function LeagueBuilder({ league, onSave, onCancel, onDelete }) {
   const [name, setName] = useState(league?.name ?? '');
   const [s, setS] = useState(() => leagueSettings(league?.settings));
   const [busy, setBusy] = useState(false);
@@ -254,6 +254,33 @@ export default function LeagueBuilder({ league, onSave, onCancel }) {
       <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
         {busy ? 'Saving…' : league ? 'Save format' : 'Create league'}
       </button>
+
+      {league && onDelete && (
+        <section className="card danger-zone">
+          <h3>Delete league</h3>
+          <p className="hint">
+            Removes the league for everyone: members, rounds, scores and standings. This can&apos;t be undone.
+          </p>
+          <button
+            className="btn btn-ghost full danger"
+            disabled={busy}
+            onClick={async () => {
+              const typed = prompt(`To delete "${league.name}" for everyone, type DELETE`);
+              if (typed?.trim().toUpperCase() !== 'DELETE') return;
+              setBusy(true);
+              setError('');
+              try {
+                await onDelete();
+              } catch (e) {
+                setError(e.message);
+                setBusy(false);
+              }
+            }}
+          >
+            Delete this league
+          </button>
+        </section>
+      )}
     </div>
   );
 }

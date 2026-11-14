@@ -1156,3 +1156,12 @@ button.sticky-bottom.btn {
   width: 100%;
   height: auto;
 }
+
+.danger-zone {
+  border: 1px solid #fecaca;
+  margin-top: 28px;
+}
+
+.danger-zone h3 {
+  color: var(--down);
+}

@@ -144,8 +144,16 @@ export function updateLeague(id, patch) {
   return call(supabase.from('leagues').update(patch).eq('id', id));
 }
 
-export function deleteLeague(id) {
-  return call(supabase.from('leagues').delete().eq('id', id));
+// Deletes the league and (by cascade) its members, rounds and scores.
+// Row level security lets only a commissioner do it; anyone else deletes 0 rows.
+export async function deleteLeague(id) {
+  const rows = await call(supabase.from('leagues').delete().eq('id', id).select('id'));
+  if (!rows?.length) throw new Error('Only the commissioner can delete this league.');
+  try {
+    localStorage.removeItem(`${CACHE}${id}`);
+  } catch {
+    // nothing cached
+  }
 }
 
 // --- Members ---------------------------------------------------------------

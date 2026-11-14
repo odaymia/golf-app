@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { loadLeague, updateLeague } from '../lib/leagueApi.js';
+import { deleteLeague, loadLeague, updateLeague } from '../lib/leagueApi.js';
 import LeagueHome from './LeagueHome.jsx';
 import LeagueEvent from './LeagueEvent.jsx';
 import LeagueBuilder from './LeagueBuilder.jsx';
@@ -65,6 +65,10 @@ export default function League({ leagueId, user, onBack }) {
           await updateLeague(leagueId, { name, settings });
           await reload();
           setView({ name: 'home' });
+        }}
+        onDelete={async () => {
+          await deleteLeague(leagueId);
+          onBack();
         }}
       />
     );
