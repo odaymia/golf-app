@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPost } from '../../lib/social.js';
+import { getInstructor } from '../../lib/instructors.js';
+import { Seg } from '../controls.jsx';
 import { courseTag, MAX_MEDIA, MAX_VIDEO_BYTES } from '../../lib/socialFormat.js';
 import { listCourses } from '../../lib/storage.js';
 import CourseSearch from '../CourseSearch.jsx';
@@ -12,7 +14,15 @@ export default function NewPost({ meId, onPosted, onCancel }) {
   const [saved, setSaved] = useState([]);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
+  const [teaches, setTeaches] = useState(false);
+  const [audience, setAudience] = useState('public');
   const input = useRef(null);
+
+  useEffect(() => {
+    getInstructor(meId)
+      .then((d) => setTeaches(!!d?.instructor.active))
+      .catch(() => {});
+  }, [meId]);
 
   useEffect(() => {
     listCourses()
@@ -56,6 +66,7 @@ export default function NewPost({ meId, onPosted, onCancel }) {
         caption,
         course: courseTag(course),
         files: files.map((f) => f.file),
+        audience: teaches ? audience : 'public',
         onProgress: (done, total) => setProgress({ done, total }),
       });
       onPosted();
@@ -156,6 +167,23 @@ export default function NewPost({ meId, onPosted, onCancel }) {
           </>
         )}
       </section>
+
+      {teaches && (
+        <section className="card">
+          <h3>Who can see it</h3>
+          <Seg
+            value={audience}
+            options={[
+              ['public', 'Everyone'],
+              ['subscribers', '🔒 Subscribers only'],
+            ]}
+            onChange={setAudience}
+          />
+          {audience === 'subscribers' && (
+            <p className="hint">Only your subscribers can see the photos and videos. Everyone else sees a locked tile and your tiers.</p>
+          )}
+        </section>
+      )}
 
       {error && <div className="card error-box">{error}</div>}
       <button className="btn btn-primary btn-xl" onClick={share} disabled={busy}>

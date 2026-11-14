@@ -8,6 +8,7 @@ import { mediaPath, MAX_VIDEO_BYTES } from './socialFormat.js';
 import { rankPosts } from './searchHistory.js';
 
 const BUCKET = 'media';
+export const PREMIUM = 'premium'; // private bucket: subscriber-only media and swing reviews
 
 function friendly(error) {
   const msg = error?.message ?? String(error);
@@ -177,6 +178,7 @@ export const toPost = (r) => ({
   id: r.id,
   userId: r.user_id,
   caption: r.caption ?? '',
+  audience: r.audience ?? 'public',
   course: r.course_key || r.course_name ? { key: r.course_key, name: r.course_name, place: r.course_place } : null,
   createdAt: r.created_at,
   author: toProfile(r.author) ?? { id: r.user_id, username: '', displayName: '' },
@@ -184,9 +186,11 @@ export const toPost = (r) => ({
     .sort((a, b) => a.position - b.position)
     .map((m) => ({
       kind: m.kind,
+      bucket: m.bucket ?? BUCKET,
       path: m.path,
-      url: mediaUrl(m.path),
-      posterUrl: mediaUrl(m.poster_path),
+      // Private (subscriber-only) media gets signed links in withMyLikes.
+      url: m.bucket === PREMIUM ? null : mediaUrl(m.path),
+      posterUrl: m.bucket === PREMIUM ? null : mediaUrl(m.poster_path),
       posterPath: m.poster_path,
       width: m.width,
       height: m.height,
@@ -257,7 +261,47 @@ export async function withMyLikes(posts, meId) {
   ]);
   const liked = new Set(rows.map((r) => r.post_id));
   const saved = new Set(saves.map((r) => r.post_id));
-  return posts.map((p) => ({ ...p, likedByMe: liked.has(p.id), savedByMe: saved.has(p.id) }));
+  const withAccess = await withPremium(posts, meId);
+  return withAccess.map((p) => ({ ...p, likedByMe: liked.has(p.id), savedByMe: saved.has(p.id) }));
+}
+
+// Signed links (1 hour) for private media paths; paths storage refuses are left out.
+export async function signPremium(paths) {
+  const list = [...new Set(paths.filter(Boolean))];
+  if (!list.length) return new Map();
+  const { data, error } = await supabase.storage.from(PREMIUM).createSignedUrls(list, 3600);
+  if (error) return new Map();
+  return new Map((data ?? []).filter((d) => d.signedUrl && !d.error).map((d) => [d.path, d.signedUrl]));
+}
+
+// Subscriber-only posts: sign their media (the database only returns media
+// rows to the author and active subscribers) and mark the rest `locked`.
+async function withPremium(posts, meId) {
+  const premium = posts.filter((p) => p.audience === 'subscribers');
+  if (!premium.length) return posts.map((p) => ({ ...p, locked: false }));
+  const authors = [...new Set(premium.map((p) => p.userId).filter((id) => id !== meId))];
+  const subs = authors.length
+    ? await call(
+        supabase
+          .from('instructor_subscriptions')
+          .select('instructor_id, status, current_period_end')
+          .eq('subscriber_id', meId)
+          .in('instructor_id', authors),
+      ).catch(() => [])
+    : [];
+  const now = new Date().toISOString();
+  const access = new Set(subs.filter((s) => s.status === 'active' && (!s.current_period_end || s.current_period_end > now)).map((s) => s.instructor_id));
+  const signed = await signPremium(premium.flatMap((p) => p.media.filter((m) => m.bucket === PREMIUM).flatMap((m) => [m.path, m.posterPath])));
+  return posts.map((p) => {
+    if (p.audience !== 'subscribers') return { ...p, locked: false };
+    const locked = p.userId !== meId && !access.has(p.userId);
+    const media = locked
+      ? []
+      : p.media
+          .map((m) => (m.bucket === PREMIUM ? { ...m, url: signed.get(m.path) ?? null, posterUrl: signed.get(m.posterPath) ?? null } : m))
+          .filter((m) => m.url);
+    return { ...p, locked, media };
+  });
 }
 
 // Newest first. `before` (an ISO time) loads the next page.
@@ -291,7 +335,8 @@ export async function getPost(id, meId) {
 }
 
 // files: File[] (photos/videos). onProgress(done, total).
-export async function createPost({ userId, caption, course, files, onProgress }) {
+export async function createPost({ userId, caption, course, files, onProgress, audience = 'public' }) {
+  const bucketName = audience === 'subscribers' ? PREMIUM : BUCKET;
   for (const f of files) {
     if (f.type.startsWith('video/') && f.size > MAX_VIDEO_BYTES) {
       throw new Error(`“${f.name}” is over 50 MB. Trim it to a shorter clip and try again.`);
@@ -305,6 +350,7 @@ export async function createPost({ userId, caption, course, files, onProgress })
         course_key: course?.key ?? null,
         course_name: course?.name ?? null,
         course_place: course?.place ?? null,
+        ...(audience === 'subscribers' ? { audience } : {}),
       })
       .select()
       .single(),
@@ -319,14 +365,14 @@ export async function createPost({ userId, caption, course, files, onProgress })
       const path = mediaPath(userId, post.id, i, isVideo ? extFor(f) : 'jpg');
       await call(
         supabase.storage
-          .from(BUCKET)
+          .from(bucketName)
           .upload(path, prepared.blob, { contentType: isVideo ? f.type || 'video/mp4' : 'image/jpeg', cacheControl: '31536000' }),
       );
       uploaded.push(path);
       let posterPath = null;
       if (isVideo && prepared.poster) {
         posterPath = mediaPath(userId, post.id, `${i}-poster`, 'jpg');
-        await call(supabase.storage.from(BUCKET).upload(posterPath, prepared.poster, { contentType: 'image/jpeg', cacheControl: '31536000' }));
+        await call(supabase.storage.from(bucketName).upload(posterPath, prepared.poster, { contentType: 'image/jpeg', cacheControl: '31536000' }));
         uploaded.push(posterPath);
       }
       rows.push({
@@ -335,6 +381,7 @@ export async function createPost({ userId, caption, course, files, onProgress })
         kind: isVideo ? 'video' : 'image',
         path,
         poster_path: posterPath,
+        ...(bucketName === PREMIUM ? { bucket: PREMIUM } : {}),
         width: prepared.width,
         height: prepared.height,
       });
@@ -344,16 +391,18 @@ export async function createPost({ userId, caption, course, files, onProgress })
     return post.id;
   } catch (e) {
     // Don't leave a half-made post behind.
-    if (uploaded.length) await supabase.storage.from(BUCKET).remove(uploaded);
+    if (uploaded.length) await supabase.storage.from(bucketName).remove(uploaded);
     await supabase.from('posts').delete().eq('id', post.id);
     throw e;
   }
 }
 
 export async function deletePost(post) {
-  const paths = post.media.flatMap((m) => [m.path, m.posterPath]).filter(Boolean);
   await call(supabase.from('posts').delete().eq('id', post.id));
-  if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+  for (const b of [BUCKET, PREMIUM]) {
+    const paths = post.media.filter((m) => (m.bucket ?? BUCKET) === b).flatMap((m) => [m.path, m.posterPath]).filter(Boolean);
+    if (paths.length) await supabase.storage.from(b).remove(paths);
+  }
 }
 
 export function likePost(postId) {
@@ -387,8 +436,9 @@ export function deleteComment(id) {
 }
 
 // Delete every photo/video/avatar in my folder (before deleting my account).
-export async function deleteMyMedia(userId) {
-  const bucket = supabase.storage.from(BUCKET);
+// Every file in a member's folder of one bucket (two levels deep).
+async function filesIn(bucketName, userId) {
+  const bucket = supabase.storage.from(bucketName);
   const paths = [];
   const { data: top, error } = await bucket.list(userId, { limit: 1000 });
   if (error) throw new Error(friendly(error));
@@ -400,11 +450,28 @@ export async function deleteMyMedia(userId) {
       for (const f of inner ?? []) paths.push(`${userId}/${item.name}/${f.name}`);
     }
   }
+  return paths;
+}
+
+async function removeAll(bucketName, paths) {
+  const bucket = supabase.storage.from(bucketName);
   for (let i = 0; i < paths.length; i += 100) {
     const { error: e } = await bucket.remove(paths.slice(i, i + 100));
     if (e) throw new Error(friendly(e));
   }
-  return paths.length;
+}
+
+// Delete every photo/video/avatar I uploaded (before deleting my account):
+// public media, subscriber-only media, and swing review videos I sent.
+export async function deleteMyMedia(userId) {
+  const paths = await filesIn(BUCKET, userId);
+  await removeAll(BUCKET, paths);
+  // Private files fail soft if instructors.sql hasn't been run yet.
+  const premium = await filesIn(PREMIUM, userId).catch(() => []);
+  const reviews = await call(supabase.from('swing_reviews').select('video_path, poster_path').eq('student_id', userId)).catch(() => []);
+  const privatePaths = [...premium, ...reviews.flatMap((r) => [r.video_path, r.poster_path]).filter(Boolean)];
+  if (privatePaths.length) await removeAll(PREMIUM, privatePaths);
+  return paths.length + privatePaths.length;
 }
 
 // --- Saved posts and folders (private to you) -----------------------------------

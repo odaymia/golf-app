@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startDM } from '../../lib/messages.js';
+import { getInstructor } from '../../lib/instructors.js';
+import InstructorCard from '../instructor/InstructorCard.jsx';
 import {
   blockStatus,
   blockUser,
@@ -27,10 +29,12 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [blocks, setBlocks] = useState({ iBlocked: false, blockedMe: false });
+  const [teach, setTeach] = useState(null); // { instructor, tiers } if they teach
 
   const load = useCallback(async () => {
     setError('');
     try {
+      getInstructor(userId).then(setTeach).catch(() => setTeach(null));
       const [p, s, list, b] = await Promise.all([
         getPublicProfile(userId),
         profileStats(userId, meId),
@@ -176,6 +180,14 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
               ))}
             {profile.bio && <p>{profile.bio}</p>}
           </section>
+          {teach && teach.instructor.active && (
+            <InstructorCard data={teach} userId={userId} meId={meId} mine={mine} nav={nav} />
+          )}
+          {mine && teach && !teach.instructor.active && (
+            <button className="link center-link" onClick={() => nav('teach')}>
+              Your instructor page is paused · Edit
+            </button>
+          )}
           <div className="profile-buttons">
             {mine ? (
               <>
@@ -212,6 +224,11 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
               onOpen={(p) => nav('posts', { posts, startId: p.id, title: profile?.username ? `@${profile.username}` : 'Posts' })}
               empty={mine ? 'Share your first round: tap + below.' : 'No posts yet.'}
             />
+          )}
+          {mine && !teach && (
+            <button className="teach-cta" onClick={() => nav('teach')}>
+              <strong>Teach golf?</strong> Get paid for tips and swing reviews · Set up an instructor page ›
+            </button>
           )}
         </>
       )}

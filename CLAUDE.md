@@ -112,6 +112,9 @@ src/
     roundSetup.js   Setup defaults, plain-English rules, settings -> engine configs
     courseSearch.js The only OpenGolfAPI network code (search + course detail)
     searchHistory.js Recent searches (device, per account) + post ranking
+    instructors.js  The only instructor-table code (+ swing review uploads)
+    instructor/     fees.js (platform fee split, integer cents, tested);
+                    payments.js (PAYMENTS_LIVE=false; Stripe hooks in here)
     courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
     league/         Pure league engine. No React, network or storage.
@@ -137,6 +140,8 @@ src/
                     TournamentBoard, MatchCard, useLiveRefresh,
                     PairingsEditor (+ TeeSheet, MyTeeTime),
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
+  components/instructor/  InstructorSetup (teach), InstructorCard (profile:
+                    tiers, Subscribe, swing reviews), Studio (dashboard)
   components/pro/   League Pro desktop console (ProConsole + Overview,
                     Players, Schedule, Scores, Standings; useWide)
   App.jsx           Sign-in gate -> first-time profile -> screens; saves the
@@ -150,6 +155,8 @@ supabase/home_course.sql  public_profiles.home_course_key / _place
 supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media list policy
 supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
+supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
+                    swing reviews, posts.audience, private `premium` bucket
 supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
@@ -350,6 +357,28 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Website also has /privacy/ and /terms/ (static pages, linked from sign-in,
   Settings and the footer).
 
+## Instructors
+
+Instructors sell monthly subscriptions; Scribble keeps `PLATFORM_FEE_BPS`
+(15%) and the instructor the rest (`lib/instructor/fees.js`, integer cents,
+split always sums to the price). Full plan and go-live steps:
+docs/instructors.md.
+- Payments aren't live (`PAYMENTS_LIVE = false`): Subscribe records
+  `subscription_interest` ("notify me"). Instructors give free access
+  (`source = 'comp'`). Paid rows (`source = 'stripe'`) may only ever be
+  written by the Stripe webhook with the service role; RLS lets members
+  write comp rows only, and never `verified`, `stripe_*` columns.
+- Subscriber-only posts (`posts.audience = 'subscribers'`, only instructors
+  may post them) keep media in the private `premium` bucket
+  (`<instructorId>/<postId>/…`); `post_media` rows and signed links are only
+  given to the author and active subscribers (`has_premium_access`).
+  Non-subscribers get `post.locked` and a locked tile.
+- Swing reviews: `reviews/<instructorId>/<studentId>/…` in `premium`; the
+  tier's `reviews_per_month` is enforced by `reviews_left()`. Answers are
+  also sent as a DM. Account deletion removes premium files and review videos.
+- Verified badge: set `instructor_profiles.verified` in the Supabase Table
+  Editor after checking credentials.
+
 ## Course data
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
@@ -380,7 +409,9 @@ offline. The homepage centerpiece is a hand-operated-style leaderboard.
 - The game/money engine (Nassau, presses, skins, Wolf, Vegas, handicap strokes)
   is pure functions with tests. Money math must never be wrong.
 - The app tracks and settles bets; it never holds or moves money. Venmo-style
-  links only.
+  links only. (Instructor subscriptions are separate: Stripe will hold and
+  pay out that money; the app never touches card details. See
+  docs/instructors.md.)
 - GHIN handicaps need licensing; until then, self-reported indexes. Courses
   come from OpenGolfAPI search or are entered by hand.
 - Setup in under 60 seconds. Big touch targets. Plain-English game rules.

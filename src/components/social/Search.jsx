@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { searchPosts, searchProfiles } from '../../lib/social.js';
 import { searchCourses } from '../../lib/courseSearch.js';
+import { instructorBadges } from '../../lib/instructors.js';
 import { addRecent, clearRecent, listRecent, removeRecent, entryId } from '../../lib/searchHistory.js';
 import Avatar from './Avatar.jsx';
 import PostGrid from './PostGrid.jsx';
@@ -186,7 +187,11 @@ function PostResults({ q, meId, go }) {
 }
 
 function ProfileResults({ q, meId, go }) {
-  const { items, error } = useResults((x) => searchProfiles(x, meId, { withHomeCourse: true, limit: 40 }), q);
+  const { items, error } = useResults(async (x) => {
+    const list = await searchProfiles(x, meId, { withHomeCourse: true, limit: 40 });
+    const badges = await instructorBadges(list.map((p) => p.id));
+    return list.map((p) => ({ ...p, teaches: badges.get(p.id) ?? null }));
+  }, q);
   if (items === null) return <p className="muted center">Searching…</p>;
   return (
     <section className="results">
@@ -198,7 +203,10 @@ function ProfileResults({ q, meId, go }) {
             <button onClick={() => go('user', { userId: p.id }, { type: 'profile', profile: { id: p.id, username: p.username, displayName: p.displayName, avatarUrl: p.avatarUrl } })}>
               <Avatar profile={p} size={44} />
               <span>
-                <strong>{p.username || p.displayName}</strong>
+                <strong>
+                  {p.username || p.displayName}
+                  {p.teaches && <span className="mini-badge">{p.teaches.verified ? '✓ Instructor' : 'Instructor'}</span>}
+                </strong>
                 <em>
                   {p.displayName}
                   {p.matchedBy === 'home course' && p.homeCourse ? ` · ⛳ ${p.homeCourse}` : ''}

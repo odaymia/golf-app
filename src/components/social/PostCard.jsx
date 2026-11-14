@@ -155,6 +155,14 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
         )}
       </header>
 
+      {post.locked && (
+        <button className="post-locked" onClick={() => nav('user', { userId: post.userId })}>
+          <span className="lock-icon" aria-hidden="true">🔒</span>
+          <strong>For subscribers</strong>
+          <span>Subscribe to {post.author.username ? `@${post.author.username}` : 'this instructor'} to see this post</span>
+        </button>
+      )}
+      {post.audience === 'subscribers' && !post.locked && <p className="subs-only-tag">🔒 Subscribers only</p>}
       {post.media.length > 0 && (
         <div className="post-media">
           <div

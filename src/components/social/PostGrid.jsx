@@ -8,8 +8,18 @@ export default function PostGrid({ posts, onOpen, empty }) {
         const src = m ? (m.kind === 'video' ? m.posterUrl : m.url) : null;
         return (
           <button key={p.id} className="grid-cell" onClick={() => onOpen(p)} aria-label={p.caption || 'Open post'}>
-            {src ? <img src={src} alt="" loading="lazy" /> : <span className="grid-text">{p.caption}</span>}
-            {m?.kind === 'video' ? (
+            {p.locked ? (
+              <span className="grid-locked" aria-label="For subscribers">
+                🔒
+              </span>
+            ) : src ? (
+              <img src={src} alt="" loading="lazy" />
+            ) : (
+              <span className="grid-text">{p.caption}</span>
+            )}
+            {p.audience === 'subscribers' && !p.locked ? (
+              <span className="grid-badge">🔒</span>
+            ) : m?.kind === 'video' ? (
               <span className="grid-badge">▶</span>
             ) : p.media.length > 1 ? (
               <span className="grid-badge">❏</span>
