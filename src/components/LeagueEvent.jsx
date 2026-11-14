@@ -445,7 +445,7 @@ function GroupPicker({ members, onDone }) {
 
 const FORMAT_HELP = {
   fourball: 'Everyone plays their own ball; the better score on each hole counts.',
-  shamble: 'Pick the best drive, then everyone plays their own ball in; the team takes the combined score.',
+  shamble: 'Pick the best drive, then everyone plays their own ball in. Both balls are added together for the team score.',
   scramble: 'Everyone hits, the team picks the best shot every time; one team score per hole.',
   foursomes: 'Partners take turns hitting one ball; one team score per hole.',
   singles: 'One player against one player.',

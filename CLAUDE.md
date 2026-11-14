@@ -210,7 +210,7 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
   open. Matches in team formats need every player assigned a team/side.
 - Match formats (`MATCH_FORMATS` in league/event.js), stored per match in
   `league_events.matchups[].format`; the commissioner sets one per round in
-  Manage: singles, fourball (best ball), shamble (combined score),
+  Manage: singles, fourball (best ball), combined score (internal key "shamble", both balls added),
   scramble and foursomes (one team ball). One-ball formats use a team
   handicap (scramble 35% low + 15% high; foursomes half the total) off the
   low team; the team score is saved on every partner's card and score entry
