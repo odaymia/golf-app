@@ -26,6 +26,8 @@ const offline = (e) => /fetch|network|Load failed|Failed to fetch/i.test(e?.mess
 function friendly(error) {
   const msg = error?.message ?? String(error);
   if (offline(error)) return 'No connection. Try again when you have signal.';
+  if (/event_scores/.test(msg) && /row-level security/i.test(msg))
+    return "You can only enter scores for your own group. Ask the commissioner if your group is wrong.";
   if (/row-level security|permission/i.test(msg)) return 'Only the commissioner can do that.';
   return msg;
 }
@@ -63,6 +65,7 @@ const toEvent = (r) => ({
   date: r.event_date,
   course: r.course,
   matchups: r.matchups ?? [],
+  groups: r.groups ?? [],
   status: r.status,
   tier: r.tier ?? 'regular',
 });
@@ -202,6 +205,7 @@ export function updateEvent(id, patch) {
   if ('status' in patch) row.status = patch.status;
   if ('course' in patch) row.course = patch.course;
   if ('tier' in patch) row.tier = patch.tier;
+  if ('groups' in patch) row.groups = patch.groups;
   return call(supabase.from('league_events').update(row).eq('id', id));
 }
 

@@ -1,5 +1,6 @@
 -- Leagues. Paste into Supabase: SQL Editor -> New query -> Run.
--- Run schema.sql first. Safe to run again.
+-- Run schema.sql first, then this, then league_tiers.sql and groups.sql
+-- (groups.sql replaces the score policies below). Safe to run again.
 
 create table if not exists public.leagues (
   id uuid primary key default gen_random_uuid(),

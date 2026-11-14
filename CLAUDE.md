@@ -116,6 +116,7 @@ src/
 supabase/schema.sql   Profiles + saved players; paste into the SQL Editor
 supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
 supabase/league_tiers.sql  Adds league_events.tier (regular/major)
+supabase/groups.sql   Adds league_events.groups + can_score() score policies
 ```
 
 ### Engine conventions
@@ -174,9 +175,13 @@ supabase/league_tiers.sql  Adds league_events.tier (regular/major)
 - Members: app users join with the 6-character invite code (`join_league`
   RPC, which also claims a name-only spot with the same name); the
   commissioner adds people without the app. `team` is the team or side name.
-- Rounds (`league_events`) snapshot the course + tee. Any member can enter
-  scores for their group; only commissioners manage members, rounds,
-  matches and mark rounds final. Only final rounds count in standings, and
+- Rounds (`league_events`) snapshot the course + tee. Only commissioners
+  manage members, rounds, matches and groups, and mark rounds final.
+  Players may enter scores only for their own group (`league_events.groups`,
+  or their match when no group includes them); commissioners for anyone.
+  Enforced by `public.can_score()` (supabase/groups.sql) and mirrored in
+  `src/lib/league/groups.js` (keep them in step). Everyone can read all
+  scores. Only final rounds count in standings, and
   members can't change scores after final (enforced by RLS).
 - Matches (league and casual) stop at the closeout ("4 & 3"). Live match
   play: `matchSummary(status)` gives the scoreboard text (3 UP / ALL SQUARE

@@ -1638,3 +1638,9 @@ tr.clickable {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.big-names {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--green-deep);
+}
