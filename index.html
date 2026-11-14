@@ -2,17 +2,261 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Scribble Golf Club – Golf games, leagues and settle-up</title>
+    <meta
+      name="description"
+      content="Score your round on one phone. Scribble Golf Club runs Nassau, skins, Wolf, Vegas and Stableford, builds your league, and tells everyone exactly who owes who."
+    />
     <meta name="theme-color" content="#065025" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="Scribble" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Scribble Golf Club</title>
+    <meta property="og:title" content="Scribble Golf Club" />
+    <meta property="og:description" content="Golf games, leagues and settle-up, without the math." />
+    <meta property="og:image" content="https://scribblegolfclub.com/icon-512.png" />
+    <meta property="og:url" content="https://scribblegolfclub.com/" />
+    <script type="module" src="/src/site/site.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a href="/" class="brand" aria-label="Scribble Golf Club home">
+          <img src="/logo.png" alt="Scribble Golf Club" width="150" height="53" />
+        </a>
+        <nav class="nav" aria-label="Sections">
+          <a href="#games">The Games</a>
+          <a href="#leagues">Leagues</a>
+          <a href="#how">How It Works</a>
+        </nav>
+        <a href="/app/" class="btn btn-login" id="login">Log in</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="rule"></span>Est. 2026 · For the Weekend Game<span class="rule"></span></p>
+            <h1>Golf with your crew. <em>Minus the math.</em></h1>
+            <p class="lede">
+              Keep score on one phone. Scribble runs the Nassau, the skins, Wolf, Vegas and Stableford hole by hole,
+              keeps your league's standings, and settles up to the penny.
+            </p>
+            <div class="cta-row">
+              <a href="/app/" class="btn btn-primary btn-lg">Start Playing, Free</a>
+              <a href="#how" class="btn btn-ghost btn-lg">How It Works</a>
+            </div>
+            <p class="small">Works on any phone. No download needed.</p>
+          </div>
+
+          <div class="hero-art" aria-hidden="true">
+            <div class="board">
+              <div class="board-head">
+                <span class="flag"></span>
+                <span>Leaders</span>
+                <span class="flag"></span>
+              </div>
+              <div class="board-cols">
+                <span>Pos</span><span>Player</span><span>Thru</span><span>Score</span>
+              </div>
+              <div class="board-row"><span class="tile">1</span><span class="name">Mike</span><span class="tile">16</span><span class="tile red">−4</span></div>
+              <div class="board-row"><span class="tile">2</span><span class="name">Sam</span><span class="tile">F</span><span class="tile red">−2</span></div>
+              <div class="board-row"><span class="tile">T3</span><span class="name">Dave</span><span class="tile">15</span><span class="tile green">E</span></div>
+              <div class="board-row"><span class="tile">T3</span><span class="name">Joe</span><span class="tile">17</span><span class="tile green">E</span></div>
+              <div class="board-row"><span class="tile">5</span><span class="name">Omar</span><span class="tile">14</span><span class="tile">+1</span></div>
+              <div class="board-foot">Tuesday Night League · Week 7</div>
+            </div>
+            <div class="settle-card">
+              <p class="settle-title">Settle Up</p>
+              <p><b>Joe</b> pays <b>Mike</b> <span>$39.20</span></p>
+              <p><b>Joe</b> pays <b>Sam</b> <span>$10.00</span></p>
+              <p><b>Dave</b> pays <b>Sam</b> <span>$5.20</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="pinstripe" aria-hidden="true"></div>
+
+      <section id="games" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="rule"></span>The Games<span class="rule"></span></p>
+            <h2>Every game your group already plays</h2>
+            <p class="section-lede">
+              Pick your games and stakes in under a minute. Handicap strokes, presses and carryovers are handled for
+              you, and the money updates after every hole.
+            </p>
+          </div>
+          <div class="grid games">
+            <article class="card scorecard">
+              <p class="card-no">No. 1</p>
+              <h3>Nassau</h3>
+              <p>Front, back and overall, with manual presses or automatic presses when you go two down.</p>
+            </article>
+            <article class="card scorecard">
+              <p class="card-no">No. 2</p>
+              <h3>Skins</h3>
+              <p>Gross or net, with carryovers and optional validation. Every skin tracked to the hole.</p>
+            </article>
+            <article class="card scorecard">
+              <p class="card-no">No. 3</p>
+              <h3>Wolf</h3>
+              <p>The rotation is set for you. Pick a partner, go lone wolf for double, or blind wolf for triple.</p>
+            </article>
+            <article class="card scorecard">
+              <p class="card-no">No. 4</p>
+              <h3>Vegas</h3>
+              <p>Team numbers built automatically, double digits handled, and a birdie flips the other side.</p>
+            </article>
+            <article class="card scorecard">
+              <p class="card-no">No. 5</p>
+              <h3>Stableford</h3>
+              <p>Standard, Modified or your own points, solo or two-on-two, with bonuses for natural birdies.</p>
+            </article>
+            <article class="card scorecard">
+              <p class="card-no">No. 6</p>
+              <h3>Match &amp; Stroke Play</h3>
+              <p>One-on-one, best ball or everyone against everyone, net or gross.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section green-band">
+        <div class="wrap split">
+          <div>
+            <p class="eyebrow light"><span class="rule"></span>Settle Up<span class="rule"></span></p>
+            <h2>One tap. The fewest payments possible.</h2>
+            <p>
+              Scribble nets every game against every player and works out the fewest payments to square everyone up.
+              No napkin math in the grill room, no arguments about the presses.
+            </p>
+            <ul class="checks">
+              <li>Exact to the penny, every game, every time</li>
+              <li>Live “if we stopped now” totals during the round</li>
+              <li>Send the results to the group text in one tap</li>
+              <li>Scribble never holds or moves money. Pay each other however you like.</li>
+            </ul>
+          </div>
+          <div class="ticket">
+            <p class="ticket-top">Saturday Foursome</p>
+            <p class="ticket-big">6 Games</p>
+            <p class="ticket-sub">netted into</p>
+            <p class="ticket-big">3 Payments</p>
+            <p class="ticket-note">Nassau, skins, match play, stroke play, Wolf and Vegas, all in one round.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="leagues" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="rule"></span>Leagues<span class="rule"></span></p>
+            <h2>Build the league you actually want to run</h2>
+            <p class="section-lede">
+              Set it up once, share an invite code, and Scribble keeps the schedule, the scores and the standings.
+            </p>
+          </div>
+          <div class="grid leagues">
+            <article class="card plaque">
+              <h3>Any Format</h3>
+              <p>Single players, two- or four-player teams, or a Ryder Cup between two sides. Stroke play, Stableford or match play.</p>
+            </article>
+            <article class="card plaque">
+              <h3>Season Points</h3>
+              <p>FedEx Cup-style points by finish for every round, with majors worth more. Count every week or only your best.</p>
+            </article>
+            <article class="card plaque">
+              <h3>Match Play Records</h3>
+              <p>Head-to-head leagues with wins, losses and halves, and an auto-pair schedule so everyone meets everyone.</p>
+            </article>
+            <article class="card plaque">
+              <h3>Fair Handicaps</h3>
+              <p>Each player’s own index, or a league handicap from their recent league rounds. Allowance and caps included.</p>
+            </article>
+            <article class="card plaque">
+              <h3>Invite in Seconds</h3>
+              <p>Members join with a six-letter code. Add players without the app too: their spot is waiting when they join.</p>
+            </article>
+            <article class="card plaque">
+              <h3>Live Standings</h3>
+              <p>Results update as scores come in. The commissioner marks a round final and the standings lock in.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <div class="pinstripe" aria-hidden="true"></div>
+
+      <section class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="rule"></span>Made for the Course<span class="rule"></span></p>
+            <h2>Fast, simple, and it works with no signal</h2>
+          </div>
+          <div class="grid three">
+            <article class="card plain">
+              <h3>Big Buttons</h3>
+              <p>Tap a score, tap next. Built to be used with a glove on and the cart rolling.</p>
+            </article>
+            <article class="card plain">
+              <h3>Works Offline</h3>
+              <p>Scores save on your phone and send when you’re back in range. Dead zones don’t lose a hole.</p>
+            </article>
+            <article class="card plain">
+              <h3>Course Search</h3>
+              <p>Find thousands of courses with pars, hole handicaps, tees, rating and slope filled in for you.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="section cream-band">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="rule"></span>How It Works<span class="rule"></span></p>
+            <h2>On the first tee in under a minute</h2>
+          </div>
+          <ol class="steps">
+            <li>
+              <span class="step-num">1</span>
+              <h3>Pick the Course</h3>
+              <p>Search for it, choose your tees, and add your group with their handicaps.</p>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <h3>Choose Your Games</h3>
+              <p>Turn on the games you play and set the stakes. Smart defaults get you started.</p>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <h3>Score and Settle</h3>
+              <p>One phone keeps score for everyone. After eighteen, see who pays who.</p>
+            </li>
+          </ol>
+          <div class="install">
+            <div>
+              <h3>Put it on your home screen</h3>
+              <p>On iPhone, open <b>scribblegolfclub.com</b> in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. It opens like an app.</p>
+            </div>
+            <a href="/app/" class="btn btn-primary btn-lg">Open Scribble</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="seal" aria-hidden="true">
+          <span class="seal-top">Scribble</span>
+          <span class="seal-mid">SGC</span>
+          <span class="seal-bot">Est. 2026</span>
+        </div>
+        <img src="/logo.png" alt="Scribble Golf Club" width="130" height="46" />
+        <p>© 2026 Scribble Golf Club. Scribble tracks and settles bets; it never holds or moves money.</p>
+        <p class="tiny">Course data © OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI.</p>
+      </div>
+    </footer>
   </body>
 </html>

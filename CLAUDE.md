@@ -18,7 +18,9 @@ deploy, own Supabase project.
 
 ## Stack
 
-Vite 5 + React 18 (plain JS, no router) as an offline-first PWA
+Two pages from one Vite build: the website at `/` (`index.html`, static HTML
++ `src/site/`) and the app at `/app/` (`app/index.html`). The app is Vite 5 +
+React 18 (plain JS, no router) as an offline-first PWA
 (`vite-plugin-pwa`, service worker precaches the app). Rounds and courses live
 on the device in IndexedDB. Supabase project `qdnrmeipmggpxynggsnl` holds
 accounts, profiles, saved players and leagues (casual-round sync and realtime
@@ -44,7 +46,10 @@ Public repo `odaymia/golf-app`. Every push to `main` runs
 deploys `dist/` to GitHub Pages (repo Settings → Pages → Source: GitHub
 Actions). A failing test blocks the deploy.
 
-- Builds use base path `/` for the custom domain (`vite.config.js`). DNS at
+- Website at `/`, app at `/app/` (Vite multi-page input in `vite.config.js`).
+  PWA `start_url` is `/app/`; offline navigations under `/app/` fall back to
+  `app/index.html`. League invites link to `/app/`.
+- Builds use base path `/` for the custom domain. DNS at
   GoDaddy: `@` A records to GitHub Pages (185.199.108-111.153), `www` CNAME to
   `odaymia.github.io`. Custom domain + Enforce HTTPS are set in repo
   Settings → Pages (the workflow deploy ignores a CNAME file).
@@ -62,7 +67,10 @@ Actions). A failing test blocks the deploy.
 ## Structure
 
 ```
+index.html          Website homepage (static; features, Log in -> /app/)
+app/index.html      App entry (loads src/main.jsx)
 src/
+  site/             Website styles + entry (site.css, site.js)
   lib/
     games/          Pure game/money engine. No React, DOM or storage.
       money.js      Integer-cents helpers: team bets, exact pot splits, formatting
@@ -188,6 +196,15 @@ called straight from the phone (CORS is open).
   9-hole ratings, and fills missing pars/handicaps/ratings with defaults plus a
   warning shown in setup. Picked courses save to IndexedDB with id `oga-<id>`,
   so a course you've fixed keeps your fixes and works offline.
+
+## Look and feel
+
+Vintage clubhouse style, inspired by classic golf brands and Augusta (no
+other brand's names or marks): aged cream paper (#f4eedf), logo green
+#065025 with deep green #033a1a, flag-yellow gold #d9b04a, a touch of azalea
+#b8466f, red for under par. Headlines in Fraunces (serif), labels and UI in
+Montserrat, both self-hosted via @fontsource (Latin only) so they work
+offline. The homepage centerpiece is a hand-operated-style leaderboard.
 
 ## Rules
 

@@ -1,19 +1,24 @@
 :root {
+  /* Vintage clubhouse palette, shared with the website (src/site/site.css) */
   --green: #065025; /* Scribble logo green */
   --green-2: #0b6b33;
-  --green-soft: #dcfce7;
-  --bg: #f6f7f2;
-  --card: #ffffff;
-  --text: #1c1917;
-  --muted: #6b7280;
-  --line: #e5e7eb;
+  --green-deep: #033a1a;
+  --green-soft: #dfe8d8;
+  --gold: #d9b04a;
+  --bg: #f4eedf;
+  --card: #fbf8ef;
+  --text: #1c2a20;
+  --muted: #5d6656;
+  --line: #ddd2b8;
+  --serif: 'Fraunces', Georgia, serif;
   --up: #15803d;
   --down: #b91c1c;
   --birdie: #dc2626;
   --bogey: #1d4ed8;
   --radius: 14px;
   color-scheme: light;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
   color: var(--text);
   background: var(--bg);
 }
@@ -1164,4 +1169,148 @@ button.sticky-bottom.btn {
 
 .danger-zone h3 {
   color: var(--down);
+}
+
+
+/* --- Vintage clubhouse touches (match the website) --- */
+h1,
+h2,
+.hole-num,
+.cup-line,
+.pay-amt,
+.stat-big {
+  font-family: var(--serif);
+  font-weight: 600;
+  color: var(--green-deep);
+}
+
+h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.topbar h1 {
+  font-size: 21px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+input,
+select {
+  background: #fffdf7;
+  border-color: var(--line);
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary {
+  background: var(--green);
+  box-shadow: inset 0 -3px 0 var(--green-deep);
+}
+
+.btn-primary:disabled {
+  box-shadow: none;
+}
+
+.section-title {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.hero p {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+}
+
+.tabs {
+  background: var(--line);
+}
+
+.tabs button.on {
+  background: var(--card);
+}
+
+.option.on,
+.chip.on {
+  border-color: var(--green);
+}
+
+.dot.done {
+  background: var(--green-soft);
+  border-color: #9fbf98;
+}
+
+.total,
+.score-val,
+.step,
+.nav-btn,
+.chip,
+.option,
+.round-open,
+.tile {
+  background-color: var(--card);
+}
+
+.step {
+  background: #ece5d2;
+}
+
+.step:active {
+  background: #e0d7bf;
+}
+
+.invite .code {
+  color: var(--green-deep);
+}
+
+.major-tag {
+  background: #f5e6b8;
+  color: #7a5a0c;
+}
+
+/* Montserrat runs wider than the system font: keep the top bar on one line */
+.topbar {
+  gap: 4px;
+}
+
+.topbar .btn {
+  font-size: 14px;
+  letter-spacing: 0;
+  padding: 8px 2px;
+  white-space: nowrap;
+}
+
+.tabs button {
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 380px) {
+  .tabs button {
+    padding: 8px 7px;
+    font-size: 13px;
+  }
 }
