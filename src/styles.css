@@ -1122,3 +1122,26 @@ button.sticky-bottom.btn {
   font-weight: 700;
   vertical-align: middle;
 }
+
+.mini-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-stepper button {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #eef0ea;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.mini-stepper span {
+  min-width: 44px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 18px;
+}

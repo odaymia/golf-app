@@ -4,8 +4,34 @@ import { holeResults, matchStatus } from '../games/match.js';
 import { playingHandicap } from './leagueHandicap.js';
 import { tableForTier } from './format.js';
 
-export function stablefordPoints(score, par) {
-  return Math.max(0, 2 - (score - par));
+const STANDARD = { albatross: 5, eagle: 4, birdie: 3, par: 2, bogey: 1, double: 0 };
+
+export function stablefordPoints(score, par, table = STANDARD) {
+  const d = score - par;
+  if (d <= -3) return table.albatross;
+  if (d === -2) return table.eagle;
+  if (d === -1) return table.birdie;
+  if (d === 0) return table.par;
+  if (d === 1) return table.bogey;
+  return table.double;
+}
+
+// Bonus for a natural (gross) score, no handicap strokes involved.
+export function naturalBonus(gross, par, bonus) {
+  if (gross === 1) return bonus.ace ?? 0;
+  const d = gross - par;
+  if (d <= -3) return bonus.albatross ?? 0;
+  if (d === -2) return bonus.eagle ?? 0;
+  if (d === -1) return bonus.birdie ?? 0;
+  return 0;
+}
+
+// One player's Stableford points on a hole, bonus included.
+export function holeStableford(settings, gross, strokes, par) {
+  const sf = settings.stableford ?? {};
+  const score = settings.net ? gross - strokes : gross;
+  const pts = stablefordPoints(score, par, sf.points ?? STANDARD);
+  return pts + (sf.bonusOn ? naturalBonus(gross, par, sf.bonus ?? {}) : 0);
 }
 
 // Team (or side) name for a member; individual leagues key by member id.
@@ -71,7 +97,7 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
       grossTotal += g;
       netTotal += g - strokes[i];
       parPlayed += holes[i].par;
-      stableford += stablefordPoints(settings.net ? g - strokes[i] : g, holes[i].par);
+      stableford += holeStableford(settings, g, strokes[i], holes[i].par);
     });
     players[m.id] = { playing, strokes, gross, thru, grossTotal, netTotal, stableford, parPlayed };
   }
@@ -140,8 +166,8 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
         const hole = ids.map((id) => {
           const g = players[id].gross[h];
           if (g == null) return null;
-          const s = settings.net ? g - players[id].strokes[h] : g;
-          return stableford ? stablefordPoints(s, holes[h].par) : s;
+          if (stableford) return holeStableford(settings, g, players[id].strokes[h], holes[h].par);
+          return settings.net ? g - players[id].strokes[h] : g;
         });
         if (hole.some((x) => x == null)) continue;
         thru++;

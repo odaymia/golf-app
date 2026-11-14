@@ -46,6 +46,39 @@ export const POINT_PRESETS = {
   custom: { label: 'Custom', help: 'Type your own points for each place.' },
 };
 
+// Stableford points per hole by result (net or gross, per the league).
+export const STABLEFORD_RESULTS = [
+  ['albatross', 'Albatross or better'],
+  ['eagle', 'Eagle'],
+  ['birdie', 'Birdie'],
+  ['par', 'Par'],
+  ['bogey', 'Bogey'],
+  ['double', 'Double bogey or worse'],
+];
+
+export const STABLEFORD_PRESETS = {
+  standard: {
+    label: 'Standard',
+    help: 'The classic: par 2, birdie 3, eagle 4. A blow-up hole is just 0.',
+    points: { albatross: 5, eagle: 4, birdie: 3, par: 2, bogey: 1, double: 0 },
+  },
+  modified: {
+    label: 'Modified',
+    help: 'The PGA Tour version: rewards going low and costs you for bogeys.',
+    points: { albatross: 8, eagle: 5, birdie: 2, par: 0, bogey: -1, double: -3 },
+  },
+  custom: { label: 'Custom', help: 'Set your own points for every result.' },
+};
+
+// Extra points for a natural (gross, no handicap strokes) score, on top of
+// the Stableford points. An ace earns the ace bonus instead of eagle/albatross.
+export const BONUS_RESULTS = [
+  ['ace', 'Hole-in-one'],
+  ['albatross', 'Natural albatross'],
+  ['eagle', 'Natural eagle'],
+  ['birdie', 'Natural birdie'],
+];
+
 export const MAJOR_MULTIPLIERS = [1.25, 1.5, 2, 3];
 
 export function presetTable(preset, places) {
@@ -95,6 +128,12 @@ export function defaultLeagueSettings() {
     pointsPreset: 'fedex',
     pointsTable: presetTable('fedex', 8),
     majorMultiplier: 1.5,
+    stableford: {
+      preset: 'standard',
+      points: { ...STABLEFORD_PRESETS.standard.points },
+      bonusOn: false,
+      bonus: { ace: 5, albatross: 3, eagle: 2, birdie: 1 },
+    },
     bestOf: null, // count only the best N weeks (points / cumulative)
     record: { win: 2, tie: 1, loss: 0 },
     handicap: {
@@ -119,6 +158,9 @@ export function leagueSettings(raw = {}) {
 // Keep settings consistent after any change in the builder.
 export function normalizeSettings(s) {
   const out = { ...s, handicap: { ...s.handicap }, record: { ...s.record } };
+  const sf = { ...defaultLeagueSettings().stableford, ...(s.stableford ?? {}) };
+  if (sf.preset !== 'custom') sf.points = { ...STABLEFORD_PRESETS[sf.preset ?? 'standard'].points };
+  out.stableford = sf;
   if (!scoringOptions(out.unit).includes(out.scoring)) out.scoring = scoringOptions(out.unit)[0];
   if (!seasonOptions(out.unit, out.scoring).includes(out.season)) out.season = seasonOptions(out.unit, out.scoring)[0];
   if (out.unit !== 'teams') out.teamSize = 2;

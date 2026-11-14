@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PARS, HCPS } from '../games/test-helpers.js';
-import { stablefordPoints, rank, awardPoints, computeEvent } from './event.js';
+import { stablefordPoints, naturalBonus, holeStableford, rank, awardPoints, computeEvent } from './event.js';
 import { standings, computeLeague, roundRobinWeek } from './season.js';
 import { adjustedGross, differential, leagueIndexFrom, indexesByEvent, playingHandicap } from './leagueHandicap.js';
 import {
@@ -25,6 +25,65 @@ describe('stableford', () => {
   it('points per hole', () => {
     expect([6, 5, 4, 3, 2, 1].map((s) => stablefordPoints(s, 4))).toEqual([0, 1, 2, 3, 4, 5]);
     expect(stablefordPoints(9, 4)).toBe(0);
+  });
+});
+
+describe('custom stableford and natural bonuses', () => {
+  const modified = { albatross: 8, eagle: 5, birdie: 2, par: 0, bogey: -1, double: -3 };
+
+  it('custom tables, including negative points', () => {
+    // par 5: albatross, eagle, birdie, par, bogey, quadruple bogey
+    expect([2, 3, 4, 5, 6, 9].map((s) => stablefordPoints(s, 5, modified))).toEqual([8, 5, 2, 0, -1, -3]);
+    expect(stablefordPoints(5, 4, modified)).toBe(-1);
+  });
+
+  it('presets fill the table; custom keeps yours', () => {
+    expect(leagueSettings({ stableford: { preset: 'modified' } }).stableford.points).toEqual(modified);
+    const own = { albatross: 10, eagle: 6, birdie: 4, par: 1, bogey: 0, double: -2 };
+    expect(leagueSettings({ stableford: { preset: 'custom', points: own } }).stableford.points).toEqual(own);
+    expect(leagueSettings({}).stableford).toMatchObject({ preset: 'standard', bonusOn: false });
+  });
+
+  it('natural bonus uses the gross score, ace replaces eagle', () => {
+    const bonus = { ace: 5, albatross: 3, eagle: 2, birdie: 1 };
+    expect(naturalBonus(3, 4, bonus)).toBe(1);
+    expect(naturalBonus(2, 4, bonus)).toBe(2);
+    expect(naturalBonus(2, 5, bonus)).toBe(3);
+    expect(naturalBonus(1, 3, bonus)).toBe(5);
+    expect(naturalBonus(4, 4, bonus)).toBe(0);
+  });
+
+  it('a net birdie made with a stroke earns no natural bonus', () => {
+    const s = leagueSettings({ scoring: 'stableford', stableford: { preset: 'standard', bonusOn: true, bonus: { ace: 5, albatross: 3, eagle: 2, birdie: 1 } } });
+    expect(holeStableford(s, 4, 1, 4)).toBe(3); // net birdie: 3, no bonus
+    expect(holeStableford(s, 3, 0, 4)).toBe(4); // natural birdie: 3 + 1
+    expect(holeStableford(s, 3, 1, 4)).toBe(5); // natural birdie with a stroke = net eagle 4 + 1
+  });
+
+  it('bonuses count in the event leaderboard', () => {
+    const base = { scoring: 'stableford', pointsTable: [10, 5] };
+    const members = [mem('a'), mem('b', { index: 18 })];
+    // a: one natural birdie, pars elsewhere = 37 (+1 bonus = 38)
+    // b: bogeys everywhere with a stroke each = net par = 36, plus a net birdie on 1 (gross par) = 37
+    const scores = {
+      a: card({ 1: 3 }),
+      b: card(Object.fromEntries(PARS.map((p, i) => [i + 1, i === 0 ? p : p + 1]))),
+    };
+    const plain = computeEvent({ settings: settings(base), event: { course }, members, scores });
+    expect(plain.board.map((e) => [e.key, e.value])).toEqual([
+      ['a', 37],
+      ['b', 37],
+    ]);
+    const withBonus = computeEvent({
+      settings: settings({ ...base, stableford: { preset: 'standard', bonusOn: true, bonus: { ace: 5, albatross: 3, eagle: 2, birdie: 1 } } }),
+      event: { course },
+      members,
+      scores,
+    });
+    expect(withBonus.board.map((e) => [e.key, e.value])).toEqual([
+      ['a', 38],
+      ['b', 37],
+    ]);
   });
 });
 
