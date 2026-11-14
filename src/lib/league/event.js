@@ -1,6 +1,6 @@
 // One league round (event): handicaps, leaderboard, matches, points. Pure.
 import { strokesOnHole } from '../games/handicap.js';
-import { holeResults, matchStatus } from '../games/match.js';
+import { matchStatus } from '../games/match.js';
 import { playingHandicap } from './leagueHandicap.js';
 import { tableForTier } from './format.js';
 import { holePoints, naturalBonus, stablefordPoints } from '../games/stableford.js';
@@ -185,28 +185,84 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
   return result;
 }
 
+// Match formats. Each match carries its own; a Ryder Cup round sets them all.
+//   singles   1 vs 1
+//   fourball  2 vs 2, own balls, best score on each hole counts
+//   shamble   2 vs 2, own balls after the best drive, both scores added
+//   scramble  2 vs 2, one team ball (one score per hole for the pair)
+//   foursomes 2 vs 2, alternate shot (one score per hole for the pair)
+export const MATCH_FORMATS = {
+  fourball: { label: 'Four-ball (best ball)', short: 'Four-ball', size: 2 },
+  shamble: { label: 'Shamble (both scores count)', short: 'Shamble', size: 2 },
+  scramble: { label: 'Scramble', short: 'Scramble', size: 2, teamBall: true },
+  foursomes: { label: 'Foursomes (alternate shot)', short: 'Foursomes', size: 2, teamBall: true },
+  singles: { label: 'Singles (1 vs 1)', short: 'Singles', size: 1 },
+};
+
+export function matchFormat(mu) {
+  if (mu.format && MATCH_FORMATS[mu.format]) return mu.format;
+  return mu.sides[0].length === 1 ? 'singles' : 'fourball';
+}
+
+// Team handicap for one-ball formats, from the players' playing handicaps:
+// scramble 35% of the lower + 15% of the higher; foursomes half the total.
+export function teamHandicap(format, handicaps) {
+  const [lo, hi] = [...handicaps].sort((x, y) => x - y);
+  if (format === 'scramble') return Math.round(0.35 * lo + 0.15 * (hi ?? lo));
+  return Math.round(((lo ?? 0) + (hi ?? 0)) / 2);
+}
+
 function scoreMatch(settings, members, players, holes, mu) {
   const [a, b] = mu.sides;
   const ids = [...a, ...b];
-  // Off the low: strokes relative to the best player in this match.
-  const low = settings.handicap.offLow ? Math.min(...ids.map((id) => players[id].playing)) : 0;
+  const format = matchFormat(mu);
+  const teamBall = MATCH_FORMATS[format].teamBall;
+  const n = holes.length;
+  const net = settings.net;
+
+  // Handicaps: each player's own, or one team handicap for one-ball formats.
+  // Off the low: strokes relative to the best player (or team) in the match.
+  const hcpOf = teamBall
+    ? Object.fromEntries([a, b].flatMap((side) => {
+        const t = teamHandicap(format, side.map((id) => players[id].playing));
+        return side.map((id) => [id, t]);
+      }))
+    : Object.fromEntries(ids.map((id) => [id, players[id].playing]));
+  const low = settings.handicap.offLow ? Math.min(...ids.map((id) => hcpOf[id])) : 0;
   const strokes = Object.fromEntries(
-    ids.map((id) => [id, holes.map((h) => strokesOnHole(players[id].playing - low, h.hcp, holes.length))]),
+    ids.map((id) => [id, holes.map((h) => strokesOnHole(hcpOf[id] - low, h.hcp, n))]),
   );
-  const ctx = {
-    players: ids.map((id) => ({ id })),
-    holes,
-    gross: Object.fromEntries(ids.map((id) => [id, players[id].gross])),
-    strokes,
+
+  const scoreOf = (id, h) => {
+    const g = players[id].gross[h];
+    return g == null ? null : net ? g - strokes[id][h] : g;
   };
-  const holeByHole = holeResults(ctx, a, b, settings.net);
-  const status = matchStatus(holeByHole, 0, holes.length - 1, { stopAtCloseout: true });
+  // The side's number on a hole, or null until it's complete.
+  const sideScore = (side, h) => {
+    if (teamBall) {
+      // The team's one score is saved on each partner's card; use whichever is there.
+      const id = side.find((x) => players[x].gross[h] != null);
+      return id == null ? null : scoreOf(id, h);
+    }
+    const sc = side.map((id) => scoreOf(id, h));
+    if (sc.some((x) => x == null)) return null;
+    return format === 'shamble' ? sc.reduce((x, y) => x + y, 0) : Math.min(...sc);
+  };
+  const holeByHole = holes.map((_, h) => {
+    const sa = sideScore(a, h);
+    const sb = sideScore(b, h);
+    if (sa == null || sb == null) return null;
+    return sa < sb ? 1 : sa > sb ? -1 : 0;
+  });
+  const status = matchStatus(holeByHole, 0, n - 1, { stopAtCloseout: true });
   const keys = [entityKey(settings, members, a), entityKey(settings, members, b)];
   const result = status.complete ? (status.winner === 0 ? 'A' : status.winner === 1 ? 'B' : 'halved') : null;
   return {
     sides: [a, b],
     keys,
-    names: [a, b].map((s) => s.map((id) => members.find((m) => m.id === id)?.name ?? '?').join(' & ')),
+    format,
+    teamBall: !!teamBall,
+    names: [a, b].map((side) => side.map((id) => members.find((m) => m.id === id)?.name ?? '?').join(' & ')),
     status,
     results: holeByHole,
     strokes,

@@ -1616,3 +1616,25 @@ select {
 tr.clickable {
   cursor: pointer;
 }
+
+.match-format {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.round-format {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Team rows ("Omar & Mike") wrap instead of cutting off */
+.score-name strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

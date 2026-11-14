@@ -1,4 +1,5 @@
 import { orderEvents } from '../lib/league/season.js';
+import { MATCH_FORMATS } from '../lib/league/event.js';
 import MatchCard from './MatchCard.jsx';
 import { useLiveRefresh } from './useLiveRefresh.js';
 
@@ -75,6 +76,8 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
   );
 }
 
+const roundFormats = (matches) => [...new Set(matches.map((m) => MATCH_FORMATS[m.format].short))].join(' + ');
+
 function RyderBoard({ settings, standings, events, results, open, onOpenEvent }) {
   const bySide = Object.fromEntries(standings.map((r) => [r.key, r]));
   const [a, b] = settings.sides.map((s) => bySide[s]);
@@ -118,6 +121,7 @@ function RyderBoard({ settings, standings, events, results, open, onOpenEvent })
                   <td className="left">
                     {e.name || `Round ${i + 1}`}
                     {e.status === 'final' ? '' : <span className="badge"> · live</span>}
+                    {ms[0] && <span className="round-format">{roundFormats(ms)}</span>}
                   </td>
                   <td className="side-a-text">{pts(a.rounds[i])}</td>
                   <td className="side-b-text">{pts(b.rounds[i])}</td>
@@ -141,7 +145,7 @@ function RyderBoard({ settings, standings, events, results, open, onOpenEvent })
         <section>
           <p className="section-title">On the course · {live.name}</p>
           {results[live.id].matches.map((m, i) => (
-            <MatchCard key={i} names={m.names} status={m.status} results={m.results} />
+            <MatchCard key={i} names={m.names} status={m.status} results={m.results} label={MATCH_FORMATS[m.format].label} />
           ))}
         </section>
       )}
