@@ -8,7 +8,8 @@ import MatchScorecard from './MatchScorecard.jsx';
 import { useLiveRefresh } from './useLiveRefresh.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { Seg } from './controls.jsx';
-import { autoGroups, canScore, groupOf } from '../lib/league/groups.js';
+import { canScore, groupOf } from '../lib/league/groups.js';
+import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -37,6 +38,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
         {event.course.name} · {event.course.tee.name} {event.course.tee.rating}/{event.course.tee.slope}
         {final ? ' · Final' : ''}
       </p>
+      <MyTeeTime event={event} members={data.members} meId={me?.id} />
 
       <div className="tabs wide-tabs" role="tablist">
         {[
@@ -60,6 +62,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           reload={reload}
         />
       )}
+      {tab === 'results' && <TeeSheet event={event} members={data.members} meId={me?.id} />}
       {tab === 'score' &&
         (canScore ? (
           <ScoreEntry
@@ -620,12 +623,15 @@ function Manage({ data, event, computed, reload, onDeleted }) {
           {waiting} invited player{waiting === 1 ? ' hasn’t' : 's haven’t'} joined yet, so they can&apos;t be paired or scored.
         </p>
       )}
-      <GroupsEditor
+      <PairingsEditor
+        data={data}
         event={event}
-        members={members}
+        computed={computed}
         playable={playable}
+        roundFormat={roundFormat}
         busy={busy}
-        onSave={(groups) => act(() => updateEvent(event.id, { groups }))}
+        setError={setError}
+        onSave={(patch) => act(() => updateEvent(event.id, patch))}
       />
 
       <section className="card">
@@ -678,85 +684,6 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         </button>
       </section>
     </>
-  );
-}
-
-// Commissioner: who plays together this round. Players can only enter
-// scores for their own group. In match play, a match is a group unless a
-// group says otherwise (for example two singles matches as one foursome).
-function GroupsEditor({ event, members, playable, busy, onSave }) {
-  const [building, setBuilding] = useState([]);
-  const groups = event.groups ?? [];
-  const name = (id) => members.find((m) => m.id === id)?.name ?? '?';
-  const grouped = new Set(groups.flat());
-  const free = playable.filter((m) => !grouped.has(m.id));
-  const matchOrder = (event.matchups ?? []).flatMap((mu) => mu.sides.flat());
-  // Auto: keep match partners and opponents together, then everyone else.
-  const order = [...new Set([...matchOrder, ...playable.map((m) => m.id)])];
-
-  return (
-    <section className="card">
-      <h3>Groups</h3>
-      <p className="hint">
-        Players can only enter scores for their own group.
-        {event.matchups?.length ? ' Each match counts as a group unless you group players here.' : ''}
-      </p>
-      {groups.length === 0 && <p className="muted">No groups yet.</p>}
-      <ul className="lines">
-        {groups.map((g, i) => (
-          <li key={i} className="match-line">
-            <span>
-              <strong>Group {i + 1}:</strong> {g.map(name).join(', ')}
-            </span>
-            <button
-              className="btn btn-ghost btn-small"
-              disabled={busy}
-              onClick={() => onSave(groups.filter((_, j) => j !== i))}
-              aria-label={`Remove group ${i + 1}`}
-            >
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
-      {free.length > 0 && (
-        <>
-          <p className="hint">Tap up to four players, then add the group.</p>
-          <div className="chips">
-            {free.map((m) => (
-              <button
-                key={m.id}
-                className={`chip ${building.includes(m.id) ? 'on' : ''}`}
-                onClick={() =>
-                  setBuilding((b) => (b.includes(m.id) ? b.filter((x) => x !== m.id) : b.length < 4 ? [...b, m.id] : b))
-                }
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
-          <div className="row2">
-            <button
-              className="btn btn-ghost"
-              disabled={busy}
-              onClick={() => onSave([...groups, ...autoGroups(order.filter((id) => !grouped.has(id)))])}
-            >
-              Auto-group the rest
-            </button>
-            <button
-              className="btn btn-primary"
-              disabled={busy || building.length === 0}
-              onClick={() => {
-                onSave([...groups, building]);
-                setBuilding([]);
-              }}
-            >
-              Add group
-            </button>
-          </div>
-        </>
-      )}
-    </section>
   );
 }
 

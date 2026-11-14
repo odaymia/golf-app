@@ -2871,3 +2871,28 @@ tr.clickable {
     background: #fff !important;
   }
 }
+
+/* Pairings and tee times */
+.pairings .field { margin-top: 10px; }
+.pairings .seg { margin-top: 8px; }
+.pairings .btn-primary { margin-top: 12px; }
+.pairings-sub { margin-top: 18px; }
+.tee-lines li { display: flex; align-items: center; gap: 12px; }
+.tee-lines .tee-names { flex: 1; }
+.tee-lines li.mine { background: var(--green-soft); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.tee-time { min-width: 76px; color: var(--green); font-variant-numeric: tabular-nums; }
+.tee-slot {
+  width: 136px; flex: none; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font: inherit; font-variant-numeric: tabular-nums;
+}
+.tee-slot.hole { width: 56px; text-align: center; font-weight: 700; }
+.my-tee {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 10px;
+  margin: 4px 16px 12px; padding: 10px 14px; border-radius: var(--radius);
+  background: var(--green); color: #fff;
+}
+.my-tee span { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.my-tee strong { font-family: var(--serif); font-size: 20px; color: var(--gold); }
+.my-tee em { font-style: normal; font-size: 14px; opacity: 0.9; }
+.round-tee { color: var(--green); font-weight: 600; font-size: 14px; }
+.tee-lines .tee-names { text-align: left !important; font-size: inherit; }

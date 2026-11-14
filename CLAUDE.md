@@ -122,7 +122,10 @@ src/
                     league index (best N of last M), per-event indexes
       pro.js        League Pro helpers: roster paste/CSV parsing, duplicate
                     check, season dates, standings -> CSV rows
-      league.test.js, pro.test.js
+      pairings.js   Pairing order (manual/random/last round/standings,
+                    leaders first or last), groups that keep teams and
+                    matches whole, singles/team matches, tee sheet
+      league.test.js, pro.test.js, pairings.test.js
     leagueApi.js    The only league Supabase code; offline cache + score queue
     supabase.js     Supabase client (URL + publishable key; safe to ship)
     account.js      The only Supabase code: email-code sign-in, profile,
@@ -131,6 +134,7 @@ src/
                     Setup (+ CourseSearch), Play (Score/Money/Card tabs), Settle,
                     League -> LeagueHome / LeagueEvent / LeagueBuilder,
                     TournamentBoard, MatchCard, useLiveRefresh,
+                    PairingsEditor (+ TeeSheet, MyTeeTime),
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
   components/pro/   League Pro desktop console (ProConsole + Overview,
                     Players, Schedule, Scores, Standings; useWide)
@@ -143,6 +147,7 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
 supabase/social.sql   Social tables, policies and the `media` storage bucket
 supabase/home_course.sql  public_profiles.home_course_key / _place
 supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media list policy
+supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
 ```
@@ -210,6 +215,18 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   A spot with no `user_id` is "Invited"/"Needs account": it can't be put in
   matches or groups and `can_score()` refuses its card. `team` is the team
   or side name.
+- Pairings (round Manage, `PairingsEditor`): the commissioner picks how
+  to pair each round: manual, random draw, last round's finish (players
+  who missed it follow in standings order), or season standings, with
+  leaders teeing off last (default) or first. Group size 4/3/2. Team
+  formats keep teammates together; match play can also set the matches
+  (neighbours in the order play; odd one out gets no match) and groups
+  never split a match. Tee times (`league_events.tee_sheet`): tee times
+  from a first time every N minutes, or a shotgun (group i on hole i+1,
+  A/B on the first holes when groups outnumber holes); any group's slot
+  can be edited. A round with no tee sheet shows no tee times. Players see
+  "Your tee time" on the round and in the rounds list, plus the tee sheet
+  on Results.
 - League Pro (desktop): at 1024px+ `League.jsx` renders `ProConsole`, a
   sidebar console for commissioners: Overview (stats + to-do list),
   Players (sortable table, inline edit, bulk team assign, roster import from

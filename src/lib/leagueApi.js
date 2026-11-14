@@ -72,6 +72,7 @@ const toEvent = (r) => ({
   course: r.course,
   matchups: r.matchups ?? [],
   groups: r.groups ?? [],
+  teeSheet: r.tee_sheet ?? null,
   status: r.status,
   tier: r.tier ?? 'regular',
 });
@@ -241,6 +242,7 @@ export function updateEvent(id, patch) {
   if ('course' in patch) row.course = patch.course;
   if ('tier' in patch) row.tier = patch.tier;
   if ('groups' in patch) row.groups = patch.groups;
+  if ('teeSheet' in patch) row.tee_sheet = patch.teeSheet;
   return call(supabase.from('league_events').update(row).eq('id', id));
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createEvent } from '../../lib/leagueApi.js';
 import { orderEvents } from '../../lib/league/season.js';
 import { seasonDates } from '../../lib/league/pro.js';
+import { normalizeTeeSheet, teeGroups, formatTime } from '../../lib/league/pairings.js';
 import { MATCH_FORMATS, matchFormat } from '../../lib/league/event.js';
 import { courseProblems } from '../../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../../lib/storage.js';
@@ -10,6 +11,12 @@ import { Seg } from '../controls.jsx';
 
 const fmtDate = (d) =>
   d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '–';
+
+function teeSummary(e) {
+  if (!e.teeSheet || !teeGroups(e).length) return <span className="muted">–</span>;
+  const t = normalizeTeeSheet(e.teeSheet);
+  return t.mode === 'shotgun' ? `Shotgun ${formatTime(t.start)}` : `${formatTime(t.start)} · every ${t.interval} min`;
+}
 
 // The season at a glance, and building many rounds at once.
 export default function ProSchedule({ data, computed, isAdmin, reload, openEvent }) {
@@ -59,6 +66,7 @@ export default function ProSchedule({ data, computed, isAdmin, reload, openEvent
                 <th>Course</th>
                 {settings.season === 'points' && <th>Type</th>}
                 {settings.scoring === 'match' ? <th>Matches</th> : <th>Groups</th>}
+                <th>Tee times</th>
                 <th>Cards in</th>
                 <th>Status</th>
                 <th />
@@ -83,6 +91,7 @@ export default function ProSchedule({ data, computed, isAdmin, reload, openEvent
                     ) : (
                       <td>{(e.groups ?? []).length ? `${e.groups.length} groups` : <span className="pill wait">Not set</span>}</td>
                     )}
+                    <td>{teeSummary(e)}</td>
                     <td>{cards}</td>
                     <td>
                       <span className={`pill ${e.status === 'final' ? '' : 'ok'}`}>{e.status === 'final' ? 'Final' : 'Open'}</span>

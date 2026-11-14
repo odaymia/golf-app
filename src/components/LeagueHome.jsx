@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { myTeeTime } from '../lib/league/pairings.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { addMember, createEvent, inviteLink, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
@@ -82,7 +83,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
           <Standings computed={computed} events={events} />
         ))}
       {tab === 'rounds' && (
-        <Rounds data={data} computed={computed} isAdmin={isAdmin} reload={reload} onOpenEvent={onOpenEvent} />
+        <Rounds data={data} computed={computed} isAdmin={isAdmin} meId={me?.id} reload={reload} onOpenEvent={onOpenEvent} />
       )}
       {tab === 'members' && <Members data={data} computed={computed} me={me} isAdmin={isAdmin} reload={reload} />}
       {members.length < 2 && tab !== 'members' && (
@@ -154,7 +155,7 @@ export function Standings({ computed, events }) {
   );
 }
 
-function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
+function Rounds({ data, computed, isAdmin, meId, reload, onOpenEvent }) {
   const [adding, setAdding] = useState(false);
   const { events } = data;
   return (
@@ -166,6 +167,7 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
           const leader =
             r.board[0]?.name ??
             (r.matches.length ? `${r.matches.filter((m) => m.result).length}/${r.matches.length} matches done` : null);
+          const tee = ev.status !== 'final' && meId ? myTeeTime(ev, meId) : null;
           return (
             <li key={ev.id} className="card round-item">
               <button className="round-open" onClick={() => onOpenEvent(ev.id)}>
@@ -180,6 +182,7 @@ function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
                   {fmtDate(ev.date)} · {ev.course.name}
                   {ev.course.tee?.name ? ` (${ev.course.tee.name})` : ''}
                 </span>
+                {tee?.label && <span className="round-tee">Your tee time: {tee.label}</span>}
                 <span className={`badge ${ev.status === 'final' ? 'final' : ''}`}>
                   {ev.status === 'final' ? 'Final' : 'Open'}
                   {leader && r.board.length ? ` · leader ${leader}` : leader ? ` · ${leader}` : ''}
