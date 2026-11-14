@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
-import { addMember, createEvent, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
+import { addMember, createEvent, inviteLink, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
+import { looksLikeEmail } from '../lib/account.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
 import CourseSearch from './CourseSearch.jsx';
@@ -19,7 +20,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   const { league, members, events } = data;
 
   async function share() {
-    const text = `Join "${league.name}" on Scribble Golf Club: open https://scribblegolfclub.com/app/ and enter code ${league.code}`;
+    const text = `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
     try {
       if (navigator.share) await navigator.share({ text });
       else {
@@ -93,7 +94,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   );
 }
 
-function Standings({ computed, events }) {
+export function Standings({ computed, events }) {
   const { settings, standings } = computed;
   const finals = events.filter((e) => e.status === 'final').length;
   if (!standings.length) return <p className="muted center">No players yet.</p>;
@@ -136,7 +137,7 @@ function Standings({ computed, events }) {
         <tbody>
           {standings.map((r, i) => (
             <tr key={r.key}>
-              <td className="pos">{i > 0 && standings[i - 1].position === r.position ? `T${r.position}` : r.position}</td>
+              <td className="pos">{standings.some((o, j) => j !== i && o.position === r.position) ? `T${r.position}` : r.position}</td>
               <td className="left">{r.name}</td>
               {cols.map(([k]) => (
                 <td key={k}>{r[k] == null ? '–' : typeof r[k] === 'number' ? fmtPts(r[k]) : r[k]}</td>
@@ -334,7 +335,7 @@ function AddRound({ leagueId, usesTiers, count, label, onDone }) {
   );
 }
 
-const blankMember = { id: null, name: '', indexText: '', ghinNumber: '', team: '' };
+const blankMember = { id: null, name: '', email: '', indexText: '', ghinNumber: '', team: '' };
 
 function Members({ data, computed, me, isAdmin, reload }) {
   const { members } = data;
@@ -351,10 +352,14 @@ function Members({ data, computed, me, isAdmin, reload }) {
     if (!editing.name.trim()) return setError('Enter a name.');
     const index = parseIndex(editing.indexText);
     if (index === null) return setError('Index should be a number like 12.4, or +2.1.');
+    // Everyone plays with a Scribble account: players without one are invited by email.
+    const needsEmail = !editing.userId;
+    if (needsEmail && !looksLikeEmail(editing.email ?? '')) return setError('Enter their email so they can join with a Scribble account.');
     setBusy(true);
     setError('');
     try {
       const m = { ...editing, index: editing.indexText.trim() === '' ? null : index };
+      if (!needsEmail) delete m.email;
       if (editing.id) await updateMember(editing.id, m);
       else await addMember(data.league.id, m);
       setEditing(null);
@@ -403,7 +408,12 @@ function Members({ data, computed, me, isAdmin, reload }) {
                     className="saved-player"
                     disabled={!isAdmin}
                     onClick={() =>
-                      setEditing({ ...m, indexText: m.index == null ? '' : formatIndex(m.index), team: m.team ?? '' })
+                      setEditing({
+                        ...m,
+                        email: m.inviteEmail ?? '',
+                        indexText: m.index == null ? '' : formatIndex(m.index),
+                        team: m.team ?? '',
+                      })
                     }
                   >
                     <strong>
@@ -416,7 +426,7 @@ function Members({ data, computed, me, isAdmin, reload }) {
                       {settings.handicap.mode === 'league' && leagueIdx?.[m.id] != null && leagueIdx[m.id] !== m.index
                         ? ` · league ${formatIndex(leagueIdx[m.id])}`
                         : ''}
-                      {m.userId ? '' : ' · no app'}
+                      {m.userId ? '' : m.inviteEmail ? ' · invited, waiting to join' : ' · needs an account'}
                     </span>
                   </button>
                 </li>
@@ -428,16 +438,29 @@ function Members({ data, computed, me, isAdmin, reload }) {
       {isAdmin &&
         (editing ? (
           <section className="card player-editor">
-            <h3>{editing.id ? `Edit ${editing.name}` : 'Add a player'}</h3>
-            {!editing.id && (
+            <h3>{editing.id ? `Edit ${editing.name}` : 'Invite a player'}</h3>
+            {!editing.userId && (
               <p className="hint">
-                For someone without the app. If they join later with the same name, this spot becomes theirs.
+                Every player needs a Scribble account. When they sign in with this email (or open your invite link), this
+                spot becomes theirs. Until then they can&apos;t be grouped or scored.
               </p>
             )}
             <label className="field">
               <span>Name</span>
               <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
             </label>
+            {!editing.userId && (
+              <label className="field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  autoCapitalize="none"
+                  value={editing.email ?? ''}
+                  onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                  placeholder="player@example.com"
+                />
+              </label>
+            )}
             <div className="row2">
               <label className="field">
                 <span>Index</span>
@@ -515,7 +538,7 @@ function Members({ data, computed, me, isAdmin, reload }) {
           </section>
         ) : (
           <button className="btn btn-primary btn-xl" onClick={() => setEditing({ ...blankMember })}>
-            + Add player
+            + Invite player
           </button>
         ))}
       {!isAdmin && <p className="hint center">Only the commissioner can change members and teams.</p>}

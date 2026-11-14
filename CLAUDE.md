@@ -120,7 +120,9 @@ src/
       season.js     computeLeague + standings per season type, round robin
       leagueHandicap.js  Adjusted gross (net double bogey), differentials,
                     league index (best N of last M), per-event indexes
-      league.test.js
+      pro.js        League Pro helpers: roster paste/CSV parsing, duplicate
+                    check, season dates, standings -> CSV rows
+      league.test.js, pro.test.js
     leagueApi.js    The only league Supabase code; offline cache + score queue
     supabase.js     Supabase client (URL + publishable key; safe to ship)
     account.js      The only Supabase code: email-code sign-in, profile,
@@ -130,6 +132,8 @@ src/
                     League -> LeagueHome / LeagueEvent / LeagueBuilder,
                     TournamentBoard, MatchCard, useLiveRefresh,
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
+  components/pro/   League Pro desktop console (ProConsole + Overview,
+                    Players, Schedule, Scores, Standings; useWide)
   App.jsx           Sign-in gate -> first-time profile -> screens; saves the
                     round on every change
 supabase/schema.sql   Profiles + saved players; paste into the SQL Editor
@@ -139,6 +143,8 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
 supabase/social.sql   Social tables, policies and the `media` storage bucket
 supabase/home_course.sql  public_profiles.home_course_key / _place
 supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media list policy
+supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
+                    join_league/can_score require an account
 ```
 
 ### Engine conventions
@@ -195,9 +201,22 @@ supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media li
   gross per `net`. Optional natural bonus (`bonusOn`) adds points for a gross
   birdie/eagle/albatross/ace regardless of strokes; an ace takes the ace bonus
   instead of eagle/albatross. Team best ball takes the higher points.
-- Members: app users join with the 6-character invite code (`join_league`
-  RPC, which also claims a name-only spot with the same name); the
-  commissioner adds people without the app. `team` is the team or side name.
+- Every player needs a Scribble account (supabase/league_pro.sql). The
+  commissioner invites by email (`league_members.invite_email`, readable only
+  by commissioners via `league_invites()`; column grants hide it from
+  members). Signing in with that email links the spot (`claim_my_invites()`
+  runs at app start); the invite code / link `/app/?join=CODE` also works
+  (`join_league` claims an emailed spot first, then a same-name spot).
+  A spot with no `user_id` is "Invited"/"Needs account": it can't be put in
+  matches or groups and `can_score()` refuses its card. `team` is the team
+  or side name.
+- League Pro (desktop): at 1024px+ `League.jsx` renders `ProConsole`, a
+  sidebar console for commissioners: Overview (stats + to-do list),
+  Players (sortable table, inline edit, bulk team assign, roster import from
+  pasted spreadsheet or CSV), Schedule (build a whole season of rounds at
+  once), Score entry (spreadsheet grid, auto-advance, saves as you type),
+  Standings (CSV export, print). Rounds open the same LeagueEvent screens.
+  Phones keep the mobile League screens.
 - Rounds (`league_events`) snapshot the course + tee. Only commissioners
   manage members, rounds, matches and groups, and mark rounds final.
   Players may enter scores only for their own group (`league_events.groups`,

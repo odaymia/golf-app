@@ -7,7 +7,7 @@ import SignIn from './components/SignIn.jsx';
 import Profile from './components/Profile.jsx';
 import League from './components/League.jsx';
 import LeagueBuilder from './components/LeagueBuilder.jsx';
-import { createLeague } from './lib/leagueApi.js';
+import { claimMyInvites, createLeague, joinLeague } from './lib/leagueApi.js';
 import BottomNav from './components/BottomNav.jsx';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
@@ -43,6 +43,7 @@ export default function App() {
   const [leagueId, setLeagueId] = useState(null);
   const [newKind, setNewKind] = useState('league');
   const [socialStart, setSocialStart] = useState({ name: 'feed', params: {} });
+  const [joinError, setJoinError] = useState('');
 
   // Signed in? The session is kept on the phone, so this works offline.
   useEffect(() => {
@@ -63,6 +64,40 @@ export default function App() {
       .catch((e) => setProfileError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the account changes
   }, [userId]);
+
+  // Invite links (/app/?join=CODE): remember the code through sign-in.
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get('join');
+    if (!code) return;
+    try {
+      sessionStorage.setItem('golf-app:join', code.toUpperCase());
+    } catch {
+      // storage blocked: the code is still in the URL this visit
+    }
+    history.replaceState(null, '', location.pathname);
+  }, []);
+
+  // Once signed in with a profile: link email invites, then follow an invite link.
+  const ready = !!profile?.name;
+  useEffect(() => {
+    if (!ready) return;
+    claimMyInvites().catch(() => {});
+    let code = null;
+    try {
+      code = sessionStorage.getItem('golf-app:join');
+      sessionStorage.removeItem('golf-app:join');
+    } catch {
+      // nothing saved
+    }
+    if (!code) return;
+    joinLeague(code, profile)
+      .then((id) => {
+        setLeagueId(id);
+        setScreen('league');
+      })
+      .catch((e) => setJoinError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per sign-in
+  }, [ready]);
 
   // Every change to the round is written to the device right away.
   useEffect(() => {
@@ -164,19 +199,31 @@ export default function App() {
   if (screen === 'settle' && round)
     return <Settle round={round} setRound={setRound} onBack={() => setScreen('play')} onHome={goHome} />;
   return withNav(
-    <Home
-      profile={profile}
-      onProfile={() => onTab('me')}
-      onNew={() => setScreen('setup')}
-      onOpen={openRound}
-      onOpenLeague={(id) => {
-        setLeagueId(id);
-        setScreen('league');
-      }}
-      onCreateLeague={(kind) => {
-        setNewKind(kind);
-        setScreen('newLeague');
-      }}
-    />
+    <>
+      {joinError && (
+        <div className="screen join-error">
+          <div className="card warn-box">
+            {joinError}{' '}
+            <button className="link" onClick={() => setJoinError('')}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      <Home
+        profile={profile}
+        onProfile={() => onTab('me')}
+        onNew={() => setScreen('setup')}
+        onOpen={openRound}
+        onOpenLeague={(id) => {
+          setLeagueId(id);
+          setScreen('league');
+        }}
+        onCreateLeague={(kind) => {
+          setNewKind(kind);
+          setScreen('newLeague');
+        }}
+      />
+    </>
   );
 }

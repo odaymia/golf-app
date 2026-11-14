@@ -57,7 +57,7 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
             {standings.map((r, i) => (
               <tr key={r.key} className={r.started ? '' : 'not-started'}>
                 <td className="pos">
-                  {r.position == null ? '' : i > 0 && standings[i - 1].position === r.position ? `T${r.position}` : r.position}
+                  {r.position == null ? '' : standings.some((o, j) => j !== i && o.position === r.position) ? `T${r.position}` : r.position}
                 </td>
                 <td className="left name-cell">{r.name}</td>
                 <td className={`big ${stableford ? '' : toParClass(r.toPar)}`}>

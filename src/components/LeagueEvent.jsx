@@ -173,7 +173,7 @@ function Results({ settings, result, members, holes, live, reload }) {
         <tbody>
           {result.board.map((e, i) => (
             <tr key={e.key}>
-              <td className="pos">{i > 0 && result.board[i - 1].position === e.position ? `T${e.position}` : e.position}</td>
+              <td className="pos">{result.board.some((o, j) => j !== i && o.position === e.position) ? `T${e.position}` : e.position}</td>
               <td className="left">
                 {e.name}
                 {settings.unit !== 'individual' && (
@@ -308,7 +308,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
             ))}
           </div>
         )}
-        <GroupPicker members={data.members} onDone={setPicked} />
+        <GroupPicker members={data.members.filter((m) => m.active)} onDone={setPicked} />
       </section>
     );
   }
@@ -458,6 +458,9 @@ function Manage({ data, event, computed, reload, onDeleted }) {
   const [sideA, setSideA] = useState([]);
   const [sideB, setSideB] = useState([]);
   const members = data.members;
+  // Only players with a Scribble account can be paired, grouped or scored.
+  const playable = members.filter((m) => m.active);
+  const waiting = members.length - playable.length;
   // Team formats: the commissioner picks one format for the round.
   const usesFormats = settings.unit !== 'individual';
   const [roundFormat, setRoundFormat] = useState(() =>
@@ -501,10 +504,10 @@ function Manage({ data, event, computed, reload, onDeleted }) {
     const week = data.events.filter((e) => (e.date ?? '') < (event.date ?? '') || (e.date === event.date && e.id < event.id)).length;
     let matchups;
     if (settings.unit === 'individual') {
-      matchups = roundRobinWeek(members.map((m) => m.id), week).map(([a, b]) => ({ sides: [[a], [b]] }));
+      matchups = roundRobinWeek(playable.map((m) => m.id), week).map(([a, b]) => ({ sides: [[a], [b]] }));
     } else {
-      const teams = [...new Set(members.map((m) => m.team).filter(Boolean))];
-      const playersOf = (t) => members.filter((m) => m.team === t).slice(0, size).map((m) => m.id);
+      const teams = [...new Set(playable.map((m) => m.team).filter(Boolean))];
+      const playersOf = (t) => playable.filter((m) => m.team === t).slice(0, size).map((m) => m.id);
       matchups = roundRobinWeek(teams, week).map(([a, b]) => ({ sides: [playersOf(a), playersOf(b)], format: roundFormat }));
     }
     setMatchups(matchups);
@@ -529,7 +532,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
   const used = new Set(event.matchups.flatMap((m) => m.sides.flat()));
   const pick = (side, setSide, other) => (
     <div className="chips">
-      {members
+      {playable
         .filter((m) => !used.has(m.id) && !other.includes(m.id))
         .map((m) => (
           <button
@@ -596,6 +599,8 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         </section>
       )}
 
+      <RoundDetails event={event} busy={busy} onSave={(patch) => act(() => updateEvent(event.id, patch))} />
+
       {settings.season === 'points' && (
         <section className="card">
           <h3>Round type</h3>
@@ -610,7 +615,18 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         </section>
       )}
 
-      <GroupsEditor event={event} members={members} busy={busy} onSave={(groups) => act(() => updateEvent(event.id, { groups }))} />
+      {waiting > 0 && (
+        <p className="hint center">
+          {waiting} invited player{waiting === 1 ? ' hasn’t' : 's haven’t'} joined yet, so they can&apos;t be paired or scored.
+        </p>
+      )}
+      <GroupsEditor
+        event={event}
+        members={members}
+        playable={playable}
+        busy={busy}
+        onSave={(groups) => act(() => updateEvent(event.id, { groups }))}
+      />
 
       <section className="card">
         <h3>Handicaps this round</h3>
@@ -668,15 +684,15 @@ function Manage({ data, event, computed, reload, onDeleted }) {
 // Commissioner: who plays together this round. Players can only enter
 // scores for their own group. In match play, a match is a group unless a
 // group says otherwise (for example two singles matches as one foursome).
-function GroupsEditor({ event, members, busy, onSave }) {
+function GroupsEditor({ event, members, playable, busy, onSave }) {
   const [building, setBuilding] = useState([]);
   const groups = event.groups ?? [];
   const name = (id) => members.find((m) => m.id === id)?.name ?? '?';
   const grouped = new Set(groups.flat());
-  const free = members.filter((m) => !grouped.has(m.id));
+  const free = playable.filter((m) => !grouped.has(m.id));
   const matchOrder = (event.matchups ?? []).flatMap((mu) => mu.sides.flat());
   // Auto: keep match partners and opponents together, then everyone else.
-  const order = [...new Set([...matchOrder, ...members.map((m) => m.id)])];
+  const order = [...new Set([...matchOrder, ...playable.map((m) => m.id)])];
 
   return (
     <section className="card">
@@ -739,6 +755,32 @@ function GroupsEditor({ event, members, busy, onSave }) {
             </button>
           </div>
         </>
+      )}
+    </section>
+  );
+}
+
+function RoundDetails({ event, busy, onSave }) {
+  const [name, setName] = useState(event.name);
+  const [date, setDate] = useState(event.date ?? '');
+  const changed = name.trim() !== event.name || (date || null) !== (event.date || null);
+  return (
+    <section className="card">
+      <h3>Round details</h3>
+      <div className="row2">
+        <label className="field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Date</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+      </div>
+      {changed && (
+        <button className="btn btn-primary full" disabled={busy || !name.trim()} onClick={() => onSave({ name: name.trim(), date })}>
+          Save details
+        </button>
       )}
     </section>
   );

@@ -3,12 +3,16 @@ import { deleteLeague, loadLeague, updateLeague } from '../lib/leagueApi.js';
 import LeagueHome from './LeagueHome.jsx';
 import LeagueEvent from './LeagueEvent.jsx';
 import LeagueBuilder from './LeagueBuilder.jsx';
+import ProConsole from './pro/ProConsole.jsx';
+import { useWide } from './pro/useWide.js';
 
 // Loads one league and moves between its screens.
 export default function League({ leagueId, user, onBack }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [view, setView] = useState({ name: 'home' });
+  // Laptops and desktops get the full League Pro console; phones keep the app screens.
+  const wide = useWide();
 
   const reload = useCallback(
     async ({ quiet = false } = {}) => {
@@ -45,6 +49,24 @@ export default function League({ leagueId, user, onBack }) {
   if (!data) return <div className="screen"><p className="muted center">Loading league…</p></div>;
 
   const me = data.members.find((m) => m.userId === user.id);
+
+  if (wide)
+    return (
+      <ProConsole
+        data={data}
+        me={me}
+        reload={reload}
+        onBack={onBack}
+        onSaveFormat={async ({ name, settings }) => {
+          await updateLeague(leagueId, { name, settings });
+          await reload();
+        }}
+        onDelete={async () => {
+          await deleteLeague(leagueId);
+          onBack();
+        }}
+      />
+    );
 
   if (view.name === 'event')
     return (

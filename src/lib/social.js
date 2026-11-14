@@ -172,7 +172,7 @@ export async function unblockUser(meId, userId) {
 
 // Who I've blocked, with their public profiles, for Settings.
 export async function listBlocked(meId) {
-  const rows = await call(supabase.from('blocks').select('blocked, created_at').eq('blocker', meId));
+  const rows = await call(supabase.from('blocks').select('blocked, created_at').eq('blocker', meId)).catch(() => []);
   if (!rows.length) return [];
   const profiles = await call(
     supabase.from('public_profiles').select('*').in('id', rows.map((r) => r.blocked)),
@@ -184,13 +184,14 @@ export async function listBlocked(meId) {
 }
 
 // Does either of us block the other?
+// Fails soft: if blocking isn't set up yet (account_safety.sql not run), no one is blocked.
 export async function blockStatus(meId, userId) {
   const rows = await call(
     supabase
       .from('blocks')
       .select('blocker, blocked')
       .or(`and(blocker.eq.${meId},blocked.eq.${userId}),and(blocker.eq.${userId},blocked.eq.${meId})`),
-  );
+  ).catch(() => []);
   return { iBlocked: rows.some((r) => r.blocker === meId), blockedMe: rows.some((r) => r.blocker === userId) };
 }
 

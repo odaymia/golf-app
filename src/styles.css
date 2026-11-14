@@ -2312,3 +2312,562 @@ tr.clickable {
   margin: 8px auto 0;
   color: var(--muted);
 }
+
+/* ---------- League Pro desktop console ---------- */
+.pro-layout {
+  display: grid;
+  grid-template-columns: 264px 1fr;
+  min-height: 100vh;
+}
+
+.pro-side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--green);
+  color: var(--bg);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-right: 4px double var(--gold);
+}
+
+.pro-back {
+  background: none;
+  border: none;
+  color: #cfe0cd;
+  text-align: left;
+  padding: 4px 0;
+  font-weight: 600;
+}
+
+.pro-title h1 {
+  color: #fff;
+  font-size: 24px;
+  margin: 4px 0;
+}
+
+.pro-title p {
+  font-size: 13px;
+  color: #cfe0cd;
+  margin: 0;
+}
+
+.pro-kind {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.pro-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pro-nav button {
+  background: none;
+  border: none;
+  color: #e7efe4;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.pro-nav button:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.pro-nav button.on {
+  background: var(--bg);
+  color: var(--green-deep);
+}
+
+.pro-invite {
+  margin-top: auto;
+  background: rgb(0 0 0 / 15%);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.pro-invite strong {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: #fff;
+}
+
+.pro-invite button {
+  margin-top: 6px;
+  background: var(--gold);
+  color: var(--green-deep);
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  font-weight: 700;
+}
+
+.pro-note {
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.pro-main {
+  padding: 28px 36px 60px;
+  min-width: 0;
+}
+
+.pro-page {
+  max-width: 1280px;
+}
+
+.pro-event,
+.pro-format {
+  max-width: 640px;
+}
+
+.pro-event .screen,
+.pro-format .screen {
+  padding: 0;
+  margin: 0;
+}
+
+.pro-h {
+  font-size: 30px;
+  margin: 0;
+}
+
+.pro-page-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.pro-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.pro-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 22px;
+  margin: 16px 0;
+}
+
+.pro-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pro-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.pro-stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pro-stat span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pro-stat strong {
+  font-family: var(--serif);
+  font-size: 38px;
+  color: var(--green-deep);
+  line-height: 1.1;
+}
+
+.pro-stat strong small {
+  font-size: 20px;
+  color: var(--muted);
+}
+
+.pro-stat .pro-stat-text {
+  font-size: 24px;
+}
+
+.pro-stat em {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pro-stat.clickable {
+  cursor: pointer;
+}
+
+.pro-todo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pro-todo li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pro-todo li:last-child {
+  border-bottom: none;
+}
+
+.pro-alert {
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  background: #fff7e0;
+  color: #7a5a0c;
+  font-size: 14px;
+}
+
+.pro-alert.error {
+  background: #fdecea;
+  color: var(--down);
+}
+
+.pro-alert.ok {
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+
+.pro-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.pro-search {
+  max-width: 340px;
+}
+
+.pro-select {
+  width: auto;
+  min-width: 260px;
+}
+
+.pro-bulk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.pro-save {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.pro-code {
+  font-family: ui-monospace, Menlo, monospace;
+  background: #ece5d2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.pro-table-wrap {
+  overflow-x: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.pro-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.pro-table th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.pro-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #efe8d6;
+  vertical-align: middle;
+}
+
+.pro-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pro-table tr.clickable:hover td {
+  background: #f7f2e4;
+  cursor: pointer;
+}
+
+.pro-table tr.pending td {
+  color: var(--muted);
+}
+
+.pro-table tr.editing td {
+  background: #fffdf5;
+}
+
+.pro-table input,
+.pro-table select {
+  min-height: 38px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.pro-table input.narrow {
+  width: 80px;
+}
+
+.pro-table .strong,
+.strong {
+  font-weight: 700;
+}
+
+.pro-table .check {
+  width: 36px;
+}
+
+.pro-table .row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pro-table.compact td,
+.pro-table.compact th {
+  padding: 6px 10px;
+}
+
+.th-sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ece5d2;
+  color: var(--muted);
+}
+
+.pill.ok {
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+
+.pill.wait {
+  background: #fff1cc;
+  color: #7a5a0c;
+}
+
+.pro-paste {
+  width: 100%;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf7;
+}
+
+.pro-import-summary {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.pro-problems {
+  font-size: 13px;
+  color: #7a5a0c;
+}
+
+.pro-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pro-course-name {
+  align-self: center;
+  margin-right: 6px;
+}
+
+/* Score grid */
+.pro-grid {
+  border-collapse: collapse;
+  font-size: 14px;
+  width: 100%;
+}
+
+.pro-grid th,
+.pro-grid td {
+  border: 1px solid #ece4cf;
+  text-align: center;
+  padding: 0;
+  min-width: 38px;
+  height: 38px;
+}
+
+.pro-grid th {
+  background: var(--green);
+  color: #fff;
+  font-size: 12px;
+}
+
+.pro-grid .par td,
+.pro-grid .hcp td {
+  background: #f7f2e4;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pro-grid .name {
+  text-align: left;
+  padding: 0 10px;
+  min-width: 170px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.pro-grid th.name {
+  font-weight: 700;
+}
+
+.pro-grid .tot {
+  background: #efe8d6;
+  font-weight: 700;
+  min-width: 46px;
+  color: var(--text);
+}
+
+.pro-grid th.tot {
+  background: var(--green-deep);
+  color: #fff;
+}
+
+.cell-td {
+  position: relative;
+}
+
+.pro-grid .cell {
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 0;
+  min-height: 0;
+}
+
+.pro-grid .cell:focus {
+  outline: 2px solid var(--gold);
+  background: #fffbea;
+}
+
+.pro-grid .cell.under {
+  color: #c8102e;
+}
+
+.pro-grid .cell.over {
+  color: #1d4ed8;
+}
+
+.pro-grid .dot {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: 9px;
+  font-style: normal;
+  color: var(--green-2);
+  pointer-events: none;
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  .pro-side,
+  .no-print,
+  .bottom-nav,
+  .tabs {
+    display: none !important;
+  }
+
+  .pro-layout {
+    display: block;
+  }
+
+  .pro-main {
+    padding: 0;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

@@ -49,9 +49,15 @@ async function call(promise) {
   return result.data;
 }
 
+// Members without an account are invited (by email) or legacy name-only
+// spots; only members with an account can be grouped, matched or scored.
+const MEMBER_COLUMNS = 'id, league_id, user_id, name, ghin_number, handicap_index, team, role, created_at';
+
 const toMember = (r) => ({
   id: r.id,
   userId: r.user_id,
+  active: !!r.user_id,
+  inviteEmail: '',
   name: r.name,
   index: r.handicap_index == null ? null : Number(r.handicap_index),
   ghinNumber: r.ghin_number ?? '',
@@ -120,7 +126,7 @@ export async function loadLeague(id) {
   try {
     const [league, members, events, scores] = await Promise.all([
       call(supabase.from('leagues').select('*').eq('id', id).single()),
-      call(supabase.from('league_members').select('*').eq('league_id', id).order('created_at')),
+      call(supabase.from('league_members').select(MEMBER_COLUMNS).eq('league_id', id).order('created_at')),
       call(supabase.from('league_events').select('*').eq('league_id', id).order('event_date')),
       call(supabase.from('event_scores').select('event_id, member_id, gross').eq('league_id', id)),
     ]);
@@ -133,6 +139,12 @@ export async function loadLeague(id) {
     for (const s of scores) {
       data.scores[s.event_id] = data.scores[s.event_id] ?? {};
       data.scores[s.event_id][s.member_id] = s.gross;
+    }
+    // Commissioners also see who's been invited by email (others can't).
+    const invites = await supabase.rpc('league_invites', { p_league: id });
+    if (!invites.error) {
+      const byId = Object.fromEntries((invites.data ?? []).map((r) => [r.member_id, r.email]));
+      data.members = data.members.map((m) => (byId[m.id] ? { ...m, inviteEmail: byId[m.id] } : m));
     }
     write(`${CACHE}${id}`, data);
     return withQueued(data);
@@ -168,13 +180,36 @@ const memberRow = (m) => ({
   team: m.team?.trim() || null,
 });
 
+// Invite a player by email. They join the spot when they sign in with it.
 export function addMember(leagueId, m) {
-  return call(supabase.from('league_members').insert({ league_id: leagueId, ...memberRow(m) }));
+  return call(
+    supabase.from('league_members').insert({ league_id: leagueId, ...memberRow(m), invite_email: m.email?.trim().toLowerCase() || null }),
+  );
+}
+
+// Invite many at once (roster import).
+export function addMembers(leagueId, list) {
+  return call(
+    supabase.from('league_members').insert(
+      list.map((m) => ({ league_id: leagueId, ...memberRow(m), invite_email: m.email?.trim().toLowerCase() || null })),
+    ),
+  );
 }
 
 export function updateMember(id, m) {
-  return call(supabase.from('league_members').update(memberRow(m)).eq('id', id));
+  const row = memberRow(m);
+  if ('email' in m) row.invite_email = m.email?.trim().toLowerCase() || null;
+  return call(supabase.from('league_members').update(row).eq('id', id));
 }
+
+// Link spots I've been invited to by email (after sign-in). Quietly 0 if
+// the invite system isn't set up yet.
+export async function claimMyInvites() {
+  const { data, error } = await supabase.rpc('claim_my_invites');
+  return error ? 0 : data ?? 0;
+}
+
+export const inviteLink = (code) => `https://scribblegolfclub.com/app/?join=${code}`;
 
 export function setMemberRole(id, role) {
   return call(supabase.from('league_members').update({ role }).eq('id', id));
