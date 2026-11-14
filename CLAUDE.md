@@ -111,6 +111,7 @@ src/
       *.test.js     Tests live next to each module; test-helpers.js builds cards
     roundSetup.js   Setup defaults, plain-English rules, settings -> engine configs
     courseSearch.js The only OpenGolfAPI network code (search + course detail)
+    searchHistory.js Recent searches (device, per account) + post ranking
     courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
     league/         Pure league engine. No React, network or storage.
@@ -294,6 +295,16 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   review in the Supabase dashboard). Schema + RLS + bucket in
   supabase/social.sql. Members can only upload/delete in their own
   `<userId>/` folder.
+- Search (`Search.jsx`, from the bar at the top of the Feed): recent
+  searches until Enter (typed searches plus profiles/courses opened from
+  search; stored on the device per account in `lib/searchHistory.js`, max
+  20, "Clear search history"). Enter shows three tabs: For you
+  (`searchPosts`: tagged course, caption, or author name; ranked by
+  `rankPosts` course > caption > author, newest first), Profiles (name,
+  then home course) and Golf courses (OpenGolfAPI search). A course opens
+  its location page with an OpenStreetMap embed and an Open in Maps link
+  (search results carry lat/lng). Back returns to the same search and tab
+  (Social `nav(name, params, keep)` saves params on the current screen).
 - Saving (private to you): the bookmark saves to `saved_posts` ("All
   saved"); "Add to folder" puts it in your `save_folders` via
   `save_folder_posts` (adding also saves; unsaving also leaves every folder;

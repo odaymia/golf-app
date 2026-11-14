@@ -18,7 +18,7 @@ async function get(path, signal) {
   return res.json();
 }
 
-// [{ id, name, place, holes, par }]
+// [{ id, name, place, holes, par, lat, lng, type }]
 export async function searchCourses(query, { signal } = {}) {
   const q = query.trim();
   if (q.length < 3) return [];
@@ -29,6 +29,9 @@ export async function searchCourses(query, { signal } = {}) {
     place: [c.city, c.state].filter(Boolean).join(', '),
     holes: c.holes,
     par: c.par,
+    lat: typeof c.lat === 'number' ? c.lat : null,
+    lng: typeof c.lng === 'number' ? c.lng : null,
+    type: c.type ?? '',
   }));
 }
 

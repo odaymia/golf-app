@@ -6,6 +6,7 @@ import PostList from './PostList.jsx';
 import SavedPage, { FolderPage } from './SavedPage.jsx';
 import Inbox from './Inbox.jsx';
 import Thread from './Thread.jsx';
+import Search from './Search.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import CoursePage from './CoursePage.jsx';
 import { getPublicProfile } from '../../lib/social.js';
@@ -45,10 +46,14 @@ export default function Social({ start, user, account, onTab, onSettings }) {
     return () => timers.forEach(clearTimeout);
   }, [top]);
 
-  const nav = (name, params = {}) => {
+  // keep: params to remember on the current screen for when you come back.
+  const nav = (name, params = {}, keep = null) => {
     if (name === 'new') return onTab('new');
     const scrollY = window.scrollY;
-    setStack((s) => [...s.slice(0, -1), { ...s.at(-1), scrollY }, { name, params }]);
+    setStack((s) => {
+      const cur = s.at(-1);
+      return [...s.slice(0, -1), { ...cur, scrollY, params: keep ? { ...cur.params, ...keep } : cur.params }, { name, params }];
+    });
   };
   const back = stack.length > 1 ? () => setStack((s) => s.slice(0, -1)) : null;
   const meId = user.id;
@@ -87,6 +92,8 @@ export default function Social({ start, user, account, onTab, onSettings }) {
       );
     case 'course':
       return <CoursePage course={top.params.course} meId={meId} nav={nav} back={back} />;
+    case 'search':
+      return <Search meId={meId} nav={nav} back={back ?? (() => onTab('feed'))} initial={top.params} />;
     case 'saved':
       return <SavedPage meId={meId} nav={nav} back={back} />;
     case 'folder':

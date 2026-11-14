@@ -56,6 +56,13 @@ export default function Feed({ meId, nav }) {
           {unread > 0 && <span className="inbox-badge">{unread > 9 ? '9+' : unread}</span>}
         </button>
       </div>
+      <button className="feed-search" onClick={() => nav('search')}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        Search golfers, courses, posts
+      </button>
       <div className="tabs wide-tabs" role="tablist">
         {[
           ['all', 'For you'],

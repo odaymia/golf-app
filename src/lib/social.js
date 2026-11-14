@@ -5,6 +5,7 @@
 import { supabase } from './supabase.js';
 import { prepareImage, prepareVideo, extFor } from './media.js';
 import { mediaPath, MAX_VIDEO_BYTES } from './socialFormat.js';
+import { rankPosts } from './searchHistory.js';
 
 const BUCKET = 'media';
 
@@ -56,20 +57,49 @@ export async function findProfileByUsername(username) {
   return toProfile(await call(supabase.from('public_profiles').select('*').eq('username', username).maybeSingle()));
 }
 
-// People search for messages and sharing: username or name contains q.
-export async function searchProfiles(q, meId) {
-  const term = q.trim().replace(/[%_,()]/g, '');
+// A search term safe inside a PostgREST or=() filter (quoted, so spaces,
+// commas and dots are fine; wildcards and quotes removed).
+const searchTerm = (q) => q.trim().replace(/[%_"\\*()]/g, '').replace(/\s+/g, ' ');
+const like = (col, term) => `${col}.ilike."%${term}%"`;
+
+// People search: username or name contains q. withHomeCourse also finds
+// golfers whose home course matches (listed after name matches).
+export async function searchProfiles(q, meId, { withHomeCourse = false, limit = 20 } = {}) {
+  const term = searchTerm(q);
   if (term.length < 2) return [];
+  const cols = ['username', 'display_name', ...(withHomeCourse ? ['home_course'] : [])];
   const rows = await call(
     supabase
       .from('public_profiles')
       .select('*')
       .not('username', 'is', null)
-      .or(`username.ilike.%${term}%,display_name.ilike.%${term}%`)
-      .limit(20),
+      .or(cols.map((c) => like(c, term)).join(','))
+      .limit(limit),
   );
   const hidden = meId ? await hiddenUserIds(meId).catch(() => new Set()) : new Set();
-  return rows.filter((r) => r.id !== meId && !hidden.has(r.id)).map(toProfile);
+  const t = term.toLowerCase();
+  const byName = (r) => `${r.username ?? ''} ${r.display_name ?? ''}`.toLowerCase().includes(t);
+  return rows
+    .filter((r) => r.id !== meId && !hidden.has(r.id))
+    .sort((a, b) => Number(byName(b)) - Number(byName(a)))
+    .map((r) => ({ ...toProfile(r), matchedBy: byName(r) ? 'name' : 'home course' }));
+}
+
+// Posts for a search: tagged at a matching course, a caption that mentions
+// it, or by a golfer whose name matches. Ranked by rankPosts.
+export async function searchPosts(q, meId) {
+  const term = searchTerm(q);
+  if (term.length < 2) return [];
+  const people = await call(
+    supabase.from('public_profiles').select('id').or([like('username', term), like('display_name', term)].join(',')).limit(30),
+  );
+  const ors = [like('course_name', term), like('course_place', term), like('caption', term)];
+  if (people.length) ors.push(`user_id.in.(${people.map((p) => p.id).join(',')})`);
+  const rows = await call(
+    supabase.from('posts').select(POST_SELECT).or(ors.join(',')).order('created_at', { ascending: false }).limit(90),
+  );
+  const posts = await withMyLikes(await visible(rows.map(toPost), meId), meId);
+  return rankPosts(posts, term, new Set(people.map((p) => p.id)));
 }
 
 export async function savePublicProfile(id, p) {

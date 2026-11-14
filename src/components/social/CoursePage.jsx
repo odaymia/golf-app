@@ -37,6 +37,7 @@ export default function CoursePage({ course, meId, nav, back }) {
       <section className="course-head">
         <h2>{course.name}</h2>
         {course.place && <p className="muted">{course.place}</p>}
+        <CourseMap course={course} />
         {posts && (
           <p className="course-meta">
             {posts.length === 0
@@ -56,6 +57,27 @@ export default function CoursePage({ course, meId, nav, back }) {
         />
       )}
       <p className="hint center">Newest first, so you see how the course looks right now.</p>
+    </div>
+  );
+}
+
+// Where the course is: a small map when we know the spot, and a link that
+// opens the phone's maps app (by coordinates, or by name and town).
+function CourseMap({ course }) {
+  const has = typeof course.lat === 'number' && typeof course.lng === 'number';
+  const query = has ? `${course.lat},${course.lng}` : [course.name, course.place].filter(Boolean).join(', ');
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  const d = 0.012;
+  const embed = has
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${course.lng - d * 1.6},${course.lat - d},${course.lng + d * 1.6},${course.lat + d}&layer=mapnik&marker=${course.lat},${course.lng}`
+    : null;
+  return (
+    <div className="course-map">
+      {embed && <iframe title={`Map of ${course.name}`} src={embed} loading="lazy" />}
+      <a className="btn btn-ghost outline" href={maps} target="_blank" rel="noreferrer">
+        📍 Open in Maps
+      </a>
+      {embed && <p className="hint">Map © OpenStreetMap contributors</p>}
     </div>
   );
 }
