@@ -18,7 +18,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   const { league, members, events } = data;
 
   async function share() {
-    const text = `Join "${league.name}" on Scribble Golf Club: open https://odaymia.github.io/golf-app/ and enter code ${league.code}`;
+    const text = `Join "${league.name}" on Scribble Golf Club: open https://scribblegolfclub.com and enter code ${league.code}`;
     try {
       if (navigator.share) await navigator.share({ text });
       else {

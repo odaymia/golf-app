@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Production builds are served from GitHub Pages at /golf-app/.
-// Set BASE_PATH=/ to build for a root domain instead.
-const base = process.env.BASE_PATH ?? '/golf-app/';
+// Production is served at the root of https://scribblegolfclub.com (GitHub
+// Pages custom domain). Set BASE_PATH=/golf-app/ to build for the old
+// odaymia.github.io/golf-app/ address instead.
+const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? base : '/',

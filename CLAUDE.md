@@ -37,20 +37,23 @@ npm run preview    # serve dist/
 
 ## Deploy
 
-Live at https://odaymia.github.io/golf-app/ (public repo
-`odaymia/golf-app`). Every push to `main` runs
+Live at https://scribblegolfclub.com (domain at GoDaddy, GitHub Pages
+custom domain; the old https://odaymia.github.io/golf-app/ redirects there).
+Public repo `odaymia/golf-app`. Every push to `main` runs
 `.github/workflows/deploy.yml`: `npm ci`, `npm test`, `npm run build`, then
 deploys `dist/` to GitHub Pages (repo Settings → Pages → Source: GitHub
 Actions). A failing test blocks the deploy.
 
-- Builds use the base path `/golf-app/` (`vite.config.js`); the dev server
-  stays at `/`. Set `BASE_PATH=/` to build for a root domain.
+- Builds use base path `/` for the custom domain (`vite.config.js`). DNS at
+  GoDaddy: `@` A records to GitHub Pages (185.199.108-111.153), `www` CNAME to
+  `odaymia.github.io`. Custom domain + Enforce HTTPS are set in repo
+  Settings → Pages (the workflow deploy ignores a CNAME file).
 - The PWA manifest's `start_url`/`scope` and the service worker scope follow
   the base path. Brand: `public/logo.png` (transparent wordmark, shown on
   sign-in and home), icons are the white logo on logo green #065025:
   `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
   `apple-touch-icon.png` (iPhone home screen), `favicon.png`.
-- Install on iPhone: open the URL in Safari → Share → Add to Home Screen.
+- Install on iPhone: open https://scribblegolfclub.com in Safari → Share → Add to Home Screen.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps
   resume rather than relaunch) and every 30 min. An update reloads the page;
