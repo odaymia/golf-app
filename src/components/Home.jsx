@@ -32,7 +32,9 @@ export default function Home({ profile, onProfile, onNew, onOpen, onOpenLeague, 
         </button>
       </div>
       <header className="hero">
-        <h1>Golf App</h1>
+        <h1 className="brand">
+          <img className="brand-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
+        </h1>
         <p>Score the round. Settle the bets.</p>
       </header>
       <button className="btn btn-primary btn-xl" onClick={onNew}>

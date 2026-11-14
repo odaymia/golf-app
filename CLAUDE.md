@@ -1,6 +1,6 @@
-# Golf App (working name)
+# Scribble Golf Club
 
-A golf app for leagues, daily tournaments, and foursomes playing betting games
+Scribble Golf Club (repo `golf-app`) is a golf app for leagues, daily tournaments, and foursomes playing betting games
 on the course. Goal: everything Golf Genius does, but far easier to use. Ships
 with a website (marketing page + public league/event pages).
 
@@ -46,8 +46,10 @@ Actions). A failing test blocks the deploy.
 - Builds use the base path `/golf-app/` (`vite.config.js`); the dev server
   stays at `/`. Set `BASE_PATH=/` to build for a root domain.
 - The PWA manifest's `start_url`/`scope` and the service worker scope follow
-  the base path. Icons: `public/icon.svg`, `icon-192.png`, `icon-512.png`,
-  `apple-touch-icon.png` (iPhone home screen needs the PNG).
+  the base path. Brand: `public/logo.png` (transparent wordmark, shown on
+  sign-in and home), icons are the white logo on logo green #065025:
+  `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
+  `apple-touch-icon.png` (iPhone home screen), `favicon.png`.
 - Install on iPhone: open the URL in Safari → Share → Add to Home Screen.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps

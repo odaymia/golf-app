@@ -1,6 +1,6 @@
 :root {
-  --green: #14532d;
-  --green-2: #166534;
+  --green: #065025; /* Scribble logo green */
+  --green-2: #0b6b33;
   --green-soft: #dcfce7;
   --bg: #f6f7f2;
   --card: #ffffff;
@@ -1144,4 +1144,15 @@ button.sticky-bottom.btn {
   text-align: center;
   font-weight: 800;
   font-size: 18px;
+}
+
+.brand {
+  margin: 0 auto 6px;
+  max-width: 300px;
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }

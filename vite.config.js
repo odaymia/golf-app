@@ -12,12 +12,12 @@ export default defineConfig(({ command }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png'],
       manifest: {
-        name: 'Golf App',
-        short_name: 'Golf',
+        name: 'Scribble Golf Club',
+        short_name: 'Scribble',
         description: 'Score your round and settle your bets.',
-        theme_color: '#14532d',
+        theme_color: '#065025',
         background_color: '#f6f7f2',
         display: 'standalone',
         orientation: 'portrait',
@@ -25,8 +25,7 @@ export default defineConfig(({ command }) => ({
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
