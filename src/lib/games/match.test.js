@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { holeResults, matchStatus, describeMatch, scoreMatchPlay } from './match.js';
+import { holeResults, matchStatus, describeMatch, scoreMatchPlay, matchSummary } from './match.js';
 import { makeCtx, matchCard, parCard, sum } from './test-helpers.js';
 
 const status = (seq) => {
@@ -118,5 +118,31 @@ describe('scoreMatchPlay money', () => {
     // a halves b, beats c; b beats c
     expect(r.balances).toEqual({ a: 200, b: 200, c: -400 });
     expect(sum(r.balances)).toBe(0);
+  });
+});
+
+describe('matchSummary (live scoreboard)', () => {
+  const sum = (seq, opts) => matchSummary(status(seq, opts));
+  it('not started and all square', () => {
+    expect(sum('')).toEqual({ leader: null, big: 'ALL SQUARE', small: 'not started' });
+    expect(sum('ab')).toEqual({ leader: null, big: 'ALL SQUARE', small: 'thru 2' });
+  });
+  it('leader and margin', () => {
+    expect(sum('aaa')).toEqual({ leader: 0, big: '3 UP', small: 'thru 3' });
+    expect(sum('bb=')).toEqual({ leader: 1, big: '2 UP', small: 'thru 3' });
+  });
+  it('dormie, closeout, final', () => {
+    expect(sum('bb'.padEnd(16, '='))).toEqual({ leader: 1, big: '2 UP', small: 'dormie · thru 16' });
+    expect(matchSummary(matchStatus(holeResults(makeCtx(['a', 'b'], matchCard('aaaa'.padEnd(18, '='))), ['a'], ['b'], false), 0, 17, { stopAtCloseout: true })))
+      .toEqual({ leader: 0, big: '4 & 3', small: 'final' });
+    expect(sum('a'.padEnd(18, '='))).toEqual({ leader: 0, big: '1 UP', small: 'final' });
+    expect(sum('ab'.padEnd(18, '='))).toEqual({ leader: null, big: 'HALVED', small: 'final' });
+  });
+  it('casual match play reports per-hole results and stops at the closeout', () => {
+    const ctx = makeCtx(['a', 'b'], matchCard('aaaa'.padEnd(18, '=')));
+    const r = scoreMatchPlay(ctx, { net: false, stake: 100, matchups: [[['a'], ['b']]] });
+    expect(r.matchups[0].results.slice(0, 5)).toEqual([1, 1, 1, 1, 0]);
+    expect(r.matchups[0].text).toBe('4 & 3');
+    expect(r.balances).toEqual({ a: 100, b: -100 });
   });
 });

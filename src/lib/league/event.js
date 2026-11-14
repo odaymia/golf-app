@@ -199,7 +199,8 @@ function scoreMatch(settings, members, players, holes, mu) {
     gross: Object.fromEntries(ids.map((id) => [id, players[id].gross])),
     strokes,
   };
-  const status = matchStatus(holeResults(ctx, a, b, settings.net), 0, holes.length - 1, { stopAtCloseout: true });
+  const holeByHole = holeResults(ctx, a, b, settings.net);
+  const status = matchStatus(holeByHole, 0, holes.length - 1, { stopAtCloseout: true });
   const keys = [entityKey(settings, members, a), entityKey(settings, members, b)];
   const result = status.complete ? (status.winner === 0 ? 'A' : status.winner === 1 ? 'B' : 'halved') : null;
   return {
@@ -207,6 +208,7 @@ function scoreMatch(settings, members, players, holes, mu) {
     keys,
     names: [a, b].map((s) => s.map((id) => members.find((m) => m.id === id)?.name ?? '?').join(' & ')),
     status,
+    results: holeByHole,
     strokes,
     result,
   };

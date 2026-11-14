@@ -1,5 +1,6 @@
 import { formatMoney } from '../lib/games/money.js';
 import { gameLines, gameTitle, nameMap } from './gameSummary.js';
+import MatchCard from './MatchCard.jsx';
 
 export function Totals({ players, totals }) {
   return (
@@ -40,8 +41,17 @@ export default function MoneyView({ round, computed }) {
             <h3>{gameTitle(g.game)}</h3>
             <span className="muted">{g.game.net ? 'Net' : 'Gross'}</span>
           </div>
+          {g.game.type === 'match' &&
+            g.matchups.map((m, i) => (
+              <MatchCard
+                key={i}
+                names={m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & '))}
+                status={m.status}
+                results={m.results}
+              />
+            ))}
           <ul className="lines">
-            {gameLines(g, players).map((l, i) => (
+            {(g.game.type === 'match' ? [] : gameLines(g, players)).map((l, i) => (
               <li key={i} className={`${l.sub ? 'sub' : ''} ${l.head ? 'head' : ''}`}>
                 {l.text}
               </li>

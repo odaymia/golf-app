@@ -175,7 +175,12 @@ supabase/league_tiers.sql  Adds league_events.tier (regular/major)
   scores for their group; only commissioners manage members, rounds,
   matches and mark rounds final. Only final rounds count in standings, and
   members can't change scores after final (enforced by RLS).
-- League matches stop at the closeout ("4 & 3"). Handicaps: own index or
+- Matches (league and casual) stop at the closeout ("4 & 3"). Live match
+  play: `matchSummary(status)` gives the scoreboard text (3 UP / ALL SQUARE
+  / DORMIE / 4 & 3) and `MatchCard` shows it with hole-by-hole dots, on the
+  scoring screen (from the phone's own cards, before sending) and on league
+  Results, which re-fetch every 20 s while a round is open. Ryder Cup
+  Results add a points board and who's leading on the course. Handicaps: own index or
   league index from earlier final rounds only; allowance %, max handicap,
   strokes off the low player per match.
 - Scores go to a localStorage queue first and are sent when online

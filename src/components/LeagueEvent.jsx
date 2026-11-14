@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteEvent, saveScore, updateEvent } from '../lib/leagueApi.js';
 import { roundRobinWeek } from '../lib/league/season.js';
-import { entityKey } from '../lib/league/event.js';
+import { computeEvent, entityKey } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
-import { matchText } from './gameSummary.js';
+import MatchCard from './MatchCard.jsx';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { Seg } from './controls.jsx';
 
@@ -47,10 +47,19 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
         ))}
       </div>
 
-      {tab === 'results' && <Results settings={settings} result={result} members={data.members} />}
+      {tab === 'results' && (
+        <Results settings={settings} result={result} members={data.members} live={!final} reload={reload} />
+      )}
       {tab === 'score' &&
         (canScore ? (
-          <ScoreEntry data={data} event={event} result={result} settings={settings} reload={reload} />
+          <ScoreEntry
+            data={data}
+            event={event}
+            result={result}
+            indexes={computed.indexes[event.id]}
+            settings={settings}
+            reload={reload}
+          />
         ) : (
           <p className="muted center">This round is final. Ask the commissioner to reopen it to change scores.</p>
         ))}
@@ -61,27 +70,76 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
   );
 }
 
-function Results({ settings, result, members }) {
+// While a round is open, pull everyone's latest scores every 20 seconds so
+// the board moves live. Paused when the screen isn't visible.
+function useLiveRefresh(live, reload) {
+  useEffect(() => {
+    if (!live) return;
+    const tick = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) reload({ quiet: true });
+    };
+    const id = setInterval(tick, 20000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [live, reload]);
+}
+
+function Results({ settings, result, members, live, reload }) {
+  useLiveRefresh(live, reload);
   if (settings.scoring === 'match') {
     if (!result.matches.length) return <p className="muted center">No matches set yet. The commissioner sets them under Manage.</p>;
+    // Ryder Cup: points won so far, plus where the matches still out on the course stand.
+    const cup = settings.unit === 'ryder' ? settings.sides.map((s) => result.cup[s] ?? 0) : null;
+    const leading = settings.unit === 'ryder' ? settings.sides.map(() => 0) : null;
+    if (leading) {
+      for (const m of result.matches) {
+        if (m.result || m.status.up === 0) continue;
+        const side = settings.sides.indexOf(m.keys[m.status.up > 0 ? 0 : 1]);
+        if (side >= 0) leading[side]++;
+      }
+    }
     return (
-      <section className="card">
-        <ul className="lines">
-          {result.matches.map((m, i) => (
-            <li key={i} className="match-line">
-              <strong>
-                {m.names[0]} vs {m.names[1]}
-              </strong>
-              <span className={m.result ? 'up' : 'muted'}>{matchText(m.status, m.names[0], m.names[1])}</span>
-            </li>
-          ))}
-        </ul>
-        {settings.unit === 'ryder' && Object.keys(result.cup).length > 0 && (
-          <p className="cup-line">
-            {settings.sides.map((s) => `${s} ${result.cup[s] ?? 0}`).join('  ·  ')}
-          </p>
+      <>
+        {cup && (
+          <section className="card cup-board">
+            <div>
+              <span className="muted">{settings.sides[0]}</span>
+              <strong className="side-a-text">{cup[0]}</strong>
+            </div>
+            <span className="cup-vs">Points</span>
+            <div>
+              <span className="muted">{settings.sides[1]}</span>
+              <strong className="side-b-text">{cup[1]}</strong>
+            </div>
+            {(leading[0] > 0 || leading[1] > 0) && (
+              <p className="cup-leading">
+                Leading on the course: {settings.sides[0]} {leading[0]}, {settings.sides[1]} {leading[1]}
+              </p>
+            )}
+          </section>
         )}
-      </section>
+        {result.matches.map((m, i) => (
+          <MatchCard key={i} names={m.names} status={m.status} results={m.results} />
+        ))}
+        <p className="match-legend">
+          <span>
+            <i className="mh a" />
+            {settings.unit === 'ryder' ? settings.sides[0] : 'Left side'} won
+          </span>
+          <span>
+            <i className="mh b" />
+            {settings.unit === 'ryder' ? settings.sides[1] : 'Right side'} won
+          </span>
+          <span>
+            <i className="mh halved" />
+            Halved
+          </span>
+        </p>
+        {live && <p className="hint center">Live: updates every 20 seconds as groups enter scores.</p>}
+      </>
     );
   }
   const stableford = settings.scoring === 'stableford';
@@ -120,9 +178,9 @@ function Results({ settings, result, members }) {
   );
 }
 
-function ScoreEntry({ data, event, result, settings, reload }) {
+function ScoreEntry({ data, event, result, indexes, settings, reload }) {
   const holes = event.course.holes;
-  const scored = data.scores[event.id] ?? {};
+  const scored = useMemo(() => data.scores[event.id] ?? {}, [data.scores, event.id]);
   // Default group: the people in a match with you, or nobody.
   const [picked, setPicked] = useState([]);
   const [cards, setCards] = useState(() =>
@@ -167,6 +225,19 @@ function ScoreEntry({ data, event, result, settings, reload }) {
     setCards((c) => ({ ...c, [id]: c[id].map((g, i) => (i === hole - 1 ? (value == null ? null : Math.max(1, Math.min(15, value))) : g)) }));
   }
 
+  // Live status from the cards on this phone, before they're even sent.
+  const live = useMemo(
+    () =>
+      computeEvent({
+        settings,
+        event,
+        members: data.members,
+        scores: { ...scored, ...Object.fromEntries(picked.map((id) => [id, cards[id]])) },
+        indexes,
+      }),
+    [settings, event, data.members, scored, picked, cards, indexes],
+  );
+  const myMatches = live.matches.filter((m) => m.sides.flat().some((id) => picked.includes(id)));
   const matchFor = (id) => result.matches.find((m) => m.sides.flat().includes(id));
   const strokesFor = (id) => (matchFor(id)?.strokes?.[id] ?? result.players[id]?.strokes ?? [])[hole - 1] ?? 0;
 
@@ -219,6 +290,9 @@ function ScoreEntry({ data, event, result, settings, reload }) {
           </button>
         ))}
       </div>
+      {myMatches.map((m, i) => (
+        <MatchCard key={i} names={m.names} status={m.status} compact />
+      ))}
       <div className="score-rows">
         {people.map((p) => {
           const s = cards[p.id][hole - 1];

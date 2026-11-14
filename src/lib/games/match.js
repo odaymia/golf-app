@@ -63,17 +63,34 @@ function sideLabel(ctx, side) {
 export function scoreMatchPlay(ctx, game) {
   const balances = emptyBalances(ctx.players.map((p) => p.id));
   const matchups = game.matchups.map(([a, b]) => {
-    const status = matchStatus(holeResults(ctx, a, b, game.net), 0, holeCount(ctx) - 1);
+    const results = holeResults(ctx, a, b, game.net);
+    const status = matchStatus(results, 0, holeCount(ctx) - 1, { stopAtCloseout: true });
     if (status.winner === 0) payTeamBet(balances, a, b, game.stake);
     if (status.winner === 1) payTeamBet(balances, b, a, game.stake);
     return {
       sides: [a, b],
       label: `${sideLabel(ctx, a)} vs ${sideLabel(ctx, b)}`,
       status,
+      results,
       text: describeMatch(status),
     };
   });
   return { balances, matchups };
+}
+
+// Scoreboard-style summary of a match for live display.
+// leader: 0 (side A), 1 (side B) or null. big: "3 UP", "ALL SQUARE",
+// "4 & 3", "HALVED". small: "thru 7", "dormie", "final", "not started".
+export function matchSummary(status) {
+  const { up, played, remaining, closedOut, complete } = status;
+  const leader = up > 0 ? 0 : up < 0 ? 1 : null;
+  const n = Math.abs(up);
+  if (played === 0) return { leader: null, big: 'ALL SQUARE', small: 'not started' };
+  if (closedOut && remaining > 0) return { leader, big: `${n} & ${remaining}`, small: 'final' };
+  if (complete) return up === 0 ? { leader: null, big: 'HALVED', small: 'final' } : { leader, big: `${n} UP`, small: 'final' };
+  if (up === 0) return { leader: null, big: 'ALL SQUARE', small: `thru ${played}` };
+  if (n === remaining) return { leader, big: `${n} UP`, small: `dormie · thru ${played}` };
+  return { leader, big: `${n} UP`, small: `thru ${played}` };
 }
 
 export { sideLabel };

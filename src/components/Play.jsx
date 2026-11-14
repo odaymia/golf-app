@@ -5,6 +5,7 @@ import { wolfForHole } from '../lib/games/wolf.js';
 import MoneyView, { Totals } from './MoneyView.jsx';
 import Scorecard from './Scorecard.jsx';
 import { nameMap } from './gameSummary.js';
+import MatchCard from './MatchCard.jsx';
 
 export default function Play({ round, setRound, onSettle, onHome }) {
   const [tab, setTab] = useState('score');
@@ -130,6 +131,17 @@ export default function Play({ round, setRound, onSettle, onHome }) {
             </section>
           )}
 
+          {computed.games
+            .filter((g) => g.game.type === 'match')
+            .flatMap((g) => g.matchups)
+            .map((m, i) => (
+              <MatchCard
+                key={i}
+                names={m.sides.map((side) => side.map((id) => names[id]).join(' & '))}
+                status={m.status}
+                compact
+              />
+            ))}
           <div className="score-rows">
             {round.players.map((p) => {
               const s = round.scores[p.id][h];
