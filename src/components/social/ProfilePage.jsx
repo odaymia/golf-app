@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { startDM } from '../../lib/messages.js';
 import {
   blockStatus,
   blockUser,
@@ -95,6 +96,15 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
     );
   }
 
+  async function message() {
+    try {
+      const id = await startDM(userId);
+      nav('thread', { conversationId: id, peer: profile });
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
   return (
     <div className="screen">
       <div className="topbar">
@@ -168,9 +178,14 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
           </section>
           <div className="profile-buttons">
             {mine ? (
-              <button className="btn btn-ghost full outline" onClick={() => setEditing(true)}>
-                Edit profile
-              </button>
+              <>
+                <button className="btn btn-ghost full outline" onClick={() => setEditing(true)}>
+                  Edit profile
+                </button>
+                <button className="btn btn-ghost full outline" onClick={() => nav('saved')}>
+                  Saved
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -179,6 +194,9 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
                   disabled={!stats}
                 >
                   {stats?.iFollow ? 'Following' : 'Follow'}
+                </button>
+                <button className="btn btn-ghost full outline" onClick={message}>
+                  Message
                 </button>
                 <button className="btn btn-ghost outline block-btn" onClick={toggleBlock} aria-label="Block">
                   Block

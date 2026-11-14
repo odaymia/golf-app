@@ -2908,3 +2908,113 @@ tr.clickable {
 .my-tee em { font-style: normal; font-size: 14px; opacity: 0.9; }
 .round-tee { color: var(--green); font-weight: 600; font-size: 14px; }
 .tee-lines .tee-names { text-align: left !important; font-size: inherit; }
+
+/* Share, save, folders, messages */
+.feed-top { position: relative; }
+.inbox-btn {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; display: grid; place-items: center;
+  background: none; border: none; color: var(--green-deep);
+}
+.inbox-badge {
+  position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: #b8466f; color: #fff; font-size: 11px; font-weight: 700;
+  display: grid; place-items: center;
+}
+.post-actions .save-btn { margin-left: auto; }
+.post-actions .save-btn.on { color: var(--green); }
+.save-toast {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 4px 12px 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--green-deep); color: #fff; font-weight: 600; font-size: 14px;
+}
+.save-toast .link { color: var(--gold); font-weight: 700; }
+
+.share-search {
+  width: 100%; margin: 10px 0 6px; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: #fff; font: inherit;
+}
+.people-pick, .folder-pick, .inbox { list-style: none; margin: 0; padding: 0; }
+.people-pick button, .folder-pick button, .inbox button {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 4px;
+  background: none; border: none; text-align: left; font: inherit; color: var(--text);
+}
+.people-pick span, .inbox-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.people-pick em { font-style: normal; color: var(--muted); font-size: 13px; }
+.folder-pick button { padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.folder-pick span { flex: 1; font-weight: 600; }
+.pick-dot {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none;
+}
+.people-pick .on .pick-dot, .folder-pick .on .pick-dot {
+  border-color: var(--green); background: var(--green);
+  box-shadow: inset 0 0 0 3px var(--bg);
+}
+.share-send { display: flex; gap: 8px; margin-top: 10px; }
+.share-send input {
+  flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: #fff; font: inherit;
+}
+.share-out { display: flex; gap: 8px; margin-top: 14px; }
+.share-out .btn { flex: 1; }
+.share-status { text-align: center; font-weight: 600; color: var(--green); margin: 10px 0 0; }
+
+.folder-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 4px 16px 16px;
+}
+.folder-tile {
+  display: flex; flex-direction: column; gap: 2px; background: none; border: none;
+  text-align: left; font: inherit; color: var(--text); padding: 0;
+}
+.folder-tile em { font-style: normal; color: var(--muted); font-size: 13px; }
+.folder-covers {
+  aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--green-soft);
+  display: grid; gap: 2px; margin-bottom: 6px;
+}
+.folder-covers.n2, .folder-covers.n3, .folder-covers.n4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.folder-covers.n2 img { grid-row: span 2; }
+.folder-covers.n3 img:first-child { grid-row: span 2; }
+.folder-covers img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 0; }
+.folder-empty { display: grid; place-items: center; font-size: 34px; opacity: 0.6; }
+
+.inbox { padding: 0 12px; }
+.inbox button { padding: 10px 4px; }
+.inbox-text span { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox .unread strong, .inbox .unread .inbox-text span { color: var(--text); font-weight: 700; }
+.unread-dot { width: 10px; height: 10px; border-radius: 50%; background: #b8466f; flex: none; }
+.empty-inbox { padding: 30px 16px; }
+
+.thread { padding-bottom: 140px; }
+.thread-peer {
+  display: flex; align-items: center; gap: 8px; background: none; border: none;
+  font: inherit; color: inherit; justify-content: center; min-width: 0;
+}
+.thread-peer h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubbles { list-style: none; margin: 0; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+.bubbles li { display: flex; flex-direction: column; align-items: flex-start; }
+.bubbles li.mine { align-items: flex-end; }
+.bubble-time { align-self: center; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+.bubble {
+  margin: 0; padding: 8px 12px; border-radius: 18px; max-width: 78%;
+  background: #ece4cf; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.mine .bubble { background: var(--green); color: #fff; }
+.unsend { font-size: 12px; color: var(--down); }
+.shared-post {
+  width: 220px; display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--card); font: inherit; color: var(--text);
+}
+.shared-author { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 13px; }
+.shared-media { position: relative; display: block; aspect-ratio: 1; background: #111; }
+.shared-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shared-media i { position: absolute; top: 8px; right: 10px; color: #fff; font-style: normal; text-shadow: 0 1px 3px #000; }
+.shared-caption { padding: 8px 10px; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shared-gone { font-style: italic; color: var(--muted); }
+.thread-compose {
+  position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; gap: 8px; padding: 8px 12px; background: var(--bg); border-top: 1px solid var(--line);
+  max-width: 640px; margin: 0 auto;
+}
+.thread-compose input {
+  flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 22px; background: #fff; font: inherit;
+}

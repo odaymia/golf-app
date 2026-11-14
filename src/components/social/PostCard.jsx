@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
-import { likePost, unlikePost, deletePost, reportPost, blockUser } from '../../lib/social.js';
+import { likePost, unlikePost, deletePost, reportPost, blockUser, savePost, unsavePost } from '../../lib/social.js';
 import { countLabel, timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 import FeedVideo from './FeedVideo.jsx';
+import ShareSheet from './ShareSheet.jsx';
+import FolderSheet from './FolderSheet.jsx';
 import { toggleSound } from './feedSound.js';
 
 // Tallest and widest shapes a post box takes (width / height); media
@@ -16,6 +18,10 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
   const [likes, setLikes] = useState(post.likeCount);
   const [slide, setSlide] = useState(0);
   const [menu, setMenu] = useState(false);
+  const [saved, setSaved] = useState(!!post.savedByMe);
+  const [toast, setToast] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'share' | 'folders'
+  const toastTimer = useRef(null);
   const [error, setError] = useState('');
   const track = useRef(null);
   const lastTap = useRef(0);
@@ -50,6 +56,23 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
     lastTap.current = double ? 0 : now;
     if (m.kind === 'video') toggleSound();
     if (double) toggleLike(true);
+  }
+
+  async function toggleSave() {
+    const next = !saved;
+    setSaved(next);
+    clearTimeout(toastTimer.current);
+    setToast(next);
+    if (next) toastTimer.current = setTimeout(() => setToast(false), 4000);
+    try {
+      if (next) await savePost(post.id);
+      else await unsavePost(meId, post.id);
+      onChanged?.();
+    } catch (e) {
+      setSaved(!next);
+      setToast(false);
+      setError(e.message);
+    }
   }
 
   async function remove() {
@@ -181,7 +204,33 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
             <path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </button>
+        <button className="share-btn" onClick={() => setSheet('share')} aria-label="Share">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+            <path d="M21 3 3 10.5l7 2.5 2.5 7z M21 3 10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button className={`save-btn ${saved ? 'on' : ''}`} onClick={toggleSave} aria-pressed={saved} aria-label={saved ? 'Unsave' : 'Save'}>
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+            <path d="M6 3h12v18l-6-5-6 5z" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
+      {toast && (
+        <div className="save-toast">
+          <span>Saved</span>
+          <button
+            className="link"
+            onClick={() => {
+              setToast(false);
+              setSheet('folders');
+            }}
+          >
+            Add to folder ›
+          </button>
+        </div>
+      )}
+      {sheet === 'share' && <ShareSheet post={post} meId={meId} onClose={() => setSheet(null)} />}
+      {sheet === 'folders' && <FolderSheet post={post} meId={meId} onClose={() => setSheet(null)} />}
       <div className="post-body">
         {likes > 0 && <p className="post-likes">{countLabel(likes, 'like')}</p>}
         {post.caption && (

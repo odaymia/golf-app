@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listFeed } from '../../lib/social.js';
+import { unreadCount } from '../../lib/messages.js';
 import PostCard from './PostCard.jsx';
 
 // The feed: everyone's posts ("For you") or people you follow.
@@ -9,6 +10,15 @@ export default function Feed({ meId, nav }) {
   const [more, setMore] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  // Unread conversations, for the badge on the messages button.
+  useEffect(() => {
+    const check = () => unreadCount(meId).then(setUnread).catch(() => {});
+    check();
+    const t = setInterval(check, 30000);
+    return () => clearInterval(t);
+  }, [meId]);
 
   const load = useCallback(
     async (reset) => {
@@ -39,6 +49,12 @@ export default function Feed({ meId, nav }) {
     <div className="screen feed-screen">
       <div className="feed-top">
         <img className="feed-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
+        <button className="inbox-btn" onClick={() => nav('inbox')} aria-label={unread ? `Messages, ${unread} unread` : 'Messages'}>
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+            <path d="M21 3 3 10.5l7 2.5 2.5 7z M21 3 10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+          {unread > 0 && <span className="inbox-badge">{unread > 9 ? '9+' : unread}</span>}
+        </button>
       </div>
       <div className="tabs wide-tabs" role="tablist">
         {[

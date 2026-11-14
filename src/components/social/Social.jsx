@@ -3,6 +3,9 @@ import Feed from './Feed.jsx';
 import NewPost from './NewPost.jsx';
 import PostDetail from './PostDetail.jsx';
 import PostList from './PostList.jsx';
+import SavedPage, { FolderPage } from './SavedPage.jsx';
+import Inbox from './Inbox.jsx';
+import Thread from './Thread.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import CoursePage from './CoursePage.jsx';
 import { getPublicProfile } from '../../lib/social.js';
@@ -10,11 +13,13 @@ import { getPublicProfile } from '../../lib/social.js';
 // The social side of the app, with its own back stack.
 // start: { name: 'feed' | 'new' | 'user', params }
 export default function Social({ start, user, account, onTab, onSettings }) {
-  const [stack, setStack] = useState([start]);
+  // start.under puts a screen beneath it, so Back works (shared post links).
+  const initial = (st) => (st.under ? [{ name: st.under, params: {} }, st] : [st]);
+  const [stack, setStack] = useState(() => initial(start));
   const [ready, setReady] = useState(null); // has a username?
 
   useEffect(() => {
-    setStack([start]);
+    setStack(initial(start));
   }, [start]);
 
   // Social needs a username first; the profile page asks for one.
@@ -82,6 +87,14 @@ export default function Social({ start, user, account, onTab, onSettings }) {
       );
     case 'course':
       return <CoursePage course={top.params.course} meId={meId} nav={nav} back={back} />;
+    case 'saved':
+      return <SavedPage meId={meId} nav={nav} back={back} />;
+    case 'folder':
+      return <FolderPage key={top.params.folderId} folderId={top.params.folderId} meId={meId} nav={nav} back={back} />;
+    case 'inbox':
+      return <Inbox meId={meId} nav={nav} back={back ?? (() => onTab('feed'))} />;
+    case 'thread':
+      return <Thread key={top.params.conversationId} {...top.params} meId={meId} nav={nav} back={back ?? (() => onTab('feed'))} />;
     case 'posts':
       return <PostList key={top.params.startId} {...top.params} meId={meId} nav={nav} back={back} />;
     case 'post':

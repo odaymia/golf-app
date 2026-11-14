@@ -147,6 +147,8 @@ supabase/groups.sql   Adds league_events.groups + can_score() score policies
 supabase/social.sql   Social tables, policies and the `media` storage bucket
 supabase/home_course.sql  public_profiles.home_course_key / _place
 supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media list policy
+supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
+                    messages, start_dm())
 supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
@@ -292,6 +294,22 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   review in the Supabase dashboard). Schema + RLS + bucket in
   supabase/social.sql. Members can only upload/delete in their own
   `<userId>/` folder.
+- Saving (private to you): the bookmark saves to `saved_posts` ("All
+  saved"); "Add to folder" puts it in your `save_folders` via
+  `save_folder_posts` (adding also saves; unsaving also leaves every folder;
+  deleting a folder keeps the saves). Own profile -> Saved shows All saved +
+  folders (create, rename, delete).
+- Sharing: the paper plane opens `ShareSheet`: send the post to golfers by
+  DM (search or recent chats, optional note), the phone's share sheet
+  (`navigator.share`), or copy the link `/app/?post=ID`. App.jsx reads that
+  link once at load and opens the post after sign-in (feed underneath).
+- Direct messages (`lib/messages.js`, the only code touching the DM
+  tables): one-to-one conversations (`start_dm` reuses an existing one;
+  tables allow groups later). Members-only RLS; blocked people can't start
+  or send. Inbox from the paper plane on the Feed (unread badge, checked
+  every 30 s); Message button on other profiles. Threads poll every 4 s
+  (no realtime yet); tapping your own bubble offers Unsend. Shared posts
+  show as a card that opens the post.
 - Viewing: tapping a grid tile (profile or course page) opens `PostList`,
   every post of that grid in one scrolling list starting at the tapped one;
   Back returns to the same scroll spot. Grid tiles are square crops; in the

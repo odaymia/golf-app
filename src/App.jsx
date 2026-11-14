@@ -17,6 +17,14 @@ import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 // so they land back on the same round instead of the home screen.
 const PLACE_KEY = 'golf-app:place';
 
+// Shared post link (/app/?post=ID), read once when the app loads.
+const LINKED_POST = (() => {
+  const id = new URLSearchParams(location.search).get('post');
+  if (!id) return null;
+  history.replaceState(null, '', location.pathname);
+  return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+})();
+
 function readPlace() {
   try {
     return JSON.parse(sessionStorage.getItem(PLACE_KEY));
@@ -98,6 +106,14 @@ export default function App() {
       .catch((e) => setJoinError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per sign-in
   }, [ready]);
+
+  // Shared post links (/app/?post=ID): open the post once signed in.
+  const linkedPost = LINKED_POST;
+  useEffect(() => {
+    if (!ready || !linkedPost) return;
+    setSocialStart({ name: 'post', params: { postId: linkedPost }, under: 'feed' });
+    setScreen('social');
+  }, [ready, linkedPost]);
 
   // Every change to the round is written to the device right away.
   useEffect(() => {
