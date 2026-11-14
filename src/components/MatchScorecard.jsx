@@ -122,7 +122,7 @@ export default function MatchScorecard({ match, holes, grossOf, nameOf, net, lab
           {sideNames ? ` (${sideNames[0]} green, ${sideNames[1]} pink)` : ''}; AS = all square.
           {net ? ' Dots are handicap strokes in this match.' : ''}
           {teamLabel
-            ? ` Team row: the team's ${match.format === 'shamble' ? 'two scores added' : 'best score'} on each hole${net ? ', net' : ''}.`
+            ? ` Team row: the team's ${match.format === 'shamble' ? 'combined score' : 'best score'} on each hole${net ? ', net' : ''}.`
             : ''}
           {played < holes.length && match.status.closedOut ? ' Holes after the match ended are faded.' : ''}
         </p>

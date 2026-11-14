@@ -188,12 +188,12 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
 // Match formats. Each match carries its own; a Ryder Cup round sets them all.
 //   singles   1 vs 1
 //   fourball  2 vs 2, own balls, best score on each hole counts
-//   shamble   2 vs 2, own balls after the best drive, both scores added
+//   shamble   2 vs 2, own balls after the best drive, combined score
 //   scramble  2 vs 2, one team ball (one score per hole for the pair)
 //   foursomes 2 vs 2, alternate shot (one score per hole for the pair)
 export const MATCH_FORMATS = {
   fourball: { label: 'Four-ball (best ball)', short: 'Four-ball', size: 2 },
-  shamble: { label: 'Shamble (both scores count)', short: 'Shamble', size: 2 },
+  shamble: { label: 'Shamble (combined score)', short: 'Shamble', size: 2 },
   scramble: { label: 'Scramble', short: 'Scramble', size: 2, teamBall: true },
   foursomes: { label: 'Foursomes (alternate shot)', short: 'Foursomes', size: 2, teamBall: true },
   singles: { label: 'Singles (1 vs 1)', short: 'Singles', size: 1 },
