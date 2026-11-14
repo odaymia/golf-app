@@ -948,3 +948,110 @@ button.sticky-bottom.btn {
 .btn.danger {
   color: var(--down);
 }
+
+.option-help {
+  display: block;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* Leagues */
+.invite {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invite > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.invite .code {
+  font-size: 26px;
+  letter-spacing: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.wide-tabs {
+  display: flex;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.wide-tabs button {
+  flex: 1;
+}
+
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.standings th,
+.standings td {
+  padding: 10px 4px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.standings .left {
+  text-align: left;
+}
+
+.standings .pos {
+  text-align: left;
+  color: var(--muted);
+  width: 34px;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.badge {
+  font-size: 13px;
+  color: var(--green-2);
+  font-weight: 600;
+}
+
+.badge.final {
+  color: var(--muted);
+}
+
+.match-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0 !important;
+}
+
+.match-line > span:last-child {
+  text-align: right;
+  font-size: 14px;
+}
+
+.cup-line {
+  text-align: center;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--green);
+}
+
+.join-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+}
+
+.join-row input {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

@@ -13,6 +13,7 @@ import {
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
+import { Switch, Toggle } from './controls.jsx';
 import { listSavedPlayers } from '../lib/account.js';
 
 const newPlayer = (from) => ({
@@ -440,30 +441,6 @@ function GameOptions({ type, s, set, playerCount }) {
       {type === 'vegas' && (
         <Toggle label="Birdie flips the other team" checked={s.birdieFlip} onChange={(v) => set('birdieFlip', v)} />
       )}
-    </div>
-  );
-}
-
-function Switch({ checked, onChange, disabled, label }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      className={`switch ${checked ? 'on' : ''}`}
-      onClick={() => onChange(!checked)}
-    >
-      <span />
-    </button>
-  );
-}
-
-function Toggle({ label, checked, onChange }) {
-  return (
-    <div className="toggle">
-      <span>{label}</span>
-      <Switch checked={checked} onChange={onChange} label={label} />
     </div>
   );
 }

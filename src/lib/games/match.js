@@ -15,14 +15,16 @@ export function holeResults(ctx, sideA, sideB, useNet) {
 }
 
 // Status of a match over holes [from, to] (0-based, inclusive), counting
-// holes in order and stopping at the first unscored one.
-export function matchStatus(results, from, to) {
+// holes in order and stopping at the first unscored one. With stopAtCloseout
+// the match ends as soon as it's decided ("4 & 3"), like a real match.
+export function matchStatus(results, from, to, { stopAtCloseout = false } = {}) {
   let up = 0;
   let played = 0;
   for (let h = from; h <= to; h++) {
     if (results[h] == null) break;
     up += results[h];
     played++;
+    if (stopAtCloseout && Math.abs(up) > to - h) break;
   }
   const total = to - from + 1;
   const remaining = total - played;

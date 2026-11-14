@@ -1,0 +1,496 @@
+import { useEffect, useState } from 'react';
+import { describeLeague } from '../lib/league/format.js';
+import { useLeagueComputed } from './useLeagueComputed.js';
+import { addMember, createEvent, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
+import { listCourses, saveCourse } from '../lib/storage.js';
+import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
+import CourseSearch from './CourseSearch.jsx';
+import { Seg } from './controls.jsx';
+
+const fmtPts = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''));
+const fmtDate = (d) =>
+  d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+
+export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat, onBack }) {
+  const [tab, setTab] = useState('standings');
+  const computed = useLeagueComputed(data);
+  const isAdmin = me?.role === 'commissioner';
+  const { league, members, events } = data;
+
+  async function share() {
+    const text = `Join "${league.name}" on Golf App: open https://odaymia.github.io/golf-app/ and enter code ${league.code}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else {
+        await navigator.clipboard.writeText(text);
+        alert('Invite copied');
+      }
+    } catch {
+      // share sheet dismissed
+    }
+  }
+
+  return (
+    <div className="screen">
+      <div className="topbar">
+        <button className="btn btn-ghost" onClick={onBack}>
+          ‹ Home
+        </button>
+        <h1>{league.name}</h1>
+        {isAdmin ? (
+          <button className="btn btn-ghost" onClick={onEditFormat}>
+            Format
+          </button>
+        ) : (
+          <span />
+        )}
+      </div>
+      <p className="muted center">{describeLeague(computed.settings)}</p>
+      {data.offline && <div className="card warn-box">No connection: showing the last copy on this phone.</div>}
+      {data.pending > 0 && (
+        <div className="card warn-box">{data.pending} score card(s) saved on this phone, waiting for signal to send.</div>
+      )}
+
+      <div className="card invite">
+        <div>
+          <span className="muted">Invite code</span>
+          <strong className="code">{league.code}</strong>
+        </div>
+        <button className="btn btn-primary" onClick={share}>
+          Invite
+        </button>
+      </div>
+
+      <div className="tabs wide-tabs" role="tablist">
+        {[
+          ['standings', 'Standings'],
+          ['rounds', 'Rounds'],
+          ['members', 'Members'],
+        ].map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'standings' && <Standings computed={computed} events={events} />}
+      {tab === 'rounds' && (
+        <Rounds data={data} computed={computed} isAdmin={isAdmin} reload={reload} onOpenEvent={onOpenEvent} />
+      )}
+      {tab === 'members' && <Members data={data} computed={computed} me={me} isAdmin={isAdmin} reload={reload} />}
+      {members.length < 2 && tab !== 'members' && (
+        <p className="hint center">Invite players with the code above, or add them under Members.</p>
+      )}
+    </div>
+  );
+}
+
+function Standings({ computed, events }) {
+  const { settings, standings } = computed;
+  const finals = events.filter((e) => e.status === 'final').length;
+  if (!standings.length) return <p className="muted center">No players yet.</p>;
+  const cols =
+    settings.season === 'ryder'
+      ? [['cup', 'Points']]
+      : settings.season === 'record'
+        ? [
+            ['w', 'W'],
+            ['l', 'L'],
+            ['t', 'T'],
+            ['points', 'Pts'],
+          ]
+        : settings.season === 'cumulative'
+          ? settings.scoring === 'stableford'
+            ? [
+                ['played', 'Rds'],
+                ['total', 'Pts'],
+              ]
+            : [
+                ['played', 'Rds'],
+                ['average', 'Avg'],
+              ]
+          : [
+              ['played', 'Rds'],
+              ['points', 'Pts'],
+            ];
+  return (
+    <section className="card">
+      <table className="standings">
+        <thead>
+          <tr>
+            <th />
+            <th className="left">{settings.unit === 'individual' ? 'Player' : settings.unit === 'ryder' ? 'Side' : 'Team'}</th>
+            {cols.map(([, label]) => (
+              <th key={label}>{label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {standings.map((r, i) => (
+            <tr key={r.key}>
+              <td className="pos">{i > 0 && standings[i - 1].position === r.position ? `T${r.position}` : r.position}</td>
+              <td className="left">{r.name}</td>
+              {cols.map(([k]) => (
+                <td key={k}>{r[k] == null ? '–' : typeof r[k] === 'number' ? fmtPts(r[k]) : r[k]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="hint">
+        {finals === 0 ? 'Standings fill in as rounds are marked final.' : `After ${finals} final round${finals > 1 ? 's' : ''}.`}
+        {settings.bestOf ? ` Best ${settings.bestOf} weeks count.` : ''}
+      </p>
+    </section>
+  );
+}
+
+function Rounds({ data, computed, isAdmin, reload, onOpenEvent }) {
+  const [adding, setAdding] = useState(false);
+  const { events } = data;
+  return (
+    <>
+      {events.length === 0 && <p className="muted center">No rounds scheduled yet.</p>}
+      <ul className="round-list">
+        {events.map((ev) => {
+          const r = computed.results[ev.id];
+          const leader =
+            r.board[0]?.name ??
+            (r.matches.length ? `${r.matches.filter((m) => m.result).length}/${r.matches.length} matches done` : null);
+          return (
+            <li key={ev.id} className="card round-item">
+              <button className="round-open" onClick={() => onOpenEvent(ev.id)}>
+                <strong>{ev.name}</strong>
+                <span className="muted">
+                  {fmtDate(ev.date)} · {ev.course.name}
+                  {ev.course.tee?.name ? ` (${ev.course.tee.name})` : ''}
+                </span>
+                <span className={`badge ${ev.status === 'final' ? 'final' : ''}`}>
+                  {ev.status === 'final' ? 'Final' : 'Open'}
+                  {leader && r.board.length ? ` · leader ${leader}` : leader ? ` · ${leader}` : ''}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {isAdmin &&
+        (adding ? (
+          <AddRound
+            leagueId={data.league.id}
+            count={events.length}
+            onDone={async (ev) => {
+              setAdding(false);
+              await reload();
+              if (ev) onOpenEvent(ev.id);
+            }}
+          />
+        ) : (
+          <button className="btn btn-primary btn-xl" onClick={() => setAdding(true)}>
+            + Add round
+          </button>
+        ))}
+    </>
+  );
+}
+
+function AddRound({ leagueId, count, onDone }) {
+  const [name, setName] = useState(`Week ${count + 1}`);
+  const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA')); // local YYYY-MM-DD
+  const [courses, setCourses] = useState([]);
+  const [course, setCourse] = useState(null);
+  const [teeIdx, setTeeIdx] = useState(0);
+  const [notes, setNotes] = useState([]);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    listCourses()
+      .then((list) => {
+        setCourses(list);
+        if (list[0]) setCourse(list[0]);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function save() {
+    if (!course) return setError('Pick a course.');
+    const tee = course.tees[teeIdx] ?? course.tees[0];
+    const problems = courseProblems(course, tee);
+    if (problems.length) return setError(`${problems[0]} Fix it in a casual round's course editor first.`);
+    setBusy(true);
+    setError('');
+    try {
+      await saveCourse(course).catch(() => {});
+      const ev = await createEvent(leagueId, {
+        name: name.trim() || `Week ${count + 1}`,
+        date,
+        course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
+      });
+      onDone(ev);
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Add a round</h2>
+      <div className="row2">
+        <label className="field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Date</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+      </div>
+      <CourseSearch
+        onPick={({ course: c, warnings }) => {
+          const saved = courses.find((x) => x.id === c.id);
+          setCourse(saved ?? c);
+          setTeeIdx(0);
+          setNotes(saved ? [] : warnings);
+        }}
+      />
+      {courses.length > 0 && (
+        <div className="chips">
+          {courses.map((c) => (
+            <button
+              key={c.id}
+              className={`chip ${course?.id === c.id ? 'on' : ''}`}
+              onClick={() => {
+                setCourse(c);
+                setTeeIdx(0);
+                setNotes([]);
+              }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {course && (
+        <>
+          <p>
+            <strong>{course.name}</strong> <span className="muted">{course.place}</span>
+          </p>
+          {notes.length > 0 && (
+            <div className="warn-box course-notes">
+              {notes.map((n) => (
+                <p key={n}>{n}</p>
+              ))}
+            </div>
+          )}
+          <div className="chips">
+            {course.tees.map((t, i) => (
+              <button key={i} className={`chip ${i === teeIdx ? 'on' : ''}`} onClick={() => setTeeIdx(i)}>
+                {t.name} {t.rating}/{t.slope}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {error && <p className="search-error">{error}</p>}
+      <div className="row2">
+        <button className="btn btn-ghost" onClick={() => onDone(null)}>
+          Cancel
+        </button>
+        <button className="btn btn-primary" onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : 'Add round'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+const blankMember = { id: null, name: '', indexText: '', ghinNumber: '', team: '' };
+
+function Members({ data, computed, me, isAdmin, reload }) {
+  const { members } = data;
+  const { settings } = computed;
+  const [editing, setEditing] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const usesTeams = settings.unit !== 'individual';
+  const teamNames = settings.unit === 'ryder' ? settings.sides : [...new Set(members.map((m) => m.team).filter(Boolean))];
+  const lastEvent = data.events[data.events.length - 1];
+  const leagueIdx = lastEvent ? computed.indexes[lastEvent.id] : null;
+
+  async function save() {
+    if (!editing.name.trim()) return setError('Enter a name.');
+    const index = parseIndex(editing.indexText);
+    if (index === null) return setError('Index should be a number like 12.4, or +2.1.');
+    setBusy(true);
+    setError('');
+    try {
+      const m = { ...editing, index: editing.indexText.trim() === '' ? null : index };
+      if (editing.id) await updateMember(editing.id, m);
+      else await addMember(data.league.id, m);
+      setEditing(null);
+      await reload();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function act(fn) {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+      setEditing(null);
+      await reload();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const groups = usesTeams
+    ? [...teamNames.map((t) => [t, members.filter((m) => m.team === t)]), ['No team yet', members.filter((m) => !m.team || !teamNames.includes(m.team))]]
+    : [['', members]];
+
+  return (
+    <>
+      {groups
+        .filter(([, list]) => list.length || usesTeams)
+        .map(([title, list]) => (
+          <section key={title || 'all'} className="card">
+            {title && (
+              <h3>
+                {title} <span className="muted">({list.length})</span>
+              </h3>
+            )}
+            {list.length === 0 && <p className="muted">Nobody yet.</p>}
+            <ul className="saved-players">
+              {list.map((m) => (
+                <li key={m.id}>
+                  <button
+                    className="saved-player"
+                    disabled={!isAdmin}
+                    onClick={() =>
+                      setEditing({ ...m, indexText: m.index == null ? '' : formatIndex(m.index), team: m.team ?? '' })
+                    }
+                  >
+                    <strong>
+                      {m.name}
+                      {m.id === me?.id ? ' (you)' : ''}
+                      {m.role === 'commissioner' ? ' · commissioner' : ''}
+                    </strong>
+                    <span className="muted">
+                      {m.index == null ? 'No index' : `Index ${formatIndex(m.index)}`}
+                      {settings.handicap.mode === 'league' && leagueIdx?.[m.id] != null && leagueIdx[m.id] !== m.index
+                        ? ` · league ${formatIndex(leagueIdx[m.id])}`
+                        : ''}
+                      {m.userId ? '' : ' · no app'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+
+      {isAdmin &&
+        (editing ? (
+          <section className="card player-editor">
+            <h3>{editing.id ? `Edit ${editing.name}` : 'Add a player'}</h3>
+            {!editing.id && (
+              <p className="hint">
+                For someone without the app. If they join later with the same name, this spot becomes theirs.
+              </p>
+            )}
+            <label className="field">
+              <span>Name</span>
+              <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            </label>
+            <div className="row2">
+              <label className="field">
+                <span>Index</span>
+                <input
+                  inputMode="decimal"
+                  value={editing.indexText}
+                  onChange={(e) => setEditing({ ...editing, indexText: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>GHIN number</span>
+                <input
+                  inputMode="numeric"
+                  value={editing.ghinNumber}
+                  placeholder="Optional"
+                  onChange={(e) => setEditing({ ...editing, ghinNumber: e.target.value.replace(/\D/g, '') })}
+                />
+              </label>
+            </div>
+            {usesTeams && (
+              <>
+                <p className="hint">{settings.unit === 'ryder' ? 'Side' : 'Team'}</p>
+                {settings.unit === 'ryder' ? (
+                  <Seg
+                    value={editing.team}
+                    options={settings.sides.map((x) => [x, x])}
+                    onChange={(team) => setEditing({ ...editing, team })}
+                  />
+                ) : (
+                  <>
+                    <input
+                      list="team-names"
+                      value={editing.team}
+                      placeholder="Team name, e.g. Eagles"
+                      onChange={(e) => setEditing({ ...editing, team: e.target.value })}
+                    />
+                    <datalist id="team-names">
+                      {teamNames.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
+                  </>
+                )}
+              </>
+            )}
+            {error && <p className="search-error">{error}</p>}
+            <div className="row2">
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={save} disabled={busy}>
+                Save
+              </button>
+            </div>
+            {editing.id && editing.id !== me?.id && (
+              <>
+                <button
+                  className="btn btn-ghost full"
+                  disabled={busy}
+                  onClick={() =>
+                    act(() => setMemberRole(editing.id, editing.role === 'commissioner' ? 'member' : 'commissioner'))
+                  }
+                >
+                  {editing.role === 'commissioner' ? 'Remove commissioner rights' : 'Make co-commissioner'}
+                </button>
+                <button
+                  className="btn btn-ghost full danger"
+                  disabled={busy}
+                  onClick={() => confirm(`Remove ${editing.name} from the league?`) && act(() => removeMember(editing.id))}
+                >
+                  Remove from league
+                </button>
+              </>
+            )}
+          </section>
+        ) : (
+          <button className="btn btn-primary btn-xl" onClick={() => setEditing({ ...blankMember })}>
+            + Add player
+          </button>
+        ))}
+      {!isAdmin && <p className="hint center">Only the commissioner can change members and teams.</p>}
+    </>
+  );
+}

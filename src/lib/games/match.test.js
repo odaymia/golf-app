@@ -28,6 +28,17 @@ describe('match play status', () => {
     expect(describeMatch(s)).toBe('3 & 2');
   });
 
+  it('can stop counting once the match is decided', () => {
+    // a wins holes 1-7, then everything is halved and b wins 18.
+    const ctx = makeCtx(['a', 'b'], matchCard('aaaaaaa==========b'));
+    const results = holeResults(ctx, ['a'], ['b'], false);
+    expect(matchStatus(results, 0, 17).up).toBe(6);
+    // 7 up with 6 to play after hole 12: the match is over.
+    const early = matchStatus(results, 0, 17, { stopAtCloseout: true });
+    expect(early).toMatchObject({ up: 7, played: 12, remaining: 6, closedOut: true, complete: true });
+    expect(describeMatch(early)).toBe('7 & 6');
+  });
+
   it('dormie', () => {
     expect(describeMatch(status('bb==============='.slice(0, 16)))).toBe('2 DN (dormie)');
   });

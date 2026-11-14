@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { listRounds, deleteRound } from '../lib/storage.js';
 import { GAME_INFO, formatIndex } from '../lib/roundSetup.js';
+import LeaguesSection from './LeaguesSection.jsx';
 
-export default function Home({ profile, onProfile, onNew, onOpen }) {
+export default function Home({ profile, onProfile, onNew, onOpen, onOpenLeague, onCreateLeague }) {
   const [rounds, setRounds] = useState(null);
 
   useEffect(() => {
@@ -38,7 +39,9 @@ export default function Home({ profile, onProfile, onNew, onOpen }) {
         New round
       </button>
 
-      <h2 className="section-title">Rounds</h2>
+      <LeaguesSection profile={profile} onOpen={onOpenLeague} onCreate={onCreateLeague} />
+
+      <h2 className="section-title">Casual rounds</h2>
       {rounds === null && <p className="muted">Loading…</p>}
       {rounds?.length === 0 && <p className="muted">No rounds yet. Tap New round to tee it up.</p>}
       <ul className="round-list">

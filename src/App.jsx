@@ -5,6 +5,9 @@ import Play from './components/Play.jsx';
 import Settle from './components/Settle.jsx';
 import SignIn from './components/SignIn.jsx';
 import Profile from './components/Profile.jsx';
+import League from './components/League.jsx';
+import LeagueBuilder from './components/LeagueBuilder.jsx';
+import { createLeague } from './lib/leagueApi.js';
 import { getRound, saveRound } from './lib/storage.js';
 import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 
@@ -35,6 +38,7 @@ export default function App() {
   const [profileError, setProfileError] = useState('');
   const [screen, setScreen] = useState('home');
   const [round, setRound] = useState(null);
+  const [leagueId, setLeagueId] = useState(null);
 
   // Signed in? The session is kept on the phone, so this works offline.
   useEffect(() => {
@@ -114,6 +118,19 @@ export default function App() {
   if (!profile.name)
     return <Profile firstTime user={user} profile={profile} onSaved={setProfile} />;
 
+  if (screen === 'league' && leagueId)
+    return <League leagueId={leagueId} user={user} onBack={goHome} />;
+  if (screen === 'newLeague')
+    return (
+      <LeagueBuilder
+        onCancel={goHome}
+        onSave={async ({ name, settings }) => {
+          const id = await createLeague({ name, settings, profile });
+          setLeagueId(id);
+          setScreen('league');
+        }}
+      />
+    );
   if (screen === 'profile')
     return <Profile user={user} profile={profile} onSaved={setProfile} onBack={goHome} />;
   if (screen === 'setup') return <Setup profile={profile} onStart={startRound} onCancel={goHome} />;
@@ -127,6 +144,11 @@ export default function App() {
       onProfile={() => setScreen('profile')}
       onNew={() => setScreen('setup')}
       onOpen={openRound}
+      onOpenLeague={(id) => {
+        setLeagueId(id);
+        setScreen('league');
+      }}
+      onCreateLeague={() => setScreen('newLeague')}
     />
   );
 }

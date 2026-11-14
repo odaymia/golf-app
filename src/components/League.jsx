@@ -1,0 +1,81 @@
+import { useCallback, useEffect, useState } from 'react';
+import { loadLeague, updateLeague } from '../lib/leagueApi.js';
+import LeagueHome from './LeagueHome.jsx';
+import LeagueEvent from './LeagueEvent.jsx';
+import LeagueBuilder from './LeagueBuilder.jsx';
+
+// Loads one league and moves between its screens.
+export default function League({ leagueId, user, onBack }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [view, setView] = useState({ name: 'home' });
+
+  const reload = useCallback(
+    async ({ quiet = false } = {}) => {
+      try {
+        setData(await loadLeague(leagueId));
+        setError('');
+      } catch (e) {
+        if (!quiet) setError(e.message);
+      }
+    },
+    [leagueId],
+  );
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
+  if (error && !data)
+    return (
+      <div className="screen">
+        <div className="card warn-box">{error}</div>
+        <button className="btn btn-primary btn-xl" onClick={() => reload()}>
+          Try again
+        </button>
+        <button className="btn btn-ghost btn-xl" onClick={onBack}>
+          Back
+        </button>
+      </div>
+    );
+  if (!data) return <div className="screen"><p className="muted center">Loading league…</p></div>;
+
+  const me = data.members.find((m) => m.userId === user.id);
+
+  if (view.name === 'event')
+    return (
+      <LeagueEvent
+        data={data}
+        eventId={view.eventId}
+        me={me}
+        reload={reload}
+        onBack={() => setView({ name: 'home' })}
+      />
+    );
+  if (view.name === 'format')
+    return (
+      <LeagueBuilder
+        league={data.league}
+        onCancel={() => setView({ name: 'home' })}
+        onSave={async ({ name, settings }) => {
+          await updateLeague(leagueId, { name, settings });
+          await reload();
+          setView({ name: 'home' });
+        }}
+      />
+    );
+  return (
+    <LeagueHome
+      data={data}
+      me={me}
+      reload={reload}
+      onOpenEvent={(eventId) => setView({ name: 'event', eventId })}
+      onEditFormat={() => setView({ name: 'format' })}
+      onBack={onBack}
+    />
+  );
+}

@@ -12,6 +12,7 @@ deploy, own Supabase project.
 1. Foursome MVP: pick course, add players, pick games, hole-by-hole scoring,
    live settle-up ("Mike owes Dave $14"). **Built (Phase 1).**
 2. Leagues: season schedule, pairings, standings, points, league handicaps.
+   **Built:** league builder, invite codes, rounds, matches, standings.
 3. Tournaments: flights, shotgun/tee times, big leaderboard, side pots, payouts.
 4. Business: club/organizer accounts, branding, paid tiers, App Store builds.
 
@@ -20,8 +21,8 @@ deploy, own Supabase project.
 Vite 5 + React 18 (plain JS, no router) as an offline-first PWA
 (`vite-plugin-pwa`, service worker precaches the app). Rounds and courses live
 on the device in IndexedDB. Supabase project `qdnrmeipmggpxynggsnl` holds
-accounts, profiles and saved players (round sync and realtime leaderboards
-come later). Capacitor later for App Store / Play Store.
+accounts, profiles, saved players and leagues (casual-round sync and realtime
+leaderboards come later). Capacitor later for App Store / Play Store.
 
 ## Commands
 
@@ -75,14 +76,26 @@ src/
     courseSearch.js The only OpenGolfAPI network code (search + course detail)
     courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
+    league/         Pure league engine. No React, network or storage.
+      format.js     Builder options, valid combinations, defaults, labels
+      event.js      One round: handicaps, stroke/Stableford board, matches,
+                    points by finish (ties split), W/L/T, Ryder Cup points
+      season.js     computeLeague + standings per season type, round robin
+      leagueHandicap.js  Adjusted gross (net double bogey), differentials,
+                    league index (best N of last M), per-event indexes
+      league.test.js
+    leagueApi.js    The only league Supabase code; offline cache + score queue
     supabase.js     Supabase client (URL + publishable key; safe to ship)
     account.js      The only Supabase code: email-code sign-in, profile,
                     saved players, with an offline cache in localStorage
-  components/       SignIn, Profile (+ My players), Home, Setup (+ CourseSearch),
-                    Play (Score/Money/Card tabs), Settle, summaries
+  components/       SignIn, Profile (+ My players), Home (+ LeaguesSection),
+                    Setup (+ CourseSearch), Play (Score/Money/Card tabs), Settle,
+                    League -> LeagueHome / LeagueEvent / LeagueBuilder,
+                    controls.jsx (Switch, Toggle, Seg, OptionCards)
   App.jsx           Sign-in gate -> first-time profile -> screens; saves the
                     round on every change
-supabase/schema.sql Tables + row level security; paste into the SQL Editor
+supabase/schema.sql   Profiles + saved players; paste into the SQL Editor
+supabase/leagues.sql  League tables, policies, create_league/join_league RPCs
 ```
 
 ### Engine conventions
@@ -120,6 +133,27 @@ supabase/schema.sql Tables + row level security; paste into the SQL Editor
 - Never ship the service_role/secret key. GHIN: handicap index and GHIN number
   are self-reported until the USGA approves an integration; that integration
   must run server-side (e.g. a Supabase Edge Function), never in the app.
+
+## Leagues
+
+- `leagues.settings` (jsonb) holds the format; `normalizeSettings` fills
+  defaults and drops invalid combos. Units: individual / teams (2 or 4) /
+  ryder (two named sides). Scoring: stroke / stableford / match, net or
+  gross. Season: points (by finish, ties split, optional best-N weeks) /
+  cumulative (Stableford total, stroke lowest average) / record (W-L-T,
+  win 2 tie 1 by default) / ryder (win 1, halve ½).
+- Members: app users join with the 6-character invite code (`join_league`
+  RPC, which also claims a name-only spot with the same name); the
+  commissioner adds people without the app. `team` is the team or side name.
+- Rounds (`league_events`) snapshot the course + tee. Any member can enter
+  scores for their group; only commissioners manage members, rounds,
+  matches and mark rounds final. Only final rounds count in standings, and
+  members can't change scores after final (enforced by RLS).
+- League matches stop at the closeout ("4 & 3"). Handicaps: own index or
+  league index from earlier final rounds only; allowance %, max handicap,
+  strokes off the low player per match.
+- Scores go to a localStorage queue first and are sent when online
+  (`flushScores`); refused cards are dropped so they can't block the queue.
 
 ## Course data
 
