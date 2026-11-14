@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { looksLikeEmail, sendCode, verifyCode } from '../lib/account.js';
+import { looksLikeEmail, sendCode, signInWithPassword, verifyCode } from '../lib/account.js';
 
 export default function SignIn() {
-  const [step, setStep] = useState('email'); // email | code
+  const [step, setStep] = useState('email'); // email | code | password
+  const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,6 +23,19 @@ export default function SignIn() {
     } catch (err) {
       setError(err.message);
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitPassword(e) {
+    e.preventDefault();
+    if (!looksLikeEmail(email) || !password) return setError('Enter your email and password.');
+    setBusy(true);
+    setError('');
+    try {
+      await signInWithPassword(email, password);
+    } catch (err) {
+      setError(/invalid/i.test(err.message) ? 'That email and password don’t match.' : err.message);
       setBusy(false);
     }
   }
@@ -48,7 +62,26 @@ export default function SignIn() {
         <p>Score the round. Settle the bets.</p>
       </header>
 
-      {step === 'email' ? (
+      {step === 'password' ? (
+        <form className="card" onSubmit={submitPassword} noValidate>
+          <h2>Sign in with password</h2>
+          <label className="field">
+            <span>Email</span>
+            <input type="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Password</span>
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          {error && <p className="search-error">{error}</p>}
+          <button className="btn btn-primary btn-xl" disabled={busy}>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </button>
+          <button type="button" className="btn btn-ghost full" onClick={() => { setStep('email'); setError(''); }}>
+            Use an email code instead
+          </button>
+        </form>
+      ) : step === 'email' ? (
         <form className="card" onSubmit={submitEmail} noValidate>
           <h2>Sign in</h2>
           <p className="muted">We&apos;ll email you a code. No password needed.</p>
@@ -67,6 +100,27 @@ export default function SignIn() {
           {error && <p className="search-error">{error}</p>}
           <button className="btn btn-primary btn-xl" disabled={busy}>
             {busy ? 'Sending…' : 'Email me a code'}
+          </button>
+          <p className="legal-links">
+            By continuing you agree to the{' '}
+            <a href="https://scribblegolfclub.com/terms/" target="_blank" rel="noreferrer">
+              Terms of use
+            </a>{' '}
+            and{' '}
+            <a href="https://scribblegolfclub.com/privacy/" target="_blank" rel="noreferrer">
+              Privacy policy
+            </a>
+            .
+          </p>
+          <button
+            type="button"
+            className="link small-link password-link"
+            onClick={() => {
+              setStep('password');
+              setError('');
+            }}
+          >
+            Sign in with a password instead
           </button>
         </form>
       ) : (

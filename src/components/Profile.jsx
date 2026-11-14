@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { deletePlayer, listSavedPlayers, saveProfile, savePlayer, signOut } from '../lib/account.js';
+import { deleteAccount, deletePlayer, listSavedPlayers, saveProfile, savePlayer, signOut } from '../lib/account.js';
 import { formatIndex, parseIndex } from '../lib/roundSetup.js';
-import { getPublicProfile, syncHomeCourse } from '../lib/social.js';
+import { getPublicProfile, listBlocked, syncHomeCourse, unblockUser } from '../lib/social.js';
+import Avatar from './social/Avatar.jsx';
 import HomeCoursePicker from './HomeCoursePicker.jsx';
 
 const indexText = (n) => (n == null ? '' : formatIndex(n));
@@ -111,12 +112,23 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
       {!firstTime && (
         <>
           <SavedPlayers />
+          <BlockedAccounts meId={user.id} />
           <section className="card">
             <p className="muted">Signed in as {user.email}</p>
             <button className="btn btn-ghost full" onClick={() => signOut()}>
               Sign out
             </button>
+            <p className="legal-links">
+              <a href="https://scribblegolfclub.com/privacy/" target="_blank" rel="noreferrer">
+                Privacy policy
+              </a>
+              {' · '}
+              <a href="https://scribblegolfclub.com/terms/" target="_blank" rel="noreferrer">
+                Terms of use
+              </a>
+            </p>
           </section>
+          <DeleteAccount userId={user.id} />
         </>
       )}
     </div>
@@ -235,6 +247,82 @@ function SavedPlayers() {
           </button>
         </>
       )}
+    </section>
+  );
+}
+
+function BlockedAccounts({ meId }) {
+  const [list, setList] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    listBlocked(meId)
+      .then(setList)
+      .catch(() => setList([]));
+  }, [meId]);
+
+  if (!list || list.length === 0) return null;
+  return (
+    <section className="card">
+      <h2>Blocked accounts</h2>
+      <ul className="saved-players">
+        {list.map((b) => (
+          <li key={b.id} className="blocked-row">
+            <Avatar profile={b.profile} size={32} />
+            <span className="grow">{b.profile.username ? `@${b.profile.username}` : b.profile.displayName}</span>
+            <button
+              className="btn btn-ghost btn-small"
+              onClick={async () => {
+                try {
+                  await unblockUser(meId, b.id);
+                  setList((l) => l.filter((x) => x.id !== b.id));
+                } catch (e) {
+                  setError(e.message);
+                }
+              }}
+            >
+              Unblock
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && <p className="search-error">{error}</p>}
+    </section>
+  );
+}
+
+// Required by the App Store and Google Play: delete your account in the app.
+function DeleteAccount({ userId }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function run() {
+    const typed = prompt(
+      'This permanently deletes your account, profile, posts, photos, videos, likes, comments and follows. ' +
+        'League and tournament results stay, under your name. Type DELETE to confirm.',
+    );
+    if (typed?.trim().toUpperCase() !== 'DELETE') return;
+    setBusy(true);
+    setError('');
+    try {
+      await deleteAccount(userId);
+      // Signed out: the app returns to the sign-in screen.
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card danger-zone">
+      <h3>Delete account</h3>
+      <p className="hint">
+        Permanently removes your account and everything you&apos;ve posted. Casual rounds saved on this phone stay on this phone.
+      </p>
+      {error && <p className="search-error">{error}</p>}
+      <button className="btn btn-ghost full danger" onClick={run} disabled={busy}>
+        {busy ? 'Deleting…' : 'Delete my account'}
+      </button>
     </section>
   );
 }

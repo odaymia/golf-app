@@ -148,6 +148,57 @@ const toPost = (r) => ({
   commentCount: r.post_comments?.[0]?.count ?? 0,
 });
 
+// --- Blocking ------------------------------------------------------------------
+// People you blocked, and people who blocked you, are hidden from each other.
+let hiddenCache = null; // { meId, ids: Set }
+
+export async function hiddenUserIds(meId) {
+  if (hiddenCache?.meId === meId) return hiddenCache.ids;
+  const rows = await call(supabase.from('blocks').select('blocker, blocked'));
+  const ids = new Set(rows.map((r) => (r.blocker === meId ? r.blocked : r.blocker)));
+  hiddenCache = { meId, ids };
+  return ids;
+}
+
+export async function blockUser(userId) {
+  await call(supabase.rpc('block_user', { p_user: userId }));
+  hiddenCache = null;
+}
+
+export async function unblockUser(meId, userId) {
+  await call(supabase.from('blocks').delete().eq('blocker', meId).eq('blocked', userId));
+  hiddenCache = null;
+}
+
+// Who I've blocked, with their public profiles, for Settings.
+export async function listBlocked(meId) {
+  const rows = await call(supabase.from('blocks').select('blocked, created_at').eq('blocker', meId));
+  if (!rows.length) return [];
+  const profiles = await call(
+    supabase.from('public_profiles').select('*').in('id', rows.map((r) => r.blocked)),
+  );
+  return rows.map((r) => ({
+    id: r.blocked,
+    profile: toProfile(profiles.find((p) => p.id === r.blocked)) ?? { id: r.blocked, username: '', displayName: 'Golfer' },
+  }));
+}
+
+// Does either of us block the other?
+export async function blockStatus(meId, userId) {
+  const rows = await call(
+    supabase
+      .from('blocks')
+      .select('blocker, blocked')
+      .or(`and(blocker.eq.${meId},blocked.eq.${userId}),and(blocker.eq.${userId},blocked.eq.${meId})`),
+  );
+  return { iBlocked: rows.some((r) => r.blocker === meId), blockedMe: rows.some((r) => r.blocker === userId) };
+}
+
+async function visible(posts, meId) {
+  const hidden = await hiddenUserIds(meId).catch(() => new Set());
+  return hidden.size ? posts.filter((p) => !hidden.has(p.userId)) : posts;
+}
+
 async function withMyLikes(posts, meId) {
   if (!posts.length || !meId) return posts.map((p) => ({ ...p, likedByMe: false }));
   const rows = await call(
@@ -166,19 +217,19 @@ export async function listFeed({ meId, mode = 'all', before = null, limit = 10 }
     const ids = [meId, ...rows.map((r) => r.followee)];
     q = q.in('user_id', ids);
   }
-  return withMyLikes((await call(q)).map(toPost), meId);
+  return withMyLikes(await visible((await call(q)).map(toPost), meId), meId);
 }
 
 export async function listUserPosts(userId, meId) {
   const rows = await call(supabase.from('posts').select(POST_SELECT).eq('user_id', userId).order('created_at', { ascending: false }).limit(60));
-  return withMyLikes(rows.map(toPost), meId);
+  return withMyLikes(await visible(rows.map(toPost), meId), meId);
 }
 
 export async function listCoursePosts(courseKey, meId) {
   const rows = await call(
     supabase.from('posts').select(POST_SELECT).eq('course_key', courseKey).order('created_at', { ascending: false }).limit(60),
   );
-  return withMyLikes(rows.map(toPost), meId);
+  return withMyLikes(await visible(rows.map(toPost), meId), meId);
 }
 
 export async function getPost(id, meId) {
@@ -261,7 +312,7 @@ export function unlikePost(meId, postId) {
   return call(supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', meId));
 }
 
-export async function listComments(postId) {
+export async function listComments(postId, meId) {
   const rows = await call(
     supabase
       .from('post_comments')
@@ -269,7 +320,10 @@ export async function listComments(postId) {
       .eq('post_id', postId)
       .order('created_at'),
   );
-  return rows.map((r) => ({ id: r.id, body: r.body, createdAt: r.created_at, userId: r.user_id, author: toProfile(r.author) }));
+  const hidden = meId ? await hiddenUserIds(meId).catch(() => new Set()) : new Set();
+  return rows
+    .filter((r) => !hidden.has(r.user_id))
+    .map((r) => ({ id: r.id, body: r.body, createdAt: r.created_at, userId: r.user_id, author: toProfile(r.author) }));
 }
 
 export function addComment(postId, body) {
@@ -278,6 +332,27 @@ export function addComment(postId, body) {
 
 export function deleteComment(id) {
   return call(supabase.from('post_comments').delete().eq('id', id));
+}
+
+// Delete every photo/video/avatar in my folder (before deleting my account).
+export async function deleteMyMedia(userId) {
+  const bucket = supabase.storage.from(BUCKET);
+  const paths = [];
+  const { data: top, error } = await bucket.list(userId, { limit: 1000 });
+  if (error) throw new Error(friendly(error));
+  for (const item of top ?? []) {
+    if (item.id) {
+      paths.push(`${userId}/${item.name}`); // a file (e.g. avatar)
+    } else {
+      const { data: inner } = await bucket.list(`${userId}/${item.name}`, { limit: 1000 });
+      for (const f of inner ?? []) paths.push(`${userId}/${item.name}/${f.name}`);
+    }
+  }
+  for (let i = 0; i < paths.length; i += 100) {
+    const { error: e } = await bucket.remove(paths.slice(i, i + 100));
+    if (e) throw new Error(friendly(e));
+  }
+  return paths.length;
 }
 
 export function reportPost(postId, reason) {

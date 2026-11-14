@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  blockStatus,
+  blockUser,
+  unblockUser,
   follow,
   getPublicProfile,
   listUserPosts,
@@ -22,11 +25,18 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
   const [posts, setPosts] = useState(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
+  const [blocks, setBlocks] = useState({ iBlocked: false, blockedMe: false });
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const [p, s, list] = await Promise.all([getPublicProfile(userId), profileStats(userId, meId), listUserPosts(userId, meId)]);
+      const [p, s, list, b] = await Promise.all([
+        getPublicProfile(userId),
+        profileStats(userId, meId),
+        listUserPosts(userId, meId),
+        mine ? Promise.resolve({ iBlocked: false, blockedMe: false }) : blockStatus(meId, userId),
+      ]);
+      setBlocks(b);
       setProfile(p);
       setStats(s);
       setPosts(list);
@@ -50,6 +60,20 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
     } catch (e) {
       setError(e.message);
       load();
+    }
+  }
+
+  async function toggleBlock() {
+    try {
+      if (blocks.iBlocked) {
+        await unblockUser(meId, userId);
+      } else {
+        if (!confirm('Block this golfer? You won’t see each other’s posts or comments, and any follows are removed.')) return;
+        await blockUser(userId);
+      }
+      load();
+    } catch (e) {
+      setError(e.message);
     }
   }
 
@@ -93,7 +117,20 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
       {error && <div className="card warn-box">{error}</div>}
       {profile === undefined && <p className="muted center">Loading…</p>}
       {profile === null && !error && <p className="muted center">This golfer hasn&apos;t set up a profile yet.</p>}
-      {profile && (
+      {profile && !mine && blocks.blockedMe && !blocks.iBlocked && (
+        <p className="muted center">This profile isn&apos;t available.</p>
+      )}
+      {profile && !mine && blocks.iBlocked && (
+        <section className="card center">
+          <p>
+            You blocked <strong>@{profile.username}</strong>.
+          </p>
+          <button className="btn btn-ghost outline" onClick={toggleBlock}>
+            Unblock
+          </button>
+        </section>
+      )}
+      {profile && (mine || (!blocks.iBlocked && !blocks.blockedMe)) && (
         <>
           <section className="profile-head">
             <Avatar profile={profile} size={86} />
@@ -135,9 +172,18 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
                 Edit profile
               </button>
             ) : (
-              <button className={`btn full ${stats?.iFollow ? 'btn-ghost outline' : 'btn-primary'}`} onClick={toggleFollow} disabled={!stats}>
-                {stats?.iFollow ? 'Following' : 'Follow'}
-              </button>
+              <>
+                <button
+                  className={`btn full ${stats?.iFollow ? 'btn-ghost outline' : 'btn-primary'}`}
+                  onClick={toggleFollow}
+                  disabled={!stats}
+                >
+                  {stats?.iFollow ? 'Following' : 'Follow'}
+                </button>
+                <button className="btn btn-ghost outline block-btn" onClick={toggleBlock} aria-label="Block">
+                  Block
+                </button>
+              </>
             )}
           </div>
           {posts === null ? (

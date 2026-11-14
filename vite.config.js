@@ -3,22 +3,32 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'node:path';
 
-// Served at the root of https://scribblegolfclub.com (GitHub Pages custom
-// domain). Two pages: the website at / (index.html) and the app at /app/
-// (app/index.html).
-export default defineConfig({
+// Web: served at the root of https://scribblegolfclub.com (GitHub Pages
+// custom domain): the website at / (index.html), the app at /app/
+// (app/index.html), and the privacy/terms pages.
+// Native (`vite build --mode native`, used by `npm run build:native`): just
+// the app, into dist-native/ for Capacitor's iPhone and Android projects.
+export default defineConfig(({ mode }) => {
+  const native = mode === 'native';
+  return {
   base: '/',
-  build: {
-    rollupOptions: {
-      input: {
-        site: resolve(__dirname, 'index.html'),
-        app: resolve(__dirname, 'app/index.html'),
+  build: native
+    ? { outDir: 'dist-native', emptyOutDir: true, rollupOptions: { input: { app: resolve(__dirname, 'app/index.html') } } }
+    : {
+        rollupOptions: {
+          input: {
+            site: resolve(__dirname, 'index.html'),
+            app: resolve(__dirname, 'app/index.html'),
+            privacy: resolve(__dirname, 'privacy/index.html'),
+            terms: resolve(__dirname, 'terms/index.html'),
+          },
+        },
       },
-    },
-  },
   plugins: [
     react(),
     VitePWA({
+      // The store apps bundle everything; no service worker needed there.
+      disable: native,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png'],
       manifest: {
@@ -49,4 +59,5 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
+  };
 });

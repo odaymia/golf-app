@@ -1,0 +1,13 @@
+{
+  "appId": "com.scribblegolfclub.app",
+  "appName": "Scribble Golf Club",
+  "webDir": "dist-native",
+  "backgroundColor": "#f4eedf",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#f4eedf"
+  },
+  "android": {
+    "backgroundColor": "#f4eedf"
+  }
+}

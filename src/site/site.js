@@ -9,9 +9,8 @@ import './site.css';
 
 // Already signed in on this device? The button goes straight into the app.
 try {
-  if (localStorage.getItem('sb-qdnrmeipmggpxynggsnl-auth-token')) {
-    document.getElementById('login').textContent = 'Open app';
-  }
+  const login = document.getElementById('login');
+  if (login && localStorage.getItem('sb-qdnrmeipmggpxynggsnl-auth-token')) login.textContent = 'Open app';
 } catch {
   // storage blocked: keep "Log in"
 }

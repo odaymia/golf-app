@@ -14,7 +14,7 @@ export default function PostDetail({ postId, meId, nav, back }) {
 
   const load = useCallback(async () => {
     try {
-      const [p, c] = await Promise.all([getPost(postId, meId), listComments(postId)]);
+      const [p, c] = await Promise.all([getPost(postId, meId), listComments(postId, meId)]);
       setPost(p);
       setComments(c);
     } catch (e) {
@@ -35,7 +35,7 @@ export default function PostDetail({ postId, meId, nav, back }) {
     try {
       await addComment(postId, text);
       setText('');
-      setComments(await listComments(postId));
+      setComments(await listComments(postId, meId));
     } catch (err) {
       setError(err.message);
     } finally {

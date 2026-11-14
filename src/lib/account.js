@@ -54,6 +54,13 @@ export function sendCode(email) {
   return call(supabase.auth.signInWithOtp({ email: normalizeEmail(email), options: { shouldCreateUser: true } }));
 }
 
+// Password sign-in, for accounts created with a password (such as the demo
+// account App Store and Google Play reviewers use).
+export async function signInWithPassword(email, password) {
+  const data = await call(supabase.auth.signInWithPassword({ email: normalizeEmail(email), password }));
+  return data.session;
+}
+
 export async function verifyCode(email, code) {
   const data = await call(
     supabase.auth.verifyOtp({ email: normalizeEmail(email), token: String(code).trim(), type: 'email' }),
@@ -69,6 +76,20 @@ export async function getSession() {
 export function onAuthChange(callback) {
   const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session));
   return () => data.subscription.unsubscribe();
+}
+
+// Delete the account: photos/videos first, then the sign-in and everything
+// tied to it (see delete_my_account in supabase/account_safety.sql).
+export async function deleteAccount(userId) {
+  const { deleteMyMedia } = await import('./social.js');
+  await deleteMyMedia(userId);
+  await call(supabase.rpc('delete_my_account'));
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('golf-app:')) localStorage.removeItem(k);
+  } catch {
+    // nothing cached
+  }
+  await supabase.auth.signOut({ scope: 'local' });
 }
 
 export async function signOut() {

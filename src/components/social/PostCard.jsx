@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { likePost, unlikePost, deletePost, reportPost } from '../../lib/social.js';
+import { likePost, unlikePost, deletePost, reportPost, blockUser } from '../../lib/social.js';
 import { countLabel, timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 
@@ -42,6 +42,19 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
     if (!confirm('Delete this post? This can’t be undone.')) return;
     try {
       await deletePost(post);
+      onDeleted?.(post.id);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function block() {
+    setMenu(false);
+    const who = post.author.username ? `@${post.author.username}` : 'this golfer';
+    if (!confirm(`Block ${who}? You won’t see each other’s posts or comments, and any follows are removed. You can unblock in Settings.`))
+      return;
+    try {
+      await blockUser(post.userId);
       onDeleted?.(post.id);
     } catch (e) {
       setError(e.message);
@@ -92,7 +105,12 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
                 Delete post
               </button>
             ) : (
-              <button onClick={report}>Report post</button>
+              <>
+                <button onClick={report}>Report post</button>
+                <button className="danger" onClick={block}>
+                  Block {post.author.username ? `@${post.author.username}` : 'user'}
+                </button>
+              </>
             )}
             <button onClick={() => setMenu(false)}>Cancel</button>
           </div>
