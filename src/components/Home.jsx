@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { listRounds, deleteRound } from '../lib/storage.js';
-import { GAME_INFO } from '../lib/roundSetup.js';
+import { GAME_INFO, formatIndex } from '../lib/roundSetup.js';
 
-export default function Home({ onNew, onOpen }) {
+export default function Home({ profile, onProfile, onNew, onOpen }) {
   const [rounds, setRounds] = useState(null);
 
   useEffect(() => {
@@ -19,6 +19,17 @@ export default function Home({ onNew, onOpen }) {
 
   return (
     <div className="screen">
+      <div className="home-top">
+        <button className="profile-chip" onClick={onProfile} aria-label="Your profile">
+          <span className="avatar">{profile.name.trim().charAt(0).toUpperCase()}</span>
+          <span>
+            <strong>{profile.name}</strong>
+            <span className="muted">
+              {profile.index == null ? 'Add your index' : `Index ${formatIndex(profile.index)}`}
+            </span>
+          </span>
+        </button>
+      </div>
       <header className="hero">
         <h1>Golf App</h1>
         <p>Score the round. Settle the bets.</p>

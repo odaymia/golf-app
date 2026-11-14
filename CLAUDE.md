@@ -18,9 +18,10 @@ deploy, own Supabase project.
 ## Stack
 
 Vite 5 + React 18 (plain JS, no router) as an offline-first PWA
-(`vite-plugin-pwa`, service worker precaches the app). Data lives on the device
-in IndexedDB. Supabase (auth, sync, realtime leaderboards) comes later;
-Capacitor later for App Store / Play Store.
+(`vite-plugin-pwa`, service worker precaches the app). Rounds and courses live
+on the device in IndexedDB. Supabase project `qdnrmeipmggpxynggsnl` holds
+accounts, profiles and saved players (round sync and realtime leaderboards
+come later). Capacitor later for App Store / Play Store.
 
 ## Commands
 
@@ -74,9 +75,14 @@ src/
     courseSearch.js The only OpenGolfAPI network code (search + course detail)
     courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
-  components/       Home, Setup (+ CourseSearch), Play (Score/Money/Card tabs),
-                    Settle, summaries
-  App.jsx           Screen switching; saves the round on every change
+    supabase.js     Supabase client (URL + publishable key; safe to ship)
+    account.js      The only Supabase code: email-code sign-in, profile,
+                    saved players, with an offline cache in localStorage
+  components/       SignIn, Profile (+ My players), Home, Setup (+ CourseSearch),
+                    Play (Score/Money/Card tabs), Settle, summaries
+  App.jsx           Sign-in gate -> first-time profile -> screens; saves the
+                    round on every change
+supabase/schema.sql Tables + row level security; paste into the SQL Editor
 ```
 
 ### Engine conventions
@@ -98,6 +104,22 @@ src/
   - Wolf: lone/blind wolf wins or loses stake x multiplier with each of the 3.
   - Vegas: a score of 10+ goes first; birdie flips the other team unless both
     teams birdie; net scores below 1 count as 1.
+
+## Accounts
+
+- Sign-in is a 6-digit email code (`signInWithOtp` + `verifyOtp`), not a
+  magic link: a link would open Safari instead of the home-screen app. The
+  Supabase email templates (Magic Link and Confirm signup) must include
+  `{{ .Token }}`. The built-in mailer allows only a few emails per hour; add
+  custom SMTP before a league signs up.
+- The session is stored on the phone, so the app opens signed in with no
+  signal. First sign-in requires a name (first-time Profile screen).
+- `profiles` (one per user) and `saved_players` (private to the owner) are
+  protected by row level security in `supabase/schema.sql`. Schema changes go
+  in that file; the user runs it in the SQL Editor.
+- Never ship the service_role/secret key. GHIN: handicap index and GHIN number
+  are self-reported until the USGA approves an integration; that integration
+  must run server-side (e.g. a Supabase Edge Function), never in the app.
 
 ## Course data
 

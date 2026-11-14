@@ -3,7 +3,10 @@ import Home from './components/Home.jsx';
 import Setup from './components/Setup.jsx';
 import Play from './components/Play.jsx';
 import Settle from './components/Settle.jsx';
+import SignIn from './components/SignIn.jsx';
+import Profile from './components/Profile.jsx';
 import { getRound, saveRound } from './lib/storage.js';
+import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 
 // Where the player is, kept across reloads (an app update reloads the page)
 // so they land back on the same round instead of the home screen.
@@ -27,8 +30,31 @@ function writePlace(place) {
 }
 
 export default function App() {
+  const [session, setSession] = useState(undefined); // undefined = still checking
+  const [profile, setProfile] = useState(undefined);
+  const [profileError, setProfileError] = useState('');
   const [screen, setScreen] = useState('home');
   const [round, setRound] = useState(null);
+
+  // Signed in? The session is kept on the phone, so this works offline.
+  useEffect(() => {
+    getSession().then(setSession);
+    return onAuthChange(setSession);
+  }, []);
+
+  const user = session?.user;
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) {
+      setProfile(undefined);
+      return;
+    }
+    setProfileError('');
+    loadProfile(user)
+      .then(setProfile)
+      .catch((e) => setProfileError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the account changes
+  }, [userId]);
 
   // Every change to the round is written to the device right away.
   useEffect(() => {
@@ -73,10 +99,34 @@ export default function App() {
     setScreen('home');
   }
 
-  if (screen === 'setup') return <Setup onStart={startRound} onCancel={goHome} />;
+  if (session === undefined) return <div className="screen" />;
+  if (!session) return <SignIn />;
+  if (profileError && !profile)
+    return (
+      <div className="screen">
+        <div className="card warn-box">{profileError}</div>
+        <button className="btn btn-primary btn-xl" onClick={() => location.reload()}>
+          Try again
+        </button>
+      </div>
+    );
+  if (profile === undefined) return <div className="screen" />;
+  if (!profile.name)
+    return <Profile firstTime user={user} profile={profile} onSaved={setProfile} />;
+
+  if (screen === 'profile')
+    return <Profile user={user} profile={profile} onSaved={setProfile} onBack={goHome} />;
+  if (screen === 'setup') return <Setup profile={profile} onStart={startRound} onCancel={goHome} />;
   if (screen === 'play' && round)
     return <Play round={round} setRound={setRound} onSettle={() => setScreen('settle')} onHome={goHome} />;
   if (screen === 'settle' && round)
     return <Settle round={round} setRound={setRound} onBack={() => setScreen('play')} onHome={goHome} />;
-  return <Home onNew={() => setScreen('setup')} onOpen={openRound} />;
+  return (
+    <Home
+      profile={profile}
+      onProfile={() => setScreen('profile')}
+      onNew={() => setScreen('setup')}
+      onOpen={openRound}
+    />
+  );
 }

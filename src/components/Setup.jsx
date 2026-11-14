@@ -5,6 +5,7 @@ import {
   defaultSettings,
   gameAvailable,
   GAME_INFO,
+  formatIndex,
   makeId,
   newRound,
   parseIndex,
@@ -12,18 +13,31 @@ import {
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
+import { listSavedPlayers } from '../lib/account.js';
 
-const newPlayer = () => ({ id: makeId(), name: '', indexText: '' });
+const newPlayer = (from) => ({
+  id: makeId(),
+  name: from?.name ?? '',
+  indexText: from?.index == null ? '' : formatIndex(from.index),
+  savedId: from?.savedId ?? null,
+});
 
-export default function Setup({ onStart, onCancel }) {
+export default function Setup({ profile, onStart, onCancel }) {
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(blankCourse);
   const [teeIdx, setTeeIdx] = useState(0);
   const [showHoles, setShowHoles] = useState(false);
-  const [players, setPlayers] = useState(() => [newPlayer(), newPlayer()]);
+  const [players, setPlayers] = useState(() => [newPlayer(profile), newPlayer()]);
+  const [saved, setSaved] = useState([]);
   const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState([]);
   const [courseNotes, setCourseNotes] = useState([]);
+
+  useEffect(() => {
+    listSavedPlayers()
+      .then(setSaved)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     listCourses()
@@ -47,6 +61,16 @@ export default function Setup({ onStart, onCancel }) {
     setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, [field]: value } : p)));
   const setGame = (type, field, value) =>
     setSettings((s) => ({ ...s, [type]: { ...s[type], [field]: value } }));
+
+  // Fill the first empty row with a saved player, or add a row.
+  function addSaved(p) {
+    const filled = newPlayer({ ...p, savedId: p.id });
+    setPlayers((ps) => {
+      const empty = ps.findIndex((x) => !x.name.trim());
+      if (empty >= 0) return ps.map((x, i) => (i === empty ? { ...filled, id: x.id } : x));
+      return ps.length < 4 ? [...ps, filled] : ps;
+    });
+  }
 
   function pickImported({ course: imported, warnings }) {
     // A course already saved on this phone keeps any fixes made to it.
@@ -211,6 +235,22 @@ export default function Setup({ onStart, onCancel }) {
 
       <section className="card">
         <h2>Players</h2>
+        {saved.length > 0 && (
+          <div className="chips">
+            {saved
+              .filter((p) => !players.some((x) => x.savedId === p.id))
+              .map((p) => (
+                <button
+                  key={p.id}
+                  className="chip"
+                  onClick={() => addSaved(p)}
+                  disabled={players.length >= 4 && players.every((x) => x.name.trim())}
+                >
+                  + {p.name}
+                </button>
+              ))}
+          </div>
+        )}
         {players.map((p, i) => (
           <div className="player-row" key={p.id}>
             <input
