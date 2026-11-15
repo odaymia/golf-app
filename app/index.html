@@ -10,8 +10,30 @@
     <meta name="apple-mobile-web-app-title" content="Scribble" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Scribble Golf Club</title>
+    <link rel="preload" as="image" href="/splash.webp" />
+    <style>
+      /* Loading page: shown instantly, removed by src/splash.js once the app is ready. */
+      #splash {
+        position: fixed; inset: 0; z-index: 1000; background: #e8e0cc;
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
+        transition: opacity 0.45s ease;
+      }
+      #splash.gone { opacity: 0; pointer-events: none; }
+      #splash .bg { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px);
+        object-fit: cover; filter: blur(18px) brightness(0.92); }
+      #splash .card { position: relative; height: 100%; width: 100%; object-fit: cover; object-position: 50% 48%; }
+      /* Wider than the photo (tablets, desktop): show it whole over a blurred copy. */
+      @media (min-aspect-ratio: 3/4) {
+        #splash .card { width: auto; max-width: 100%; object-fit: contain; box-shadow: 0 10px 40px rgb(0 0 0 / 25%); }
+      }
+      @media (prefers-reduced-motion: reduce) { #splash { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-label="Scribble Golf Club is loading" role="img">
+      <img class="bg" src="/splash.webp" alt="" />
+      <img class="card" src="/splash.webp" alt="" />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

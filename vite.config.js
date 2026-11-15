@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
       // The store apps bundle everything; no service worker needed there.
       disable: native,
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png', 'splash.webp'],
       manifest: {
         name: 'Scribble Golf Club',
         short_name: 'Scribble',
@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         // Offline, any /app/... address opens the app shell.
         navigateFallback: '/app/index.html',
         navigateFallbackAllowlist: [/^\/app(\/|$)/],
