@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startDM } from '../../lib/messages.js';
 import { getInstructor } from '../../lib/instructors.js';
 import InstructorCard from '../instructor/InstructorCard.jsx';
+import { useUnreadNotifications } from '../useUnreadNotifications.js';
 import {
   blockStatus,
   blockUser,
@@ -30,6 +31,7 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
   const [error, setError] = useState('');
   const [blocks, setBlocks] = useState({ iBlocked: false, blockedMe: false });
   const [teach, setTeach] = useState(null); // { instructor, tiers } if they teach
+  const unread = useUnreadNotifications(mine ? meId : null);
 
   const load = useCallback(async () => {
     setError('');
@@ -121,9 +123,17 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
         )}
         <h1>{profile?.username ? `@${profile.username}` : 'Profile'}</h1>
         {mine ? (
-          <button className="btn btn-ghost" onClick={onSettings}>
-            Settings
-          </button>
+          <span className="topbar-actions">
+            <button className="bell-btn" onClick={() => nav('activity')} aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}>
+              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+              {unread > 0 && <span className="inbox-badge">{unread > 99 ? '99+' : unread}</span>}
+            </button>
+            <button className="btn btn-ghost" onClick={onSettings}>
+              Settings
+            </button>
+          </span>
         ) : (
           <span />
         )}

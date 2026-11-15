@@ -1,0 +1,100 @@
+import { useCallback, useEffect, useState } from 'react';
+import { deleteNotification, groupByTime, listNotifications, markAllRead, notificationText, notificationsChanged } from '../../lib/notifications.js';
+import { timeAgo } from '../../lib/socialFormat.js';
+import Avatar from './Avatar.jsx';
+
+// Likes, comments, follows, messages and swing reviews, newest first.
+// Opening the screen marks everything read (the dots stay until you leave).
+export default function Notifications({ meId, nav, back }) {
+  const [list, setList] = useState(null);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const items = await listNotifications(meId);
+      setList(items);
+      setError('');
+      if (items.some((n) => !n.read)) {
+        await markAllRead(meId);
+        notificationsChanged();
+      }
+    } catch (e) {
+      setError(e.message);
+      setList((l) => l ?? []);
+    }
+  }, [meId]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 20000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  function open(n) {
+    if (n.type === 'message') return nav('thread', { conversationId: n.conversationId, peer: n.actor });
+    if (n.type === 'follow') return nav('user', { userId: n.actor.id });
+    if (n.type === 'review_request') return nav('studio');
+    if (n.type === 'review_answer') return nav('user', { userId: n.actor.id });
+    if (n.postId) return nav('post', { postId: n.postId });
+    return nav('user', { userId: n.actor.id });
+  }
+
+  async function remove(n) {
+    setList((l) => l.filter((x) => x.id !== n.id));
+    try {
+      await deleteNotification(n.id);
+    } catch {
+      load();
+    }
+  }
+
+  return (
+    <div className="screen notifications">
+      <div className="topbar">
+        <button className="btn btn-ghost" onClick={back}>
+          ‹ Back
+        </button>
+        <h1>Notifications</h1>
+        <span />
+      </div>
+      {error && <div className="card warn-box">{error}</div>}
+      {list === null && <p className="muted center">Loading…</p>}
+      {list?.length === 0 && !error && (
+        <div className="center empty-inbox">
+          <p className="muted">No notifications yet. Likes, comments, follows and messages show up here.</p>
+        </div>
+      )}
+      {list &&
+        groupByTime(list).map((g) => (
+          <section key={g.key} className="notif-group">
+            <h3 className="notif-h">{g.label}</h3>
+            <ul className="notif-list">
+              {g.items.map((n) => (
+                <li key={n.id} className={n.read ? '' : 'unread'}>
+                  <button className="notif-avatar" onClick={() => nav('user', { userId: n.actor.id })} aria-label={n.actor.username}>
+                    <Avatar profile={n.actor} size={44} />
+                  </button>
+                  <button className="notif-main" onClick={() => open(n)}>
+                    <span className="notif-text">
+                      <strong>{n.actor.username || n.actor.displayName}</strong> {notificationText(n)}{' '}
+                      <em>{timeAgo(n.createdAt)}</em>
+                    </span>
+                    {n.thumb ? (
+                      <img className="notif-thumb" src={n.thumb} alt="" loading="lazy" />
+                    ) : n.type === 'message' ? (
+                      <span className="notif-kind" aria-hidden="true">💬</span>
+                    ) : n.type.startsWith('review') ? (
+                      <span className="notif-kind" aria-hidden="true">🎥</span>
+                    ) : null}
+                  </button>
+                  <button className="notif-x" onClick={() => remove(n)} aria-label="Remove notification">
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+    </div>
+  );
+}

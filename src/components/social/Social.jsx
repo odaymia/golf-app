@@ -7,6 +7,7 @@ import SavedPage, { FolderPage } from './SavedPage.jsx';
 import Inbox from './Inbox.jsx';
 import Thread from './Thread.jsx';
 import Search from './Search.jsx';
+import Notifications from './Notifications.jsx';
 import InstructorSetup from '../instructor/InstructorSetup.jsx';
 import Studio from '../instructor/Studio.jsx';
 import ProfilePage from './ProfilePage.jsx';
@@ -94,6 +95,8 @@ export default function Social({ start, user, account, onTab, onSettings }) {
       );
     case 'course':
       return <CoursePage course={top.params.course} meId={meId} nav={nav} back={back} />;
+    case 'activity':
+      return <Notifications meId={meId} nav={nav} back={back ?? (() => onTab('me'))} />;
     case 'teach':
       return <InstructorSetup meId={meId} back={back ?? (() => onTab('me'))} onSaved={() => (back ? back() : onTab('me'))} />;
     case 'studio':

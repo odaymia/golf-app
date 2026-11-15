@@ -9,6 +9,7 @@ import League from './components/League.jsx';
 import LeagueBuilder from './components/LeagueBuilder.jsx';
 import { claimMyInvites, createLeague, joinLeague } from './lib/leagueApi.js';
 import BottomNav from './components/BottomNav.jsx';
+import { useUnreadNotifications } from './components/useUnreadNotifications.js';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
 import { getSession, loadProfile, onAuthChange } from './lib/account.js';
@@ -87,6 +88,8 @@ export default function App() {
 
   // Once signed in with a profile: link email invites, then follow an invite link.
   const ready = !!profile?.name;
+  // Unread notifications, for the badge on the Profile tab.
+  const unreadCount = useUnreadNotifications(ready ? userId : null);
   useEffect(() => {
     if (!ready) return;
     claimMyInvites().catch(() => {});
@@ -170,7 +173,7 @@ export default function App() {
   const withNav = (content) => (
     <>
       {content}
-      <BottomNav active={activeTab} onTab={onTab} />
+      <BottomNav active={activeTab} onTab={onTab} badges={{ me: unreadCount }} />
     </>
   );
 

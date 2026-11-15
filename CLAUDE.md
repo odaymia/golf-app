@@ -112,6 +112,7 @@ src/
     roundSetup.js   Setup defaults, plain-English rules, settings -> engine configs
     courseSearch.js The only OpenGolfAPI network code (search + course detail)
     searchHistory.js Recent searches (device, per account) + post ranking
+    notifications.js The only notifications code: list, unread count, mark read
     instructors.js  The only instructor-table code (+ swing review uploads)
     instructor/     fees.js (platform fee split, integer cents, tested);
                     payments.js (PAYMENTS_LIVE=false; Stripe hooks in here)
@@ -155,6 +156,8 @@ supabase/home_course.sql  public_profiles.home_course_key / _place
 supabase/account_safety.sql  blocks, block_user(), delete_my_account(), media list policy
 supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
+supabase/notifications.sql  notifications table + triggers (likes, comments,
+                    follows, messages, swing reviews)
 supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
                     swing reviews, posts.audience, private `premium` bucket
 supabase/tee_times.sql  Adds league_events.tee_sheet
@@ -312,6 +315,16 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   its location page with an OpenStreetMap embed and an Open in Maps link
   (search results carry lat/lng). Back returns to the same search and tab
   (Social `nav(name, params, keep)` saves params on the current screen).
+- Notifications (`notifications` table, supabase/notifications.sql): made
+  only by database triggers, never by the app: like (once per liker+post,
+  removed on unlike), comment, follow (removed on unfollow), message (one
+  row per conversation with an unread count; reading the chat clears it),
+  swing review sent/answered. None for your own actions or between blocked
+  people. Bell with unread badge on your own profile and a badge on the
+  Profile tab (`useUnreadNotifications`: every 30 s, on foreground, and on
+  the `scribble:notifications-changed` event). Opening Notifications marks
+  all read; grouped Today / This week / Earlier; tap goes to the post,
+  chat, profile or Studio. In-app only (no push notifications yet).
 - Saving (private to you): the bookmark saves to `saved_posts` ("All
   saved"); "Add to folder" puts it in your `save_folders` via
   `save_folder_posts` (adding also saves; unsaving also leaves every folder;

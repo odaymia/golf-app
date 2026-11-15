@@ -6,7 +6,7 @@ const TABS = [
   ['me', 'Profile', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1-4 4.5-6 8-6s7 2 8 6'],
 ];
 
-export default function BottomNav({ active, onTab }) {
+export default function BottomNav({ active, onTab, badges = {} }) {
   return (
     <nav className="bottom-nav" aria-label="Main">
       {TABS.map(([key, label, d]) => (
@@ -21,6 +21,7 @@ export default function BottomNav({ active, onTab }) {
             <path d={d} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           {key !== 'new' && <span>{label}</span>}
+          {badges[key] > 0 && <i className="bn-badge" aria-label={`${badges[key]} new`}>{badges[key] > 99 ? '99+' : badges[key]}</i>}
         </button>
       ))}
     </nav>
