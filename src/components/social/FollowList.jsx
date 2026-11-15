@@ -60,31 +60,51 @@ export default function FollowList({ userId, username, kind: initialKind = 'foll
 
   return (
     <div className="screen follow-list">
-      <div className="topbar">
-        <button className="btn btn-ghost" onClick={back}>
-          ‹ Back
-        </button>
-        <h1>{username ? `@${username}` : 'Profile'}</h1>
-        <span />
-      </div>
-      <div className="tabs wide-tabs" role="tablist">
-        {[
-          ['followers', 'Followers'],
-          ['following', 'Following'],
-        ].map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={kind === k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>
-            {lists[k] ? `${lists[k].length} ` : ''}
-            {label}
+      <header className="fl-head">
+        <div className="fl-bar">
+          <button className="fl-back" onClick={back} aria-label="Back">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
-        ))}
-      </div>
-      <div className="follow-search">
-        <input className="share-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search this list" />
-      </div>
+          <h1>{username || 'Profile'}</h1>
+          <span />
+        </div>
+        <div className="fl-tabs" role="tablist" style={{ '--tab': kind === 'followers' ? 0 : 1 }}>
+          {[
+            ['followers', 'Followers'],
+            ['following', 'Following'],
+          ].map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={kind === k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>
+              {lists[k] && <b>{lists[k].length}</b>} {label}
+            </button>
+          ))}
+          <i className="fl-ink" aria-hidden="true" />
+        </div>
+        <label className="fl-search">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search this list" />
+        </label>
+      </header>
       {error && <div className="card warn-box">{error}</div>}
-      {items === undefined && <p className="muted center">Loading…</p>}
+      {items === undefined && (
+        <ul className="follow-rows" aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <li key={i} className="fl-skeleton">
+              <span className="fl-sk-avatar" />
+              <span className="fl-sk-lines">
+                <i />
+                <i />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       {items && shown.length === 0 && (
-        <p className="muted center">
+        <p className="fl-empty">
           {t ? 'No one matches.' : kind === 'followers' ? 'No followers yet.' : mine ? 'You’re not following anyone yet.' : 'Not following anyone yet.'}
         </p>
       )}
@@ -92,7 +112,7 @@ export default function FollowList({ userId, username, kind: initialKind = 'foll
         {shown.map((p) => (
           <li key={p.id}>
             <button className="follow-who" onClick={() => nav('user', { userId: p.id })}>
-              <Avatar profile={p.profile} size={44} />
+              <Avatar profile={p.profile} size={52} />
               <span>
                 <strong>
                   {p.profile.username || p.profile.displayName}
@@ -102,11 +122,11 @@ export default function FollowList({ userId, username, kind: initialKind = 'foll
               </span>
             </button>
             {mine && kind === 'followers' ? (
-              <button className="btn btn-ghost btn-small outline" onClick={() => remove(p)}>
+              <button className="fl-btn soft" onClick={() => remove(p)}>
                 Remove
               </button>
             ) : p.followState !== 'me' ? (
-              <button className={`btn btn-small ${p.followState === 'none' ? 'btn-primary' : 'btn-ghost outline'}`} onClick={() => toggle(p)}>
+              <button className={`fl-btn ${p.followState === 'none' ? 'solid' : 'soft'}`} onClick={() => toggle(p)}>
                 {p.followState === 'following' ? 'Following' : p.followState === 'pending' ? 'Requested' : 'Follow'}
               </button>
             ) : null}

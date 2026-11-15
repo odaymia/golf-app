@@ -2939,7 +2939,7 @@ tr.clickable {
   width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 4px;
   background: none; border: none; text-align: left; font: inherit; color: var(--text);
 }
-.people-pick span, .inbox-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.people-pick button > span:not(.avatar), .inbox-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .people-pick em { font-style: normal; color: var(--muted); font-size: 13px; }
 .folder-pick button { padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .folder-pick span { flex: 1; font-weight: 600; }
@@ -3095,7 +3095,7 @@ tr.clickable {
 .notice { background: #fbf3dc; border-color: var(--gold); font-size: 14px; }
 .studio-stats { grid-template-columns: repeat(2, 1fr); padding: 0 12px; }
 .sub-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.sub-row > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sub-row > span:not(.avatar) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .comp-add select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: inherit; }
 .review-new { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .review-new textarea, .studio-reviews textarea {
@@ -3107,7 +3107,7 @@ tr.clickable {
 .studio-reviews { padding: 0 12px 20px; }
 .studio-reviews li.open { border-left: 4px solid var(--gold); }
 .review-head { display: flex; gap: 10px; align-items: center; cursor: pointer; }
-.review-head span { display: flex; flex-direction: column; }
+.review-head > span:not(.avatar) { display: flex; flex-direction: column; }
 .review-head em { font-style: normal; color: var(--muted); font-size: 13px; }
 .post-locked {
   width: 100%; aspect-ratio: 4 / 5; max-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -3183,17 +3183,63 @@ tr.clickable {
 .lock-mark { font-size: 0.8em; }
 .request-actions { display: flex; gap: 6px; flex: none; }
 
-/* Followers / following */
+/* Followers / following (modern list) */
 .count-btn { background: none; border: none; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; }
 .count-btn:disabled { cursor: default; opacity: 1; }
-.follow-search { padding: 0 12px; }
-.follow-rows { list-style: none; margin: 0; padding: 0 12px 20px; }
-.follow-rows li { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.follow-list { padding-top: 0; }
+.fl-head {
+  position: sticky; top: 0; z-index: 20; margin: 0 -16px; padding: env(safe-area-inset-top) 16px 10px;
+  background: rgb(244 238 223 / 92%); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid rgb(28 42 32 / 8%);
+}
+.fl-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; height: 48px; }
+.fl-bar h1 {
+  margin: 0; text-align: center; font-family: 'Montserrat', system-ui, sans-serif; font-size: 16px; font-weight: 700;
+  letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fl-back { width: 44px; height: 44px; display: grid; place-items: center; background: none; border: none; color: var(--text); margin-left: -10px; }
+.fl-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 -16px; }
+.fl-tabs button {
+  height: 44px; background: none; border: none; font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--muted); transition: color 0.2s;
+}
+.fl-tabs button.on { color: var(--text); }
+.fl-tabs b { font-weight: 800; }
+.fl-ink {
+  position: absolute; bottom: 0; left: 0; width: 50%; height: 2px; background: var(--text);
+  transform: translateX(calc(var(--tab) * 100%)); transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.fl-search {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px; height: 38px; padding: 0 12px;
+  border-radius: 10px; background: rgb(28 42 32 / 7%); color: var(--muted);
+}
+.fl-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font: inherit; font-size: 15px; color: var(--text); }
+.fl-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.follow-rows { list-style: none; margin: 0; padding: 6px 0 24px; }
+.follow-rows li { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
 .follow-who {
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px 0;
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0;
   background: none; border: none; font: inherit; color: var(--text); text-align: left;
 }
-.follow-who span { min-width: 0; display: flex; flex-direction: column; }
+.follow-who .avatar, .follow-who .avatar-img { flex: none; }
+.follow-who > span:not(.avatar) { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.follow-who strong { font-size: 14.5px; font-weight: 700; }
 .follow-who strong, .follow-who em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.follow-who em { font-style: normal; color: var(--muted); font-size: 13px; }
-.follow-rows .btn-small { flex: none; min-width: 96px; }
+.follow-who em { font-style: normal; color: var(--muted); font-size: 14px; }
+.fl-btn {
+  flex: none; min-width: 100px; height: 34px; padding: 0 16px; border: none; border-radius: 9px;
+  font: inherit; font-size: 14px; font-weight: 700; transition: transform 0.1s, background 0.2s;
+}
+.fl-btn:active { transform: scale(0.96); }
+.fl-btn.solid { background: var(--green); color: #fff; }
+.fl-btn.soft { background: rgb(28 42 32 / 8%); color: var(--text); }
+.fl-empty { text-align: center; color: var(--muted); margin: 40px 0; }
+.fl-skeleton .fl-sk-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgb(28 42 32 / 8%); flex: none; }
+.fl-sk-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+.fl-sk-lines i { display: block; height: 11px; border-radius: 6px; background: rgb(28 42 32 / 8%); width: 45%; }
+.fl-sk-lines i + i { width: 30%; }
+.fl-skeleton span, .fl-skeleton i { animation: fl-pulse 1.2s ease-in-out infinite; }
+@keyframes fl-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .fl-ink, .fl-skeleton span, .fl-skeleton i { transition: none; animation: none; } }
+
+.avatar { flex: none; line-height: 1; }
