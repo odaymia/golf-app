@@ -49,6 +49,7 @@ export default function Settings({ user, profile, onSaved, onBack, onOpenSocial 
       messages: 'Messages',
       comments: 'Comments',
       likes: 'Likes',
+      handicap: 'Handicap index',
       notifications: 'Notifications',
       blocked: 'Blocked accounts',
       players: 'My players',
@@ -64,7 +65,7 @@ export default function Settings({ user, profile, onSaved, onBack, onOpenSocial 
           <span />
         </div>
         {error && <div className="card error-box">{error}</div>}
-        {privacy?.unavailable && ['privacy', 'messages', 'comments', 'likes', 'notifications'].includes(page) && (
+        {privacy?.unavailable && ['privacy', 'messages', 'comments', 'likes', 'notifications', 'handicap'].includes(page) && (
           <div className="card warn-box">These settings aren&apos;t available yet. Try again later.</div>
         )}
         {privacy && <SettingsPage page={page} privacy={privacy} change={change} user={user} />}
@@ -93,6 +94,7 @@ export default function Settings({ user, profile, onSaved, onBack, onOpenSocial 
         <Row icon="🔒" label="Account privacy" value={privacy ? (privacy.isPrivate ? 'Private' : 'Public') : ''} onClick={() => setPage('privacy')} />
         <Row icon="💬" label="Messages" value={privacy ? label[privacy.allowMessages] : ''} onClick={() => setPage('messages')} />
         <Row icon="🗨️" label="Comments" value={privacy ? label[privacy.allowComments] : ''} onClick={() => setPage('comments')} />
+        <Row icon="⛳" label="Handicap index" value={privacy ? (privacy.shareHandicap ? 'Shared' : 'Hidden') : ''} onClick={() => setPage('handicap')} />
         <Row icon="♡" label="Likes" value={privacy ? (privacy.hideLikeCounts ? 'Counts hidden' : 'Counts shown') : ''} onClick={() => setPage('likes')} />
         <Row icon="⛔" label="Blocked accounts" onClick={() => setPage('blocked')} />
       </Group>
@@ -266,6 +268,24 @@ function SettingsPage({ page, privacy, change, user }) {
               onChange={(v) => change({ hideLikeCounts: v })}
             />
           </div>
+        </section>
+      );
+    case 'handicap':
+      return (
+        <section className="settings-group">
+          <div className="settings-list">
+            <Toggle
+              label="Share my handicap index"
+              checked={privacy.shareHandicap}
+              disabled={off}
+              onChange={(v) => change({ shareHandicap: v })}
+            />
+          </div>
+          <p className="settings-help">
+            {privacy.shareHandicap
+              ? 'When a friend adds you to a round, your handicap index fills in automatically. Your GHIN number is never shared.'
+              : 'Friends adding you to a round will type your index themselves.'}
+          </p>
         </section>
       );
     case 'notifications': {

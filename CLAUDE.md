@@ -161,6 +161,7 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/handicap_sharing.sql  privacy_settings.share_handicap + handicap_indexes()
 supabase/privacy.sql  private accounts + follow requests, privacy_settings
                     (messages/comments/notification prefs), hide like counts
 supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
@@ -330,6 +331,14 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   the `scribble:notifications-changed` event). Opening Notifications marks
   all read; grouped Today / This week / Earlier; tap goes to the post,
   chat, profile or Studio. In-app only (no push notifications yet).
+- Adding players to a round (`PlayerSearch` in Setup): the name box
+  suggests My players, then friends you follow, then Scribble golfers (2+
+  letters; `findGolfers` in social.js); picking one fills the name and the
+  handicap index. Indexes come from `handicap_indexes()`
+  (supabase/handicap_sharing.sql): only for golfers who share it
+  (`privacy_settings.share_handicap`, default on; Settings → Handicap
+  index), never between blocked people; GHIN numbers are never shared.
+  Typing any name still works for golfers not on Scribble.
 - Settings & privacy (supabase/privacy.sql, `getPrivacy`/`savePrivacy` in
   social.js, UI in components/settings/Settings.jsx; the old Profile screen
   is now its "Golf profile" page). Private account

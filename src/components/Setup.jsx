@@ -16,15 +16,17 @@ import CourseSearch from './CourseSearch.jsx';
 import { Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
 import { listSavedPlayers } from '../lib/account.js';
+import PlayerSearch from './PlayerSearch.jsx';
 
 const newPlayer = (from) => ({
   id: makeId(),
   name: from?.name ?? '',
   indexText: from?.index == null ? '' : formatIndex(from.index),
   savedId: from?.savedId ?? null,
+  userId: from?.userId ?? null,
 });
 
-export default function Setup({ profile, onStart, onCancel }) {
+export default function Setup({ profile, meId, onStart, onCancel }) {
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(blankCourse);
   const [teeIdx, setTeeIdx] = useState(0);
@@ -255,12 +257,26 @@ export default function Setup({ profile, onStart, onCancel }) {
         )}
         {players.map((p, i) => (
           <div className="player-row" key={p.id}>
-            <input
-              className="grow"
+            <PlayerSearch
               value={p.name}
               placeholder={`Player ${i + 1}`}
-              onChange={(e) => setPlayer(i, 'name', e.target.value)}
-              aria-label={`Player ${i + 1} name`}
+              ariaLabel={`Player ${i + 1} name`}
+              meId={meId}
+              saved={saved}
+              exclude={players.flatMap((x) => [x.savedId && `saved:${x.savedId}`, x.userId && `user:${x.userId}`]).filter(Boolean)}
+              onChange={(name) =>
+                // Editing the name by hand unlinks the picked golfer.
+                setPlayers((ps) => ps.map((x, j) => (j === i ? { ...x, name, savedId: null, userId: null } : x)))
+              }
+              onPick={(picked) =>
+                setPlayers((ps) =>
+                  ps.map((x, j) =>
+                    j === i
+                      ? { ...x, name: picked.name, indexText: picked.index == null ? x.indexText : formatIndex(picked.index), savedId: picked.savedId, userId: picked.userId }
+                      : x,
+                  ),
+                )
+              }
             />
             <input
               className="index-input"
@@ -286,7 +302,10 @@ export default function Setup({ profile, onStart, onCancel }) {
             + Add player
           </button>
         )}
-        <p className="hint">Handicap index from your app or card. Plus handicap? Type +2.1.</p>
+        <p className="hint">
+          Start typing a name to add a friend: their handicap index fills in from their profile. Anyone else, just type their name
+          and index. Plus handicap? Type +2.1.
+        </p>
         <div className="row2">
           <label className="field">
             <span>Handicap allowance</span>

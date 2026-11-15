@@ -224,7 +224,7 @@ export default function App() {
         }}
       />
     );
-  if (screen === 'setup') return <Setup profile={profile} onStart={startRound} onCancel={goHome} />;
+  if (screen === 'setup') return <Setup profile={profile} meId={userId} onStart={startRound} onCancel={goHome} />;
   if (screen === 'play' && round)
     return <Play round={round} setRound={setRound} onSettle={() => setScreen('settle')} onHome={goHome} />;
   if (screen === 'settle' && round)

@@ -216,6 +216,41 @@ export async function listFollows(userId, kind, meId) {
     }));
 }
 
+// Golfers' handicap indexes (only those who share them): Map(userId -> index).
+// Fails soft to an empty map (offline, or handicap_sharing.sql not run).
+export async function golferIndexes(userIds) {
+  if (!userIds.length) return new Map();
+  const { data, error } = await supabase.rpc('handicap_indexes', { p_users: userIds });
+  if (error || !data) return new Map();
+  return new Map(data.filter((r) => r.handicap_index != null).map((r) => [r.user_id, Number(r.handicap_index)]));
+}
+
+// Golfers to suggest when adding players: people I follow, then people
+// matching `q` (name or username). Each with their shared index, if any.
+// [{ id, name, username, avatarUrl, index, friend }]
+export async function findGolfers(meId, q = '') {
+  const term = q.trim();
+  const friendsP = listFollows(meId, 'following', meId).catch(() => []);
+  const searchP = term.length >= 2 ? searchProfiles(term, meId, { limit: 12 }).catch(() => []) : Promise.resolve([]);
+  const [friends, found] = await Promise.all([friendsP, searchP]);
+  const t = term.toLowerCase();
+  const matches = (p) => !t || `${p.username} ${p.displayName}`.toLowerCase().includes(t);
+  const list = [
+    ...friends.filter((f) => matches(f.profile)).map((f) => ({ ...f.profile, friend: true })),
+    ...found.filter((p) => !friends.some((f) => f.id === p.id)).map((p) => ({ ...p, friend: false })),
+  ].slice(0, 12);
+  const idx = await golferIndexes(list.map((p) => p.id));
+  return list.map((p) => ({
+    id: p.id,
+    name: p.displayName || p.username,
+    username: p.username,
+    avatarUrl: p.avatarUrl,
+    displayName: p.displayName,
+    index: idx.has(p.id) ? idx.get(p.id) : null,
+    friend: p.friend,
+  }));
+}
+
 // People asking to follow my private account, newest first.
 export async function listFollowRequests(meId) {
   const rows = await call(
@@ -247,6 +282,7 @@ export const DEFAULT_PRIVACY = {
   allowMessages: 'everyone', // everyone | following | none
   allowComments: 'everyone', // everyone | followers | none
   notify: { like: true, comment: true, follow: true, message: true, review: true },
+  shareHandicap: true,
 };
 
 export async function getPrivacy(meId) {
@@ -260,6 +296,7 @@ export async function getPrivacy(meId) {
     allowMessages: row?.allow_messages ?? DEFAULT_PRIVACY.allowMessages,
     allowComments: row?.allow_comments ?? DEFAULT_PRIVACY.allowComments,
     notify: { ...DEFAULT_PRIVACY.notify, ...(row?.notify ?? {}) },
+    shareHandicap: row?.share_handicap ?? true,
     hasProfile: !!profile,
   };
 }
@@ -278,6 +315,7 @@ export async function savePrivacy(meId, patch) {
   if ('allowMessages' in patch) row.allow_messages = patch.allowMessages;
   if ('allowComments' in patch) row.allow_comments = patch.allowComments;
   if ('notify' in patch) row.notify = patch.notify;
+  if ('shareHandicap' in patch) row.share_handicap = patch.shareHandicap;
   if (Object.keys(row).length) {
     await call(supabase.from('privacy_settings').upsert({ user_id: meId, ...row, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }));
   }
