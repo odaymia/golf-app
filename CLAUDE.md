@@ -435,6 +435,13 @@ called straight from the phone (CORS is open).
 
 ## Look and feel
 
+Modern refresh (Nov 2026): the "Modern refresh" block at the end of
+src/styles.css layers on top of the vintage styles: pinned translucent top
+bars, borderless cards with soft shadows, flat rounded buttons, soft-fill
+inputs with a green focus ring, iOS-style segmented controls (white thumb),
+bottom sheets with a grab handle, sans-serif UI headings (Fraunces kept for
+display: hero, big numbers, money). Delete that block to go back.
+
 Vintage clubhouse style, inspired by classic golf brands and Augusta (no
 other brand's names or marks): aged cream paper (#f4eedf), logo green
 #065025 with deep green #033a1a, flag-yellow gold #d9b04a, a touch of azalea
