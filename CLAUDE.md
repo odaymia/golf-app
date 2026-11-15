@@ -345,6 +345,11 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   insert policy; the app hides the box), notify {like, comment, follow,
   message, review} muting (checked by the notification triggers; follow
   requests always notify). `hide_like_counts` hides counts from others.
+- Followers / Following: tapping the counts on a profile opens `FollowList`
+  (`listFollows` in social.js): both tabs, a search box, Follow /
+  Requested / Following buttons, and Remove on your own followers. Accepted
+  follows only; blocked people hidden; a private account's lists can't be
+  opened by non-followers (counts disabled).
 - Saving (private to you): the bookmark saves to `saved_posts` ("All
   saved"); "Add to folder" puts it in your `save_folders` via
   `save_folder_posts` (adding also saves; unsaving also leaves every folder;

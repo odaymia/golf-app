@@ -185,6 +185,37 @@ export function unfollow(meId, followee) {
   return call(supabase.from('follows').delete().eq('follower', meId).eq('followee', followee));
 }
 
+// Someone's followers or the people they follow (accepted only), newest
+// first, each with my own follow state so the list can show Follow buttons.
+// kind: 'followers' | 'following'
+export async function listFollows(userId, kind, meId) {
+  const followers = kind === 'followers';
+  const rows = await call(
+    supabase
+      .from('follows')
+      .select('follower, followee, created_at')
+      .eq(followers ? 'followee' : 'follower', userId)
+      .eq('status', 'accepted')
+      .order('created_at', { ascending: false })
+      .limit(500),
+  );
+  const ids = rows.map((r) => (followers ? r.follower : r.followee));
+  if (!ids.length) return [];
+  const [people, mine, hidden] = await Promise.all([
+    call(supabase.from('public_profiles').select('*').in('id', ids)),
+    meId ? call(supabase.from('follows').select('followee, status').eq('follower', meId).in('followee', ids)) : [],
+    meId ? hiddenUserIds(meId).catch(() => new Set()) : new Set(),
+  ]);
+  const state = new Map(mine.map((f) => [f.followee, f.status === 'accepted' ? 'following' : 'pending']));
+  return ids
+    .filter((id) => !hidden.has(id))
+    .map((id) => ({
+      id,
+      profile: toProfile(people.find((p) => p.id === id)) ?? { id, username: '', displayName: 'Golfer' },
+      followState: id === meId ? 'me' : state.get(id) ?? 'none',
+    }));
+}
+
 // People asking to follow my private account, newest first.
 export async function listFollowRequests(meId) {
   const rows = await call(

@@ -176,14 +176,18 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
                 <strong>{compactCount(stats?.posts ?? 0)}</strong>
                 <span>Posts</span>
               </div>
-              <div>
-                <strong>{compactCount(stats?.followers ?? 0)}</strong>
-                <span>Followers</span>
-              </div>
-              <div>
-                <strong>{compactCount(stats?.following ?? 0)}</strong>
-                <span>Following</span>
-              </div>
+              {['followers', 'following'].map((k) => (
+                <button
+                  key={k}
+                  className="count-btn"
+                  onClick={() => (lockedPrivate ? null : nav('follows', { userId, username: profile.username, kind: k }))}
+                  disabled={lockedPrivate}
+                  aria-label={`${stats?.[k] ?? 0} ${k}`}
+                >
+                  <strong>{compactCount(stats?.[k] ?? 0)}</strong>
+                  <span>{k === 'followers' ? 'Followers' : 'Following'}</span>
+                </button>
+              ))}
             </div>
           </section>
           <section className="profile-bio">
