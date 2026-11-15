@@ -32,6 +32,7 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
   const [blocks, setBlocks] = useState({ iBlocked: false, blockedMe: false });
   const [teach, setTeach] = useState(null); // { instructor, tiers } if they teach
   const unread = useUnreadNotifications(mine ? meId : null);
+  const lockedPrivate = !mine && profile?.isPrivate && stats && stats.followState !== 'following';
 
   const load = useCallback(async () => {
     setError('');
@@ -59,11 +60,18 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
   }, [load]);
 
   async function toggleFollow() {
-    const next = !stats.iFollow;
-    setStats((s) => ({ ...s, iFollow: next, followers: s.followers + (next ? 1 : -1) }));
+    const state = stats.followState;
+    if (state === 'following' && profile?.isPrivate && !confirm(`Unfollow @${profile.username}? You'll need to ask again to see their posts.`)) return;
     try {
-      if (next) await follow(userId);
-      else await unfollow(meId, userId);
+      if (state === 'none') {
+        const next = await follow(userId);
+        setStats((s) => ({ ...s, followState: next, iFollow: next === 'following', followers: s.followers + (next === 'following' ? 1 : 0) }));
+        if (next === 'following' && profile?.isPrivate) load();
+      } else {
+        await unfollow(meId, userId);
+        setStats((s) => ({ ...s, followState: 'none', iFollow: false, followers: s.followers - (state === 'following' ? 1 : 0) }));
+        if (profile?.isPrivate) load();
+      }
     } catch (e) {
       setError(e.message);
       load();
@@ -121,7 +129,10 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
         ) : (
           <span />
         )}
-        <h1>{profile?.username ? `@${profile.username}` : 'Profile'}</h1>
+        <h1>
+          {profile?.isPrivate && <span className="lock-mark" aria-label="Private account">🔒 </span>}
+          {profile?.username ? `@${profile.username}` : 'Profile'}
+        </h1>
         {mine ? (
           <span className="topbar-actions">
             <button className="bell-btn" onClick={() => nav('activity')} aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}>
@@ -213,11 +224,11 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
             ) : (
               <>
                 <button
-                  className={`btn full ${stats?.iFollow ? 'btn-ghost outline' : 'btn-primary'}`}
+                  className={`btn full ${stats && stats.followState !== 'none' ? 'btn-ghost outline' : 'btn-primary'}`}
                   onClick={toggleFollow}
                   disabled={!stats}
                 >
-                  {stats?.iFollow ? 'Following' : 'Follow'}
+                  {stats?.followState === 'following' ? 'Following' : stats?.followState === 'pending' ? 'Requested' : 'Follow'}
                 </button>
                 <button className="btn btn-ghost full outline" onClick={message}>
                   Message
@@ -228,7 +239,17 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
               </>
             )}
           </div>
-          {posts === null ? (
+          {lockedPrivate ? (
+            <section className="private-note">
+              <span aria-hidden="true">🔒</span>
+              <strong>This account is private</strong>
+              <p className="muted">
+                {stats?.followState === 'pending'
+                  ? 'Follow request sent. You’ll see their photos and videos once they accept.'
+                  : 'Follow this account to see their photos and videos.'}
+              </p>
+            </section>
+          ) : posts === null ? (
             <p className="muted center">Loading…</p>
           ) : (
             <PostGrid

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addComment, deleteComment, getPost, listComments } from '../../lib/social.js';
+import { addComment, canComment, deleteComment, getPost, listComments } from '../../lib/social.js';
 import { timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 import PostCard from './PostCard.jsx';
@@ -11,12 +11,14 @@ export default function PostDetail({ postId, meId, nav, back }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [mayComment, setMayComment] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [p, c] = await Promise.all([getPost(postId, meId), listComments(postId, meId)]);
+      const [p, c, ok] = await Promise.all([getPost(postId, meId), listComments(postId, meId), canComment(postId)]);
       setPost(p);
       setComments(c);
+      setMayComment(ok);
     } catch (e) {
       setError(e.message);
       setPost(null);
@@ -91,12 +93,16 @@ export default function PostDetail({ postId, meId, nav, back }) {
               </li>
             ))}
           </ul>
-          <form className="comment-form" onSubmit={send}>
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment…" maxLength={1000} />
-            <button className="btn btn-primary" disabled={busy || !text.trim()}>
-              Post
-            </button>
-          </form>
+          {mayComment ? (
+            <form className="comment-form" onSubmit={send}>
+              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment…" maxLength={1000} />
+              <button className="btn btn-primary" disabled={busy || !text.trim()}>
+                Post
+              </button>
+            </form>
+          ) : (
+            <p className="muted small">Comments on this post are limited.</p>
+          )}
           {error && <p className="search-error">{error}</p>}
         </section>
       )}

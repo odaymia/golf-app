@@ -240,7 +240,8 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
       {sheet === 'share' && <ShareSheet post={post} meId={meId} onClose={() => setSheet(null)} />}
       {sheet === 'folders' && <FolderSheet post={post} meId={meId} onClose={() => setSheet(null)} />}
       <div className="post-body">
-        {likes > 0 && <p className="post-likes">{countLabel(likes, 'like')}</p>}
+        {likes > 0 && (!post.hideLikes || mine) && <p className="post-likes">{countLabel(likes, 'like')}</p>}
+        {post.hideLikes && !mine && liked && <p className="post-likes">You liked this</p>}
         {post.caption && (
           <p className="post-caption">
             <strong>{post.author.username}</strong> {post.caption}

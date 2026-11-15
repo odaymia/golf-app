@@ -8,7 +8,8 @@ import HomeCoursePicker from './HomeCoursePicker.jsx';
 const indexText = (n) => (n == null ? '' : formatIndex(n));
 
 // firstTime: shown right after the first sign-in, before the app opens.
-export default function Profile({ user, profile, onSaved, onBack, firstTime = false }) {
+// golfOnly: just the golf profile form (a page inside Settings).
+export default function Profile({ user, profile, onSaved, onBack, firstTime = false, golfOnly = false }) {
   const [form, setForm] = useState(() => ({
     name: profile?.name ?? '',
     ghinNumber: profile?.ghinNumber ?? '',
@@ -66,7 +67,7 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
             ‹ Back
           </button>
         )}
-        <h1>{firstTime ? 'Your profile' : 'Profile'}</h1>
+        <h1>{firstTime ? 'Your profile' : golfOnly ? 'Golf profile' : 'Profile'}</h1>
         <span />
       </div>
 
@@ -109,7 +110,7 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
         </button>
       </form>
 
-      {!firstTime && (
+      {!firstTime && !golfOnly && (
         <>
           <SavedPlayers />
           <BlockedAccounts meId={user.id} />
@@ -137,7 +138,7 @@ export default function Profile({ user, profile, onSaved, onBack, firstTime = fa
 
 const blankPlayer = { id: null, name: '', ghinNumber: '', indexText: '' };
 
-function SavedPlayers() {
+export function SavedPlayers() {
   const [players, setPlayers] = useState(null);
   const [editing, setEditing] = useState(null); // player being added/edited
   const [error, setError] = useState('');
@@ -251,7 +252,7 @@ function SavedPlayers() {
   );
 }
 
-function BlockedAccounts({ meId }) {
+export function BlockedAccounts({ meId }) {
   const [list, setList] = useState(null);
   const [error, setError] = useState('');
 
@@ -292,7 +293,7 @@ function BlockedAccounts({ meId }) {
 }
 
 // Required by the App Store and Google Play: delete your account in the app.
-function DeleteAccount({ userId }) {
+export function DeleteAccount({ userId }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 

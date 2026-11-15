@@ -2,17 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { deleteNotification, groupByTime, listNotifications, markAllRead, notificationText, notificationsChanged } from '../../lib/notifications.js';
 import { timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
+import { acceptFollower, listFollowRequests, removeFollower } from '../../lib/social.js';
 
 // Likes, comments, follows, messages and swing reviews, newest first.
 // Opening the screen marks everything read (the dots stay until you leave).
 export default function Notifications({ meId, nav, back }) {
   const [list, setList] = useState(null);
   const [error, setError] = useState('');
+  const [requests, setRequests] = useState([]);
 
   const load = useCallback(async () => {
     try {
-      const items = await listNotifications(meId);
-      setList(items);
+      const [items, reqs] = await Promise.all([listNotifications(meId), listFollowRequests(meId)]);
+      setRequests(reqs);
+      // Requests are answered in their own section above.
+      setList(items.filter((n) => n.type !== 'follow_request'));
       setError('');
       if (items.some((n) => !n.read)) {
         await markAllRead(meId);
@@ -39,6 +43,18 @@ export default function Notifications({ meId, nav, back }) {
     return nav('user', { userId: n.actor.id });
   }
 
+  async function answer(r, accept) {
+    setRequests((list) => list.filter((x) => x.userId !== r.userId));
+    try {
+      if (accept) await acceptFollower(meId, r.userId);
+      else await removeFollower(meId, r.userId);
+      load();
+    } catch (e) {
+      setError(e.message);
+      load();
+    }
+  }
+
   async function remove(n) {
     setList((l) => l.filter((x) => x.id !== n.id));
     try {
@@ -58,8 +74,33 @@ export default function Notifications({ meId, nav, back }) {
         <span />
       </div>
       {error && <div className="card warn-box">{error}</div>}
+      {requests.length > 0 && (
+        <section className="notif-group">
+          <h3 className="notif-h">Follow requests</h3>
+          <ul className="notif-list">
+            {requests.map((r) => (
+              <li key={r.userId} className="unread">
+                <button className="notif-avatar" onClick={() => nav('user', { userId: r.userId })} aria-label={r.profile.username}>
+                  <Avatar profile={r.profile} size={44} />
+                </button>
+                <span className="notif-text">
+                  <strong>{r.profile.username || r.profile.displayName}</strong> asked to follow you. <em>{timeAgo(r.createdAt)}</em>
+                </span>
+                <span className="request-actions">
+                  <button className="btn btn-primary btn-small" onClick={() => answer(r, true)}>
+                    Confirm
+                  </button>
+                  <button className="btn btn-ghost btn-small" onClick={() => answer(r, false)}>
+                    Delete
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {list === null && <p className="muted center">Loading…</p>}
-      {list?.length === 0 && !error && (
+      {list?.length === 0 && !error && requests.length === 0 && (
         <div className="center empty-inbox">
           <p className="muted">No notifications yet. Likes, comments, follows and messages show up here.</p>
         </div>

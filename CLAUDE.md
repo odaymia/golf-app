@@ -143,6 +143,9 @@ src/
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
   components/instructor/  InstructorSetup (teach), InstructorCard (profile:
                     tiers, Subscribe, swing reviews), Studio (dashboard)
+  components/settings/  Settings menu (☰ on your profile): privacy, messages,
+                    comments, likes, notifications, golf profile, players,
+                    saved, search history, support, sign out, delete account
   components/pro/   League Pro desktop console (ProConsole + Overview,
                     Players, Schedule, Scores, Standings; useWide)
   App.jsx           Sign-in gate -> first-time profile -> screens; saves the
@@ -158,6 +161,8 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/privacy.sql  private accounts + follow requests, privacy_settings
+                    (messages/comments/notification prefs), hide like counts
 supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
                     swing reviews, posts.audience, private `premium` bucket
 supabase/tee_times.sql  Adds league_events.tee_sheet
@@ -325,6 +330,21 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   the `scribble:notifications-changed` event). Opening Notifications marks
   all read; grouped Today / This week / Earlier; tap goes to the post,
   chat, profile or Studio. In-app only (no push notifications yet).
+- Settings & privacy (supabase/privacy.sql, `getPrivacy`/`savePrivacy` in
+  social.js, UI in components/settings/Settings.jsx; the old Profile screen
+  is now its "Golf profile" page). Private account
+  (`public_profiles.is_private`): posts, media, likes and comments are
+  readable only by the owner and accepted followers (`can_see_author()` in
+  RLS); following a private account inserts a 'pending' follow (status set by
+  a BEFORE trigger, not the app); requests are confirmed/deleted at the top
+  of Notifications; going public accepts all pending. Follower counts and
+  the Following feed count accepted follows only. `privacy_settings`
+  (private to the owner): allow_messages everyone/following/none (checked in
+  `start_dm` for new chats and the messages insert policy),
+  allow_comments everyone/followers/none (`can_comment()` in the comments
+  insert policy; the app hides the box), notify {like, comment, follow,
+  message, review} muting (checked by the notification triggers; follow
+  requests always notify). `hide_like_counts` hides counts from others.
 - Saving (private to you): the bookmark saves to `saved_posts` ("All
   saved"); "Add to folder" puts it in your `save_folders` via
   `save_folder_posts` (adding also saves; unsaving also leaves every folder;

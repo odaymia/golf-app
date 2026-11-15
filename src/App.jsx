@@ -9,6 +9,7 @@ import League from './components/League.jsx';
 import LeagueBuilder from './components/LeagueBuilder.jsx';
 import { claimMyInvites, createLeague, joinLeague } from './lib/leagueApi.js';
 import BottomNav from './components/BottomNav.jsx';
+import Settings from './components/settings/Settings.jsx';
 import { useUnreadNotifications } from './components/useUnreadNotifications.js';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
@@ -211,7 +212,18 @@ export default function App() {
       <Social start={socialStart} user={user} account={profile} onTab={onTab} onSettings={() => setScreen('profile')} />,
     );
   if (screen === 'profile')
-    return <Profile user={user} profile={profile} onSaved={setProfile} onBack={() => onTab('me')} />;
+    return (
+      <Settings
+        user={user}
+        profile={profile}
+        onSaved={setProfile}
+        onBack={() => onTab('me')}
+        onOpenSocial={(name) => {
+          setSocialStart({ name, params: {}, under: 'feed' });
+          setScreen('social');
+        }}
+      />
+    );
   if (screen === 'setup') return <Setup profile={profile} onStart={startRound} onCancel={goHome} />;
   if (screen === 'play' && round)
     return <Play round={round} setRound={setRound} onSettle={() => setScreen('settle')} onHome={goHome} />;

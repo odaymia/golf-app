@@ -3151,3 +3151,34 @@ tr.clickable {
 .notif-text em { font-style: normal; color: var(--muted); font-size: 13px; }
 .notif-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; flex: none; }
 .notif-kind { width: 44px; text-align: center; font-size: 22px; flex: none; }
+
+/* Settings menu */
+.settings-group { padding: 0 14px; margin-top: 14px; }
+.settings-group h3 {
+  margin: 0 4px 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.settings-list { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.settings-row {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 14px; min-height: 52px;
+  background: none; border: none; border-bottom: 1px solid var(--line); font: inherit; color: var(--text);
+  text-align: left; text-decoration: none;
+}
+.settings-list > :last-child { border-bottom: none; }
+.settings-row:active { background: var(--green-soft); }
+.settings-row.danger { color: var(--down); }
+.settings-icon { width: 24px; text-align: center; font-size: 17px; flex: none; }
+.settings-label { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.settings-label em { font-style: normal; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.settings-value { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+.settings-chev { color: var(--muted); font-size: 20px; line-height: 1; }
+.settings-row.toggle-row:active { background: none; }
+.pick-dot.on { border-color: var(--green); background: var(--green); box-shadow: inset 0 0 0 3px var(--card); }
+.settings-help { margin: 8px 6px 0; font-size: 14px; color: var(--muted); }
+.settings-signed-in { margin: 0; padding: 10px 14px 0; background: var(--card); }
+.settings-version { margin: 22px 0 30px; }
+.settings .card { margin-left: 14px; margin-right: 14px; }
+.private-note { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 30px 24px; text-align: center; }
+.private-note > span { font-size: 34px; }
+.private-note p { margin: 0; }
+.lock-mark { font-size: 0.8em; }
+.request-actions { display: flex; gap: 6px; flex: none; }

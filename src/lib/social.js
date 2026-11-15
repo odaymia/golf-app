@@ -15,6 +15,8 @@ function friendly(error) {
   if (/fetch|network|Load failed/i.test(msg)) return 'No connection. Try again when you have signal.';
   if (/public_profiles_username_key|duplicate key.*username/i.test(msg)) return 'That username is taken. Try another.';
   if (/exceeded the maximum allowed size|Payload too large/i.test(msg)) return 'That file is too big (50 MB max).';
+  if (/row-level security.*post_comments/i.test(msg)) return 'Comments on this post are limited.';
+  if (/row-level security.*messages/i.test(msg)) return 'This golfer isn’t taking messages from you.';
   if (/mime type|invalid_mime/i.test(msg)) return 'That file type isn’t supported. Use a photo or an MP4/MOV video.';
   return msg;
 }
@@ -48,6 +50,8 @@ const toProfile = (r) =>
     homeCourse: r.home_course ?? '',
     homeCourseKey: r.home_course_key ?? null,
     homeCoursePlace: r.home_course_place ?? '',
+    isPrivate: !!r.is_private,
+    hideLikeCounts: !!r.hide_like_counts,
   };
 
 export async function getPublicProfile(id) {
@@ -147,32 +151,118 @@ export async function uploadAvatar(userId, file) {
   return path;
 }
 
+// Counts only accepted follows. followState: 'none' | 'pending' (requested) | 'following'.
 export async function profileStats(userId, meId) {
   const head = { count: 'exact', head: true };
   const [posts, followers, following, mine] = await Promise.all([
     supabase.from('posts').select('id', head).eq('user_id', userId),
-    supabase.from('follows').select('follower', head).eq('followee', userId),
-    supabase.from('follows').select('followee', head).eq('follower', userId),
+    supabase.from('follows').select('follower', head).eq('followee', userId).eq('status', 'accepted'),
+    supabase.from('follows').select('followee', head).eq('follower', userId).eq('status', 'accepted'),
     meId && meId !== userId
-      ? supabase.from('follows').select('follower', head).eq('follower', meId).eq('followee', userId)
-      : Promise.resolve({ count: 0 }),
+      ? supabase.from('follows').select('status').eq('follower', meId).eq('followee', userId)
+      : Promise.resolve({ data: [] }),
   ]);
   for (const r of [posts, followers, following, mine]) if (r.error) throw new Error(friendly(r.error));
-  return { posts: posts.count ?? 0, followers: followers.count ?? 0, following: following.count ?? 0, iFollow: (mine.count ?? 0) > 0 };
+  const state = mine.data?.[0]?.status;
+  return {
+    posts: posts.count ?? 0,
+    followers: followers.count ?? 0,
+    following: following.count ?? 0,
+    followState: state === 'accepted' ? 'following' : state === 'pending' ? 'pending' : 'none',
+    iFollow: state === 'accepted',
+  };
 }
 
-export function follow(followee) {
-  return call(supabase.from('follows').insert({ followee }));
+// Follow someone. Returns 'following', or 'pending' if their account is
+// private (the database decides).
+export async function follow(followee) {
+  const row = await call(supabase.from('follows').insert({ followee }).select('status').single());
+  return row?.status === 'pending' ? 'pending' : 'following';
 }
 
+// Unfollow, or take back a follow request.
 export function unfollow(meId, followee) {
   return call(supabase.from('follows').delete().eq('follower', meId).eq('followee', followee));
+}
+
+// People asking to follow my private account, newest first.
+export async function listFollowRequests(meId) {
+  const rows = await call(
+    supabase.from('follows').select('follower, created_at').eq('followee', meId).eq('status', 'pending').order('created_at', { ascending: false }),
+  ).catch(() => []);
+  if (!rows.length) return [];
+  const people = await call(supabase.from('public_profiles').select('*').in('id', rows.map((r) => r.follower)));
+  return rows.map((r) => ({
+    userId: r.follower,
+    createdAt: r.created_at,
+    profile: toProfile(people.find((p) => p.id === r.follower)) ?? { id: r.follower, username: '', displayName: 'Golfer' },
+  }));
+}
+
+export function acceptFollower(meId, followerId) {
+  return call(supabase.from('follows').update({ status: 'accepted' }).eq('followee', meId).eq('follower', followerId));
+}
+
+// Decline a request, or remove someone who follows you.
+export function removeFollower(meId, followerId) {
+  return call(supabase.from('follows').delete().eq('followee', meId).eq('follower', followerId));
+}
+
+// --- Settings ------------------------------------------------------------------
+
+export const DEFAULT_PRIVACY = {
+  isPrivate: false,
+  hideLikeCounts: false,
+  allowMessages: 'everyone', // everyone | following | none
+  allowComments: 'everyone', // everyone | followers | none
+  notify: { like: true, comment: true, follow: true, message: true, review: true },
+};
+
+export async function getPrivacy(meId) {
+  const [profile, row] = await Promise.all([
+    call(supabase.from('public_profiles').select('is_private, hide_like_counts').eq('id', meId).maybeSingle()),
+    call(supabase.from('privacy_settings').select('*').eq('user_id', meId).maybeSingle()),
+  ]);
+  return {
+    isPrivate: !!profile?.is_private,
+    hideLikeCounts: !!profile?.hide_like_counts,
+    allowMessages: row?.allow_messages ?? DEFAULT_PRIVACY.allowMessages,
+    allowComments: row?.allow_comments ?? DEFAULT_PRIVACY.allowComments,
+    notify: { ...DEFAULT_PRIVACY.notify, ...(row?.notify ?? {}) },
+    hasProfile: !!profile,
+  };
+}
+
+// Save any of the settings above. Profile-level ones need a social profile
+// (username) first.
+export async function savePrivacy(meId, patch) {
+  const profileRow = {};
+  if ('isPrivate' in patch) profileRow.is_private = patch.isPrivate;
+  if ('hideLikeCounts' in patch) profileRow.hide_like_counts = patch.hideLikeCounts;
+  if (Object.keys(profileRow).length) {
+    const rows = await call(supabase.from('public_profiles').update(profileRow).eq('id', meId).select('id'));
+    if (!rows.length) throw new Error('Set up your profile (pick a username) first.');
+  }
+  const row = {};
+  if ('allowMessages' in patch) row.allow_messages = patch.allowMessages;
+  if ('allowComments' in patch) row.allow_comments = patch.allowComments;
+  if ('notify' in patch) row.notify = patch.notify;
+  if (Object.keys(row).length) {
+    await call(supabase.from('privacy_settings').upsert({ user_id: meId, ...row, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }));
+  }
+}
+
+// May I comment on this post? (their comment setting, privacy). Fails open
+// so an older database never hides the comment box; the database still decides.
+export async function canComment(postId) {
+  const { data, error } = await supabase.rpc('can_comment', { p_post: postId });
+  return error ? true : !!data;
 }
 
 // --- Posts -------------------------------------------------------------------
 
 export const POST_SELECT =
-  '*, author:public_profiles!posts_user_id_fkey(id, username, display_name, avatar_path), post_media(*), post_likes(count), post_comments(count)';
+  '*, author:public_profiles!posts_user_id_fkey(id, username, display_name, avatar_path, hide_like_counts), post_media(*), post_likes(count), post_comments(count)';
 
 export const toPost = (r) => ({
   id: r.id,
@@ -182,6 +272,7 @@ export const toPost = (r) => ({
   course: r.course_key || r.course_name ? { key: r.course_key, name: r.course_name, place: r.course_place } : null,
   createdAt: r.created_at,
   author: toProfile(r.author) ?? { id: r.user_id, username: '', displayName: '' },
+  hideLikes: !!r.author?.hide_like_counts,
   media: [...(r.post_media ?? [])]
     .sort((a, b) => a.position - b.position)
     .map((m) => ({
@@ -309,7 +400,7 @@ export async function listFeed({ meId, mode = 'all', before = null, limit = 10 }
   let q = supabase.from('posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(limit);
   if (before) q = q.lt('created_at', before);
   if (mode === 'following') {
-    const rows = await call(supabase.from('follows').select('followee').eq('follower', meId));
+    const rows = await call(supabase.from('follows').select('followee').eq('follower', meId).eq('status', 'accepted'));
     const ids = [meId, ...rows.map((r) => r.followee)];
     q = q.in('user_id', ids);
   }

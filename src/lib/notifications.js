@@ -96,6 +96,10 @@ export function notificationText(n) {
       return `commented: ${n.body}`;
     case 'follow':
       return 'started following you.';
+    case 'follow_request':
+      return 'asked to follow you.';
+    case 'follow_accept':
+      return 'accepted your follow request.';
     case 'message':
       return n.count > 1 ? `sent you ${n.count} messages: ${n.body}` : `sent you a message: ${n.body}`;
     case 'review_request':
