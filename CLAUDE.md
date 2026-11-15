@@ -80,11 +80,6 @@ Actions). A failing test blocks the deploy.
   `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
   `apple-touch-icon.png` (iPhone home screen), `favicon.png`.
 - Install on iPhone: open https://scribblegolfclub.com in Safari → Share → Add to Home Screen.
-- Loading page: app/index.html shows `public/splash.webp` (the scorecard
-  logo photo) instantly, full screen (whole over a blurred copy on wide
-  screens); `src/splash.js` fades it out once App knows the first screen
-  (sign-in, or the signed-in app with its profile), at least 0.9 s after
-  load, and always by 8 s. Precached for offline.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps
   resume rather than relaunch) and every 30 min. An update reloads the page;

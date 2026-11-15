@@ -10,7 +10,6 @@ import LeagueBuilder from './components/LeagueBuilder.jsx';
 import { claimMyInvites, createLeague, joinLeague } from './lib/leagueApi.js';
 import BottomNav from './components/BottomNav.jsx';
 import Settings from './components/settings/Settings.jsx';
-import { hideSplash } from './splash.js';
 import { useUnreadNotifications } from './components/useUnreadNotifications.js';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
@@ -90,13 +89,6 @@ export default function App() {
 
   // Once signed in with a profile: link email invites, then follow an invite link.
   const ready = !!profile?.name;
-  // Fade out the loading page once there's a real screen to show: sign-in,
-  // or the signed-in app with its profile (or a profile error).
-  const firstScreenReady = session !== undefined && (!session || profile !== undefined || !!profileError);
-  useEffect(() => {
-    if (firstScreenReady) hideSplash();
-  }, [firstScreenReady]);
-
   // Unread notifications, for the badge on the Profile tab.
   const unreadCount = useUnreadNotifications(ready ? userId : null);
   useEffect(() => {
