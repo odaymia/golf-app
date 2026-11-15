@@ -130,8 +130,10 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
               </svg>
               {unread > 0 && <span className="inbox-badge">{unread > 99 ? '99+' : unread}</span>}
             </button>
-            <button className="btn btn-ghost" onClick={onSettings}>
-              Settings
+            <button className="bell-btn" onClick={onSettings} aria-label="Settings">
+              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </button>
           </span>
         ) : (
