@@ -238,6 +238,20 @@ function SettingsPage({ page, privacy, change, user }) {
             ]}
           />
           <p className="settings-help">Blocked accounts can never message you.</p>
+          <div className="settings-list settings-gap">
+            <Toggle
+              label="Read receipts"
+              help="Let people see when you’ve read their messages."
+              checked={privacy.readReceipts}
+              disabled={off}
+              onChange={(v) => change({ readReceipts: v })}
+            />
+          </div>
+          <p className="settings-help">
+            {privacy.readReceipts
+              ? 'People see “Seen” once you’ve read their messages.'
+              : 'People won’t see when you’ve read their messages, and you won’t see when they’ve read yours.'}
+          </p>
         </section>
       );
     case 'comments':

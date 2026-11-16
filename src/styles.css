@@ -3559,3 +3559,4 @@ a:focus-visible {
 /* Read receipts */
 .receipt { align-self: flex-end; margin: 2px 4px 0; font-size: 11px; font-weight: 600; color: var(--muted); }
 .receipt.seen { color: var(--green); }
+.settings-gap { margin-top: 18px; }

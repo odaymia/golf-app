@@ -21,12 +21,12 @@ export function startDM(userId) {
 // My inbox, newest first:
 // [{ id, other: profile, last: { body, postId, senderId, createdAt } | null, unread }]
 export async function listConversations(meId) {
-  const mine = await call(supabase.from('conversation_members').select('conversation_id, last_read_at').eq('user_id', meId));
+  const mine = await call(supabase.from('conversation_members').select('conversation_id').eq('user_id', meId));
   if (!mine.length) return [];
   const ids = mine.map((m) => m.conversation_id);
   const [convs, members, recent, hidden] = await Promise.all([
     call(supabase.from('conversations').select('id, last_message_at').in('id', ids)),
-    call(supabase.from('conversation_members').select('conversation_id, user_id, last_read_at').in('conversation_id', ids).neq('user_id', meId)),
+    call(supabase.from('conversation_members').select('conversation_id, user_id').in('conversation_id', ids).neq('user_id', meId)),
     call(
       supabase
         .from('messages')
@@ -37,6 +37,7 @@ export async function listConversations(meId) {
     ),
     hiddenUserIds(meId).catch(() => new Set()),
   ]);
+  const times = await readTimes(ids);
   const otherIds = [...new Set(members.map((m) => m.user_id))];
   const profiles = otherIds.length ? await call(supabase.from('public_profiles').select('*').in('id', otherIds)) : [];
   return convs
@@ -44,7 +45,8 @@ export async function listConversations(meId) {
       const other = members.find((m) => m.conversation_id === c.id);
       const otherId = other?.user_id;
       const last = recent.find((r) => r.conversation_id === c.id) ?? null;
-      const readAt = mine.find((m) => m.conversation_id === c.id)?.last_read_at;
+      const readAt = times.get(c.id)?.mine;
+      const peerReadAt = times.get(c.id)?.peer;
       return {
         id: c.id,
         otherId,
@@ -53,7 +55,7 @@ export async function listConversations(meId) {
         last: last && { body: last.body, postId: last.post_id, senderId: last.sender_id, createdAt: last.created_at },
         unread: !!last && last.sender_id !== meId && (!readAt || last.created_at > readAt),
         // Read receipt: they've opened the chat since my last message.
-        seen: !!last && last.sender_id === meId && !!other?.last_read_at && other.last_read_at >= last.created_at,
+        seen: !!last && last.sender_id === meId && !!peerReadAt && peerReadAt >= last.created_at,
       };
     })
     .filter((c) => c.last && otherIds.length && !hidden.has(c.otherId))
@@ -75,12 +77,19 @@ export async function conversationPeer(conversationId, meId) {
   return profileOf(p) ?? { id: rows[0].user_id, username: '', displayName: 'Golfer' };
 }
 
-// When the other person last opened this chat (for read receipts), or null.
-export async function peerReadAt(conversationId, meId) {
-  const rows = await call(
-    supabase.from('conversation_members').select('last_read_at').eq('conversation_id', conversationId).neq('user_id', meId),
-  );
-  return rows[0]?.last_read_at ?? null;
+// Read times per conversation: Map(id -> { mine, peer }). `peer` is only
+// given when both people have read receipts on (supabase/read_receipts.sql).
+async function readTimes(ids) {
+  if (!ids.length) return new Map();
+  const rows = await call(supabase.rpc('conversation_read_times', { p_ids: ids })).catch(() => []);
+  return new Map((rows ?? []).map((r) => [r.conversation_id, { mine: r.my_read_at, peer: r.peer_read_at }]));
+}
+
+// When the other person last opened this chat, or null (not yet, or read
+// receipts are off for either of you).
+export async function peerReadAt(conversationId) {
+  const times = await readTimes([conversationId]);
+  return times.get(conversationId)?.peer ?? null;
 }
 
 // The latest messages, oldest first, with shared posts attached.

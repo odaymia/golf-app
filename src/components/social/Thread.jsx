@@ -3,6 +3,12 @@ import { conversationPeer, deleteMessage, listMessages, markRead, peerReadAt, se
 import { timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 
+// "2m ago", "just now", or a date.
+const agoText = (iso) => {
+  const t = timeAgo(iso);
+  return /^\d+[mhdw]$/.test(t) ? `${t} ago` : t;
+};
+
 // One conversation. New messages show up every few seconds while it's open.
 export default function Thread({ conversationId, peer: initialPeer, meId, nav, back }) {
   const [peer, setPeer] = useState(initialPeer ?? null);
@@ -92,7 +98,7 @@ export default function Thread({ conversationId, peer: initialPeer, meId, nav, b
         {(messages ?? []).map((m, i) => {
           const mine = m.senderId === meId;
           // Read receipt under my latest message only (like other apps).
-          const receipt = mine && m.id === lastMineId ? (readAt && readAt >= m.createdAt ? `Seen ${timeAgo(readAt)}` : 'Sent') : null;
+          const receipt = mine && m.id === lastMineId ? (readAt && readAt >= m.createdAt ? `Seen ${agoText(readAt)}` : 'Sent') : null;
           const gap = i === 0 || new Date(m.createdAt) - new Date(messages[i - 1].createdAt) > 30 * 60 * 1000;
           return (
             <li key={m.id} className={mine ? 'mine' : ''}>

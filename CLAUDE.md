@@ -161,6 +161,7 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/read_receipts.sql  read_receipts setting, conversation_read_times()
 supabase/comment_replies.sql  post_comments.parent_id (one level), reply +
                     mention notifications
 supabase/handicap_sharing.sql  privacy_settings.share_handicap + handicap_indexes()
@@ -385,7 +386,11 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   every 30 s); Message button on other profiles. Threads poll every 4 s
   (no realtime yet); tapping your own bubble offers Unsend. Read receipts:
   "Sent" / "Seen 2m ago" under your latest message and "· Seen" in the inbox,
-  from the other member's `conversation_members.last_read_at` (`peerReadAt`). Shared posts
+  from `conversation_read_times()` (supabase/read_receipts.sql): members
+  can't select `last_read_at` directly; the function returns my read time
+  and the other person's only when both have read receipts on
+  (`privacy_settings.read_receipts`, Settings → Messages; off hides both
+  ways, like Instagram). Shared posts
   show as a card that opens the post.
 - Viewing: tapping a grid tile (profile or course page) opens `PostList`,
   every post of that grid in one scrolling list starting at the tapped one;

@@ -283,6 +283,7 @@ export const DEFAULT_PRIVACY = {
   allowComments: 'everyone', // everyone | followers | none
   notify: { like: true, comment: true, follow: true, message: true, review: true },
   shareHandicap: true,
+  readReceipts: true,
 };
 
 export async function getPrivacy(meId) {
@@ -297,6 +298,7 @@ export async function getPrivacy(meId) {
     allowComments: row?.allow_comments ?? DEFAULT_PRIVACY.allowComments,
     notify: { ...DEFAULT_PRIVACY.notify, ...(row?.notify ?? {}) },
     shareHandicap: row?.share_handicap ?? true,
+    readReceipts: row?.read_receipts ?? true,
     hasProfile: !!profile,
   };
 }
@@ -316,6 +318,7 @@ export async function savePrivacy(meId, patch) {
   if ('allowComments' in patch) row.allow_comments = patch.allowComments;
   if ('notify' in patch) row.notify = patch.notify;
   if ('shareHandicap' in patch) row.share_handicap = patch.shareHandicap;
+  if ('readReceipts' in patch) row.read_receipts = patch.readReceipts;
   if (Object.keys(row).length) {
     await call(supabase.from('privacy_settings').upsert({ user_id: meId, ...row, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }));
   }
