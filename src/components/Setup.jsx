@@ -19,6 +19,10 @@ import StablefordScoring from './StablefordScoring.jsx';
 import { listSavedPlayers } from '../lib/account.js';
 import PlayerSearch from './PlayerSearch.jsx';
 
+// "Blue · 6,850 yds · 72.4/131" for the tee dropdown.
+const teeLabel = (t, i) =>
+  [t.name || `Tee ${i + 1}`, t.yards ? `${Number(t.yards).toLocaleString()} yds` : null, `${t.rating}/${t.slope}`].filter(Boolean).join(' · ');
+
 const newPlayer = (from) => ({
   id: makeId(),
   name: from?.name ?? '',
@@ -32,6 +36,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const [course, setCourse] = useState(blankCourse);
   const [teeIdx, setTeeIdx] = useState(0);
   const [showHoles, setShowHoles] = useState(false);
+  const [editTee, setEditTee] = useState(false);
   const [players, setPlayers] = useState(() => [newPlayer(profile), newPlayer()]);
   const [saved, setSaved] = useState([]);
   const [settings, setSettings] = useState(defaultSettings);
@@ -82,6 +87,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     const saved = courses.find((c) => c.id === imported.id);
     setCourse(saved ?? imported);
     setTeeIdx(0);
+    setEditTee(false);
     setCourseNotes(saved ? [] : warnings);
     setShowHoles(!saved && warnings.some((w) => /hole handicaps|pars/.test(w)));
   }
@@ -89,6 +95,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   function chooseCourse(c) {
     setCourse(c);
     setTeeIdx(0);
+    setEditTee(false);
     setCourseNotes([]);
   }
 
@@ -165,30 +172,52 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             onChange={(e) => setCourse((c) => ({ ...c, name: e.target.value }))}
           />
         </label>
-        <div className="chips">
-          {course.tees.map((t, i) => (
-            <button key={i} className={`chip ${i === teeIdx ? 'on' : ''}`} onClick={() => setTeeIdx(i)}>
-              {t.name || `Tee ${i + 1}`}
+        <label className="field">
+          <span>Tees</span>
+          <select
+            value={teeIdx}
+            onChange={(e) => {
+              if (e.target.value === 'add') {
+                addTee();
+                setEditTee(true);
+              } else setTeeIdx(Number(e.target.value));
+            }}
+            aria-label="Tees you're playing"
+          >
+            {course.tees.map((t, i) => (
+              <option key={i} value={i}>
+                {teeLabel(t, i)}
+              </option>
+            ))}
+            <option value="add">+ Add a tee…</option>
+          </select>
+        </label>
+        {editTee || !String(course.id).startsWith('oga-') ? (
+          <div className="row3">
+            <label className="field">
+              <span>Tee</span>
+              <input value={tee.name} onChange={(e) => setTee('name', e.target.value)} />
+            </label>
+            <label className="field">
+              <span>Rating</span>
+              <input inputMode="decimal" value={tee.rating} onChange={(e) => setTee('rating', e.target.value)} />
+            </label>
+            <label className="field">
+              <span>Slope</span>
+              <input inputMode="numeric" value={tee.slope} onChange={(e) => setTee('slope', e.target.value)} />
+            </label>
+          </div>
+        ) : (
+          <p className="tee-summary">
+            <span>
+              Rating <strong>{tee.rating}</strong> · Slope <strong>{tee.slope}</strong>
+              {tee.yards ? ` · ${Number(tee.yards).toLocaleString()} yds` : ''}
+            </span>
+            <button className="link small-link" onClick={() => setEditTee(true)}>
+              Edit tee
             </button>
-          ))}
-          <button className="chip" onClick={addTee}>
-            + Tee
-          </button>
-        </div>
-        <div className="row3">
-          <label className="field">
-            <span>Tee</span>
-            <input value={tee.name} onChange={(e) => setTee('name', e.target.value)} />
-          </label>
-          <label className="field">
-            <span>Rating</span>
-            <input inputMode="decimal" value={tee.rating} onChange={(e) => setTee('rating', e.target.value)} />
-          </label>
-          <label className="field">
-            <span>Slope</span>
-            <input inputMode="numeric" value={tee.slope} onChange={(e) => setTee('slope', e.target.value)} />
-          </label>
-        </div>
+          </p>
+        )}
         <button className="btn btn-ghost full" onClick={() => setShowHoles((v) => !v)}>
           Par {par} · {showHoles ? 'Hide holes' : 'Edit pars & hole handicaps'}
         </button>

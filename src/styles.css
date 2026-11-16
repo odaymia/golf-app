@@ -3569,3 +3569,10 @@ a:focus-visible {
   padding: 10px 12px; border-radius: 12px; background: #eef3ea;
 }
 .course-picked > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Tee picker */
+.tee-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 8px;
+  font-size: 14px; color: var(--muted);
+}
+.tee-summary strong { color: var(--text); }

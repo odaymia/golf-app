@@ -74,7 +74,13 @@ export function courseFromApi(detail) {
       rating = Math.round(rating * 2 * 10) / 10; // 9-hole rating -> 18
     }
     const gender = t.gender === 'Female' ? ' (W)' : '';
-    tees.push({ name: `${t.tee_name || t.tee_color || 'Tee'}${gender}`, rating, slope });
+    const yards = Number(t.yardage);
+    tees.push({
+      name: `${t.tee_name || t.tee_color || 'Tee'}${gender}`,
+      rating,
+      slope,
+      ...(Number.isFinite(yards) && yards > 1000 ? { yards: Math.round(nineHoles && yards < 4500 ? yards * 2 : yards) } : {}),
+    });
   }
   if (tees.length === 0) {
     tees.push({ name: 'White', rating: totalPar, slope: 113 });

@@ -453,6 +453,9 @@ docs/instructors.md.
   with misspellings matched under "Similar names". No games start selected.
   The Teams card (4 players) shows below Games only when a chosen game plays
   2 vs 2 (`usesTeams`: Nassau/match/Stableford set to teams, or Vegas).
+  Tees: a dropdown ("Blue · 6,850 yds · 72.4/131", plus "+ Add a tee…");
+  database courses show rating/slope/yards with Edit tee, hand-entered
+  courses keep the edit boxes open. Imported tees carry `yards`.
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).
