@@ -3520,3 +3520,38 @@ a:focus-visible {
 .ps-text strong { font-size: 15px; }
 .ps-text em { font-style: normal; font-size: 12px; color: var(--muted); }
 .ps-index { flex: none; font-size: 13px; font-weight: 700; color: var(--green-deep); background: var(--green-soft); border-radius: 8px; padding: 3px 8px; }
+
+/* Comments: threads, replies, mentions */
+.comment-list > li.thread { display: block; padding: 0; }
+.comment-thread, .comment-replies { list-style: none; margin: 0; padding: 0; }
+.comment-replies { margin-left: 42px; }
+.comment-replies li { padding: 6px 0; }
+.comment-replies li.more-replies { padding: 2px 0 4px; }
+.more-replies .small-link { margin-left: 0; color: var(--muted); font-weight: 600; }
+.comment-main { flex: 1; min-width: 0; }
+.comment-name { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--text); }
+.comment-meta { display: flex; align-items: center; gap: 2px; margin-top: 3px; font-size: 12px; color: var(--muted); }
+.comment-meta .small-link { margin-left: 12px; font-weight: 700; }
+.comment-meta .muted-link { color: var(--muted); font-weight: 600; }
+.mention { background: none; border: none; padding: 0; font: inherit; color: var(--green); font-weight: 700; }
+.comment-form { flex-direction: column; gap: 6px; }
+.comment-input-row { display: flex; gap: 8px; }
+.replying {
+  display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 6px 10px;
+  border-radius: 10px; background: var(--fill); font-size: 13px; color: var(--muted);
+}
+.replying .small-link { margin-left: 8px; color: var(--muted); }
+.mention-box { position: relative; flex: 1; min-width: 0; }
+.mention-box > input { width: 100%; }
+.mention-menu {
+  position: absolute; z-index: 25; bottom: calc(100% + 6px); left: 0; right: 0; max-height: 260px; overflow-y: auto;
+  list-style: none; margin: 0; padding: 6px; background: #fff; border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(30 25 10 / 18%), 0 1px 3px rgb(0 0 0 / 8%);
+}
+.mention-menu button {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px; border: none; border-radius: 10px;
+  background: none; font: inherit; color: var(--text); text-align: left;
+}
+.mention-menu button:hover { background: var(--fill); }
+.mention-menu span { min-width: 0; display: flex; flex-direction: column; }
+.mention-menu em { font-style: normal; font-size: 12px; color: var(--muted); }

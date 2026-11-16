@@ -161,6 +161,8 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/comment_replies.sql  post_comments.parent_id (one level), reply +
+                    mention notifications
 supabase/handicap_sharing.sql  privacy_settings.share_handicap + handicap_indexes()
 supabase/privacy.sql  private accounts + follow requests, privacy_settings
                     (messages/comments/notification prefs), hide like counts
@@ -331,6 +333,14 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   the `scribble:notifications-changed` event). Opening Notifications marks
   all read; grouped Today / This week / Earlier; tap goes to the post,
   chat, profile or Studio. In-app only (no push notifications yet).
+- Comments (`PostDetail`): Reply under any comment; replies are one level
+  deep (a reply to a reply attaches to the top comment; enforced by a
+  trigger), shown indented with the latest 2 and "View N more replies".
+  @mentions: typing "@" suggests friends then golfers (`mentionCandidates`),
+  `lib/mentions.js` (tested) finds/inserts them, and they render as links to
+  the profile. The comment trigger notifies: post owner ('comment'), the
+  replied-to author ('reply'), tagged people who can see the post
+  ('mention'); one notification per person per comment.
 - Adding players to a round (`PlayerSearch` in Setup): the name box
   suggests My players, then friends you follow, then Scribble golfers (2+
   letters; `findGolfers` in social.js); picking one fills the name and the

@@ -584,11 +584,35 @@ export async function listComments(postId, meId) {
   const hidden = meId ? await hiddenUserIds(meId).catch(() => new Set()) : new Set();
   return rows
     .filter((r) => !hidden.has(r.user_id))
-    .map((r) => ({ id: r.id, body: r.body, createdAt: r.created_at, userId: r.user_id, author: toProfile(r.author) }));
+    .map((r) => ({
+      id: r.id,
+      body: r.body,
+      createdAt: r.created_at,
+      userId: r.user_id,
+      parentId: r.parent_id ?? null,
+      author: toProfile(r.author),
+    }));
 }
 
-export function addComment(postId, body) {
-  return call(supabase.from('post_comments').insert({ post_id: postId, body: body.trim() }));
+// A comment, or a reply when parentId is given (the database keeps replies
+// one level deep and sends reply/mention notifications).
+export function addComment(postId, body, parentId = null) {
+  return call(
+    supabase.from('post_comments').insert({ post_id: postId, body: body.trim(), ...(parentId ? { parent_id: parentId } : {}) }),
+  );
+}
+
+// People to suggest after typing "@": people I follow first, then anyone
+// whose username or name matches. [{ id, username, displayName, avatarUrl }]
+export async function mentionCandidates(meId, q) {
+  const t = q.trim().toLowerCase();
+  const [friends, found] = await Promise.all([
+    listFollows(meId, 'following', meId).catch(() => []),
+    t.length >= 2 ? searchProfiles(t, meId, { limit: 10 }).catch(() => []) : Promise.resolve([]),
+  ]);
+  const match = (p) => p.username && (!t || `${p.username} ${p.displayName}`.toLowerCase().includes(t));
+  const list = [...friends.map((f) => f.profile).filter(match), ...found.filter((p) => p.username && !friends.some((f) => f.id === p.id))];
+  return list.slice(0, 8);
 }
 
 export function deleteComment(id) {

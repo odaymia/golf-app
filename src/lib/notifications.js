@@ -94,6 +94,10 @@ export function notificationText(n) {
       return 'liked your post.';
     case 'comment':
       return `commented: ${n.body}`;
+    case 'reply':
+      return `replied to your comment: ${n.body}`;
+    case 'mention':
+      return `mentioned you in a comment: ${n.body}`;
     case 'follow':
       return 'started following you.';
     case 'follow_request':
