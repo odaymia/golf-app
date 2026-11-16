@@ -451,6 +451,8 @@ docs/instructors.md.
 - New round starts blank: tapping the empty course search shows Recent
   courses (saved on the phone, last played first); typing shows results,
   with misspellings matched under "Similar names". No games start selected.
+  The Teams card (4 players) shows below Games only when a chosen game plays
+  2 vs 2 (`usesTeams`: Nassau/match/Stableford set to teams, or Vegas).
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).

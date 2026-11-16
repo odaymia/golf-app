@@ -9,6 +9,7 @@ import {
   buildGames,
   defaultSettings,
   newRound,
+  usesTeams,
 } from './roundSetup.js';
 import { computeRound } from './games/round.js';
 
@@ -51,6 +52,20 @@ describe('teams and matchups', () => {
 });
 
 describe('buildGames', () => {
+  it('teams only matter when a chosen game plays 2 vs 2', () => {
+    const s = defaultSettings();
+    expect(usesTeams(s, 4)).toBe(false);
+    s.skins.on = true;
+    expect(usesTeams(s, 4)).toBe(false);
+    s.nassau.on = true; // defaults to 2 vs 2 teams
+    expect(usesTeams(s, 4)).toBe(true);
+    expect(usesTeams(s, 3)).toBe(false);
+    s.nassau.format = 'each';
+    expect(usesTeams(s, 4)).toBe(false);
+    s.vegas.on = true;
+    expect(usesTeams(s, 4)).toBe(true);
+  });
+
   it('defaults: no games until you pick them', () => {
     expect(buildGames(defaultSettings(), four)).toEqual([]);
   });

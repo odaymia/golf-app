@@ -134,6 +134,17 @@ export function defaultSettings() {
 }
 
 // Which games make sense for this many players.
+// Does any chosen game play 2 vs 2? (Only then do the teams matter.)
+export function usesTeams(settings, playerCount) {
+  if (playerCount !== 4) return false;
+  return (
+    (settings.nassau?.on && settings.nassau.format === 'teams') ||
+    (settings.match?.on && settings.match.format === 'teams') ||
+    (settings.stableford?.on && settings.stableford.format === 'teams') ||
+    !!settings.vegas?.on
+  );
+}
+
 export function gameAvailable(type, playerCount) {
   if (type === 'wolf' || type === 'vegas') return playerCount === 4;
   return playerCount >= 2 && playerCount <= 4;

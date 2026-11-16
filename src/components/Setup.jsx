@@ -10,6 +10,7 @@ import {
   newRound,
   parseIndex,
   teamOptions,
+  usesTeams,
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
@@ -55,6 +56,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const par = course.holes.reduce((s, h) => s + h.par, 0);
   const named = players.map((p, i) => ({ ...p, name: p.name.trim() || `Player ${i + 1}` }));
   const teams = teamOptions(named);
+  const showTeams = teams.length > 0 && usesTeams(settings, players.length);
 
   const setTee = (field, value) =>
     setCourse((c) => ({ ...c, tees: c.tees.map((t, i) => (i === teeIdx ? { ...t, [field]: value } : t)) }));
@@ -320,24 +322,6 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
         </div>
       </section>
 
-      {teams.length > 0 && (
-        <section className="card">
-          <h2>Teams</h2>
-          <p className="hint">Used for team Nassau, match play, Stableford and Vegas.</p>
-          <div className="stack">
-            {teams.map(([a, b], i) => (
-              <button
-                key={i}
-                className={`option ${settings.teamsIndex === i ? 'on' : ''}`}
-                onClick={() => setSettings((s) => ({ ...s, teamsIndex: i }))}
-              >
-                {names(named, a)} <em>vs</em> {names(named, b)}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="card">
         <h2>Games</h2>
         {Object.keys(GAME_INFO).map((type) => {
@@ -367,6 +351,25 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
           );
         })}
       </section>
+
+      {showTeams && (
+        <section className="card">
+          <h2>Teams</h2>
+          <p className="hint">Who plays together in your 2 vs 2 games.</p>
+          <div className="stack">
+            {teams.map(([a, b], i) => (
+              <button
+                key={i}
+                className={`option ${settings.teamsIndex === i ? 'on' : ''}`}
+                onClick={() => setSettings((s) => ({ ...s, teamsIndex: i }))}
+              >
+                {names(named, a)} <em>vs</em> {names(named, b)}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
 
       <button className="btn btn-primary btn-xl sticky-bottom" onClick={start}>
         Tee off
@@ -473,7 +476,7 @@ function GameOptions({ type, s, set, playerCount }) {
                   Both balls count
                 </button>
               </div>
-              <p className="hint">Teams are the ones picked above.</p>
+              <p className="hint">Pick the teams under Teams, below the games.</p>
             </>
           )}
           <div className="seg wide">
