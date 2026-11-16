@@ -88,6 +88,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     setCourse(saved ?? imported);
     setTeeIdx(0);
     setEditTee(false);
+    setErrors([]);
     setCourseNotes(saved ? [] : warnings);
     setShowHoles(!saved && warnings.some((w) => /hole handicaps|pars/.test(w)));
   }
@@ -97,6 +98,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     setTeeIdx(0);
     setEditTee(false);
     setCourseNotes([]);
+    setErrors([]);
   }
 
   function addTee() {
@@ -145,7 +147,12 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
 
       <section className="card">
         <h2>Course</h2>
-        <CourseSearch onPick={pickImported} recent={courses} onPickRecent={chooseCourse} />
+        <CourseSearch
+          onPick={pickImported}
+          recent={courses}
+          onPickRecent={chooseCourse}
+          onCustom={(name) => chooseCourse({ ...blankCourse(), name })}
+        />
         {course.name.trim() && (
           <p className="course-picked">
             <span>
@@ -164,14 +171,6 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             ))}
           </div>
         )}
-        <label className="field">
-          <span>Course name</span>
-          <input
-            value={course.name}
-            placeholder="e.g. Pine Valley"
-            onChange={(e) => setCourse((c) => ({ ...c, name: e.target.value }))}
-          />
-        </label>
         <label className="field">
           <span>Tees</span>
           <select

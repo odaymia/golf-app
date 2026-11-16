@@ -3576,3 +3576,4 @@ a:focus-visible {
   font-size: 14px; color: var(--muted);
 }
 .tee-summary strong { color: var(--text); }
+.custom-course { margin-top: 8px; }

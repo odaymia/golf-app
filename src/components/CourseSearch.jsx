@@ -5,7 +5,8 @@ import { ATTRIBUTION } from '../lib/courseImport.js';
 // Type a course name, tap a result, get the full card. onPick({ course, warnings }).
 // recent (optional): courses saved on this phone, shown when the box is
 // tapped while empty; onPickRecent(course) when one is chosen.
-export default function CourseSearch({ onPick, recent = [], onPickRecent }) {
+// onCustom(name) (optional): use what was typed as a new course not in the database.
+export default function CourseSearch({ onPick, recent = [], onPickRecent, onCustom }) {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [results, setResults] = useState([]);
@@ -90,7 +91,7 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent }) {
       {status === 'loading' && <p className="muted">Loading scorecard…</p>}
       {status === 'error' && <p className="search-error">{error}</p>}
       {searching && status === 'idle' && results.length === 0 && (
-        <p className="muted">No courses found. Try another spelling, or enter it below.</p>
+        <p className="muted">No courses found. Try another spelling{onCustom ? ', or add it as a new course' : ''}.</p>
       )}
       {results.length > 0 && (
         <>
@@ -113,6 +114,18 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent }) {
           </ul>
           <p className="attribution">Course data {ATTRIBUTION}</p>
         </>
+      )}
+      {onCustom && searching && status !== 'searching' && status !== 'loading' && (
+        <button
+          className="btn btn-ghost outline full custom-course"
+          onClick={() => {
+            onCustom(query.trim());
+            setQuery('');
+            setResults([]);
+          }}
+        >
+          + Use “{query.trim()}” as a new course
+        </button>
       )}
     </div>
   );

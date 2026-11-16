@@ -29,7 +29,7 @@ describe('parseIndex', () => {
 describe('courseProblems', () => {
   it('flags duplicate hole handicaps and missing names', () => {
     const c = blankCourse();
-    expect(courseProblems(c, c.tees[0])).toEqual(['Give the course a name.']);
+    expect(courseProblems(c, c.tees[0])).toEqual(['Pick a course: search for it, or type its name and add it as a new course.']);
     c.name = 'Home';
     c.holes[1].hcp = 7;
     expect(courseProblems(c, c.tees[0])[0]).toMatch(/missing 15/);

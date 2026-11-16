@@ -38,7 +38,7 @@ export function formatIndex(n) {
 // Problems with a course, in plain English. Empty array = good to go.
 export function courseProblems(course, tee) {
   const problems = [];
-  if (!course.name.trim()) problems.push('Give the course a name.');
+  if (!course.name.trim()) problems.push('Pick a course: search for it, or type its name and add it as a new course.');
   const hcps = course.holes.map((h) => h.hcp);
   const missing = course.holes.map((_, i) => i + 1).filter((n) => !hcps.includes(n));
   if (missing.length) problems.push(`Hole handicaps must use 1–18 once each (missing ${missing.join(', ')}).`);

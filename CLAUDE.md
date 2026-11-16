@@ -456,6 +456,8 @@ docs/instructors.md.
   Tees: a dropdown ("Blue · 6,850 yds · 72.4/131", plus "+ Add a tee…");
   database courses show rating/slope/yards with Edit tee, hand-entered
   courses keep the edit boxes open. Imported tees carry `yards`.
+  No separate Course name box: a course not in the database is added from
+  the search box ("+ Use “…” as a new course", CourseSearch `onCustom`).
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).
