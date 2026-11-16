@@ -3,8 +3,11 @@ import { searchCourses, fetchCourse } from '../lib/courseSearch.js';
 import { ATTRIBUTION } from '../lib/courseImport.js';
 
 // Type a course name, tap a result, get the full card. onPick({ course, warnings }).
-export default function CourseSearch({ onPick }) {
+// recent (optional): courses saved on this phone, shown when the box is
+// tapped while empty; onPickRecent(course) when one is chosen.
+export default function CourseSearch({ onPick, recent = [], onPickRecent }) {
   const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle'); // idle | searching | loading | error
   const [error, setError] = useState('');
@@ -58,9 +61,31 @@ export default function CourseSearch({ onPick }) {
           value={query}
           placeholder="Search by name, e.g. Oak Hills"
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
           aria-label="Search courses"
         />
       </label>
+      {focused && !query.trim() && recent.length > 0 && onPickRecent && (
+        <div className="recent-courses" onMouseDown={(e) => e.preventDefault()}>
+          <p className="ps-h">Recent courses</p>
+          <ul className="search-results">
+            {recent.slice(0, 6).map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => {
+                    setFocused(false);
+                    onPickRecent(c);
+                  }}
+                >
+                  <strong>{c.name}</strong>
+                  <span className="muted">{[c.place, c.tees?.map((t) => t.name).filter(Boolean).join(' / ')].filter(Boolean).join(' · ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {status === 'searching' && <p className="muted">Searching…</p>}
       {status === 'loading' && <p className="muted">Loading scorecard…</p>}
       {status === 'error' && <p className="search-error">{error}</p>}
@@ -70,8 +95,11 @@ export default function CourseSearch({ onPick }) {
       {results.length > 0 && (
         <>
           <ul className="search-results">
-            {results.map((c) => (
+            {results.map((c, i) => (
               <li key={c.id}>
+                {c.similar && !results[i - 1]?.similar && (
+                  <p className="ps-h similar-h">{i === 0 ? `No exact match for “${query.trim()}”. Similar names:` : 'Similar names'}</p>
+                )}
                 <button onClick={() => pick(c.id)} disabled={status === 'loading'}>
                   <strong>{c.name}</strong>
                   <span className="muted">

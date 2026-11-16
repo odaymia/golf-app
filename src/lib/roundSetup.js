@@ -115,8 +115,8 @@ export function defaultSettings() {
   return {
     handicap: { allowance: 100, offLow: true },
     teamsIndex: 0,
-    nassau: { on: true, stake: 5, autoPress: 2, net: true, format: 'teams' },
-    skins: { on: true, stake: 1, net: true, carryover: true, validate: false },
+    nassau: { on: false, stake: 5, autoPress: 2, net: true, format: 'teams' },
+    skins: { on: false, stake: 1, net: true, carryover: true, validate: false },
     match: { on: false, stake: 5, net: true, format: 'teams' },
     stroke: { on: false, stake: 5, net: true, mode: 'perOpponent' },
     stableford: {

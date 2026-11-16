@@ -47,7 +47,6 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     listCourses()
       .then((list) => {
         setCourses(list);
-        if (list[0]) setCourse(list[0]);
       })
       .catch(() => {});
   }, []);
@@ -137,27 +136,18 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
 
       <section className="card">
         <h2>Course</h2>
-        <CourseSearch onPick={pickImported} />
-        {courses.length > 0 && (
-          <div className="chips">
-            {courses.map((c) => (
-              <button
-                key={c.id}
-                className={`chip ${c.id === course.id ? 'on' : ''}`}
-                onClick={() => chooseCourse(c)}
-              >
-                {c.name}
-              </button>
-            ))}
-            <button
-              className={`chip ${courses.every((c) => c.id !== course.id) ? 'on' : ''}`}
-              onClick={() => chooseCourse(blankCourse())}
-            >
-              + New course
+        <CourseSearch onPick={pickImported} recent={courses} onPickRecent={chooseCourse} />
+        {course.name.trim() && (
+          <p className="course-picked">
+            <span>
+              <strong>{course.name}</strong>
+              {course.place && <span className="muted"> · {course.place}</span>}
+            </span>
+            <button className="link small-link" onClick={() => chooseCourse(blankCourse())}>
+              Clear
             </button>
-          </div>
+          </p>
         )}
-        {course.place && <p className="muted">{course.place}</p>}
         {courseNotes.length > 0 && (
           <div className="warn-box course-notes">
             {courseNotes.map((n) => (

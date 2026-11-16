@@ -51,8 +51,15 @@ describe('teams and matchups', () => {
 });
 
 describe('buildGames', () => {
-  it('defaults: nassau + skins, dollars to cents', () => {
-    const games = buildGames(defaultSettings(), four);
+  it('defaults: no games until you pick them', () => {
+    expect(buildGames(defaultSettings(), four)).toEqual([]);
+  });
+
+  it('nassau + skins, dollars to cents', () => {
+    const s = defaultSettings();
+    s.nassau.on = true;
+    s.skins.on = true;
+    const games = buildGames(s, four);
     expect(games.map((g) => g.type)).toEqual(['nassau', 'skins']);
     expect(games[0].stakes).toEqual({ front: 500, back: 500, overall: 500 });
     expect(games[1].stake).toBe(100);
@@ -60,8 +67,7 @@ describe('buildGames', () => {
 
   it('wolf and vegas only with four players', () => {
     const s = defaultSettings();
-    s.wolf.on = true;
-    s.vegas.on = true;
+    for (const k of ['nassau', 'skins', 'wolf', 'vegas']) s[k].on = true;
     expect(buildGames(s, four).map((g) => g.type)).toContain('vegas');
     expect(buildGames(s, four.slice(0, 3)).map((g) => g.type)).toEqual(['nassau', 'skins']);
     const vegas = buildGames(s, four).find((g) => g.type === 'vegas');
@@ -84,7 +90,7 @@ describe('buildGames', () => {
 
   it('a new round computes with every game on', () => {
     const s = defaultSettings();
-    for (const k of ['match', 'stroke', 'wolf', 'vegas', 'stableford']) s[k].on = true;
+    for (const k of ['nassau', 'skins', 'match', 'stroke', 'wolf', 'vegas', 'stableford']) s[k].on = true;
     const course = { ...blankCourse(), name: 'Home' };
     const round = newRound({ course, tee: course.tees[0], players: four, settings: s });
     const r = computeRound(round);

@@ -110,7 +110,10 @@ src/
       round.js      computeRound(round): strokes, every game, totals, payments
       *.test.js     Tests live next to each module; test-helpers.js builds cards
     roundSetup.js   Setup defaults, plain-English rules, settings -> engine configs
-    courseSearch.js The only OpenGolfAPI network code (search + course detail)
+    courseSearch.js The only OpenGolfAPI network code (search + course detail);
+                    under 5 exact results it also searches each word and adds
+                    close names (fuzzy.js, tested) marked `similar`
+    fuzzy.js        Close-match scoring for course names (typos, filler words)
     searchHistory.js Recent searches (device, per account) + post ranking
     notifications.js The only notifications code: list, unread count, mark read
     instructors.js  The only instructor-table code (+ swing review uploads)
@@ -444,6 +447,10 @@ docs/instructors.md.
   Editor after checking credentials.
 
 ## Course data
+
+- New round starts blank: tapping the empty course search shows Recent
+  courses (saved on the phone, last played first); typing shows results,
+  with misspellings matched under "Similar names". No games start selected.
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).
