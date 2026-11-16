@@ -16,7 +16,7 @@ import {
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
-import { Switch, Toggle } from './controls.jsx';
+import { NumberField, Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
 import { listSavedPlayers } from '../lib/account.js';
 import PlayerSearch from './PlayerSearch.jsx';
@@ -254,11 +254,13 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
                     </div>
                   </td>
                   <td>
-                    <input
+                    <NumberField
                       className="hcp-input"
-                      inputMode="numeric"
+                      aria-label={`Hole ${i + 1} handicap`}
                       value={h.hcp}
-                      onChange={(e) => setHole(i, 'hcp', Number(e.target.value.replace(/\D/g, '')) || 0)}
+                      min={1}
+                      max={18}
+                      onChange={(n) => setHole(i, 'hcp', n)}
                     />
                   </td>
                 </tr>

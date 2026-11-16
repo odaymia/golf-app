@@ -1,4 +1,36 @@
 // Small shared form controls: switches, toggles, segmented and option pickers.
+import { useState } from 'react';
+
+// A whole-number box you can type in freely (clear it, type 12): the number
+// is kept while typing whenever it's in range, and clamped to min..max when
+// you leave the box or press Enter. Tapping it selects the number.
+export function NumberField({ value, min, max, onChange, className, ...props }) {
+  const [draft, setDraft] = useState(null);
+  const clamp = (n) => Math.min(max, Math.max(min, n));
+  const commit = () => {
+    if (draft === null) return;
+    const n = Number(draft);
+    onChange(clamp(draft === '' || !Number.isFinite(n) ? value : n));
+    setDraft(null);
+  };
+  return (
+    <input
+      {...props}
+      className={className}
+      inputMode="numeric"
+      value={draft ?? String(value)}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const text = e.target.value.replace(/\D/g, '').slice(0, String(max).length);
+        setDraft(text);
+        const n = Number(text);
+        if (text !== '' && n >= min && n <= max) onChange(n);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+    />
+  );
+}
 
 export function Switch({ checked, onChange, disabled, label }) {
   return (

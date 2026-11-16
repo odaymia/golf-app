@@ -13,7 +13,7 @@ import {
   SEASONS,
   UNITS,
 } from '../lib/league/format.js';
-import { OptionCards, Seg, Toggle } from './controls.jsx';
+import { NumberField, OptionCards, Seg, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
 
 const numberOrNull = (text) => {
@@ -92,12 +92,13 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
             <button type="button" className="step" aria-label="Fewer players" onClick={() => set({ fieldSize: Math.max(2, s.fieldSize - 1) })}>
               −
             </button>
-            <input
+            <NumberField
               className="count-input"
-              inputMode="numeric"
               aria-label="Number of players"
               value={s.fieldSize}
-              onChange={(e) => set({ fieldSize: Math.min(200, Math.max(2, Number(e.target.value.replace(/\D/g, '')) || 2)) })}
+              min={2}
+              max={200}
+              onChange={(fieldSize) => set({ fieldSize })}
             />
             <button type="button" className="step" aria-label="More players" onClick={() => set({ fieldSize: Math.min(200, s.fieldSize + 1) })}>
               +
@@ -330,10 +331,8 @@ function PointsTable({ s, set }) {
   const [showAll, setShowAll] = useState(false);
   const major = tableForTier(s, 'major');
   const rows = showAll ? s.pointsTable.length : Math.min(10, s.pointsTable.length);
-  const setPlace = (i, text) => {
-    const v = Math.max(0, Math.min(10000, Number(text.replace(/\D/g, '')) || 0));
-    set({ pointsPreset: 'custom', pointsTable: s.pointsTable.map((p, j) => (j === i ? v : p)) });
-  };
+  const setPlace = (i, v) => set({ pointsPreset: 'custom', pointsTable: s.pointsTable.map((p, j) => (j === i ? v : p)) });
+
   return (
     <div className="points-setup">
       <p className="hint">
@@ -366,11 +365,12 @@ function PointsTable({ s, set }) {
             <tr key={i}>
               <td>{ordinal(i + 1)}</td>
               <td>
-                <input
-                  inputMode="numeric"
+                <NumberField
                   aria-label={`Points for ${ordinal(i + 1)}`}
                   value={p}
-                  onChange={(e) => setPlace(i, e.target.value)}
+                  min={0}
+                  max={10000}
+                  onChange={(v) => setPlace(i, v)}
                 />
               </td>
               <td className="muted">{major[i]}</td>
