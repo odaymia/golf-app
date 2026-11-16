@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { conversationPeer, deleteMessage, listMessages, markRead, sendMessage } from '../../lib/messages.js';
+import { conversationPeer, deleteMessage, listMessages, markRead, peerReadAt, sendMessage } from '../../lib/messages.js';
 import { timeAgo } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 
@@ -11,13 +11,15 @@ export default function Thread({ conversationId, peer: initialPeer, meId, nav, b
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [picked, setPicked] = useState(null); // my message tapped (to unsend)
+  const [readAt, setReadAt] = useState(null); // when they last opened the chat
   const end = useRef(null);
   const lastId = useRef(null);
 
   const load = useCallback(async () => {
     try {
-      const list = await listMessages(conversationId, meId);
+      const [list, seenAt] = await Promise.all([listMessages(conversationId, meId), peerReadAt(conversationId, meId).catch(() => null)]);
       setMessages(list);
+      setReadAt(seenAt);
       if (list.at(-1)?.id !== lastId.current) markRead(conversationId, meId).catch(() => {});
     } catch (e) {
       setError(e.message);
@@ -69,6 +71,8 @@ export default function Thread({ conversationId, peer: initialPeer, meId, nav, b
   }
 
   const name = peer ? peer.username || peer.displayName : '';
+  // My latest message, if it's the last thing in the chat.
+  const lastMineId = messages?.length && messages.at(-1).senderId === meId ? messages.at(-1).id : null;
 
   return (
     <div className="screen thread">
@@ -87,6 +91,8 @@ export default function Thread({ conversationId, peer: initialPeer, meId, nav, b
       <ul className="bubbles">
         {(messages ?? []).map((m, i) => {
           const mine = m.senderId === meId;
+          // Read receipt under my latest message only (like other apps).
+          const receipt = mine && m.id === lastMineId ? (readAt && readAt >= m.createdAt ? `Seen ${timeAgo(readAt)}` : 'Sent') : null;
           const gap = i === 0 || new Date(m.createdAt) - new Date(messages[i - 1].createdAt) > 30 * 60 * 1000;
           return (
             <li key={m.id} className={mine ? 'mine' : ''}>
@@ -97,6 +103,7 @@ export default function Thread({ conversationId, peer: initialPeer, meId, nav, b
                   {m.body}
                 </p>
               )}
+              {receipt && <span className={`receipt ${receipt === 'Sent' ? '' : 'seen'}`}>{receipt}</span>}
               {mine && picked === m.id && (
                 <button className="link small-link unsend" onClick={() => remove(m)}>
                   Unsend

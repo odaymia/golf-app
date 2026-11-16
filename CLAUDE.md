@@ -383,7 +383,9 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   tables allow groups later). Members-only RLS; blocked people can't start
   or send. Inbox from the paper plane on the Feed (unread badge, checked
   every 30 s); Message button on other profiles. Threads poll every 4 s
-  (no realtime yet); tapping your own bubble offers Unsend. Shared posts
+  (no realtime yet); tapping your own bubble offers Unsend. Read receipts:
+  "Sent" / "Seen 2m ago" under your latest message and "· Seen" in the inbox,
+  from the other member's `conversation_members.last_read_at` (`peerReadAt`). Shared posts
   show as a card that opens the post.
 - Viewing: tapping a grid tile (profile or course page) opens `PostList`,
   every post of that grid in one scrolling list starting at the tapped one;

@@ -26,7 +26,7 @@ export async function listConversations(meId) {
   const ids = mine.map((m) => m.conversation_id);
   const [convs, members, recent, hidden] = await Promise.all([
     call(supabase.from('conversations').select('id, last_message_at').in('id', ids)),
-    call(supabase.from('conversation_members').select('conversation_id, user_id').in('conversation_id', ids).neq('user_id', meId)),
+    call(supabase.from('conversation_members').select('conversation_id, user_id, last_read_at').in('conversation_id', ids).neq('user_id', meId)),
     call(
       supabase
         .from('messages')
@@ -41,7 +41,8 @@ export async function listConversations(meId) {
   const profiles = otherIds.length ? await call(supabase.from('public_profiles').select('*').in('id', otherIds)) : [];
   return convs
     .map((c) => {
-      const otherId = members.find((m) => m.conversation_id === c.id)?.user_id;
+      const other = members.find((m) => m.conversation_id === c.id);
+      const otherId = other?.user_id;
       const last = recent.find((r) => r.conversation_id === c.id) ?? null;
       const readAt = mine.find((m) => m.conversation_id === c.id)?.last_read_at;
       return {
@@ -51,6 +52,8 @@ export async function listConversations(meId) {
         lastAt: c.last_message_at,
         last: last && { body: last.body, postId: last.post_id, senderId: last.sender_id, createdAt: last.created_at },
         unread: !!last && last.sender_id !== meId && (!readAt || last.created_at > readAt),
+        // Read receipt: they've opened the chat since my last message.
+        seen: !!last && last.sender_id === meId && !!other?.last_read_at && other.last_read_at >= last.created_at,
       };
     })
     .filter((c) => c.last && otherIds.length && !hidden.has(c.otherId))
@@ -70,6 +73,14 @@ export async function conversationPeer(conversationId, meId) {
   if (!rows.length) return null;
   const p = await call(supabase.from('public_profiles').select('*').eq('id', rows[0].user_id).maybeSingle());
   return profileOf(p) ?? { id: rows[0].user_id, username: '', displayName: 'Golfer' };
+}
+
+// When the other person last opened this chat (for read receipts), or null.
+export async function peerReadAt(conversationId, meId) {
+  const rows = await call(
+    supabase.from('conversation_members').select('last_read_at').eq('conversation_id', conversationId).neq('user_id', meId),
+  );
+  return rows[0]?.last_read_at ?? null;
 }
 
 // The latest messages, oldest first, with shared posts attached.

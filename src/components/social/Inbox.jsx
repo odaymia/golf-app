@@ -100,6 +100,7 @@ export default function Inbox({ meId, nav, back }) {
                 <strong>{c.other.username || c.other.displayName}</strong>
                 <span>
                   {preview(c)} · {timeAgo(c.last.createdAt)}
+                  {c.seen && ' · Seen'}
                 </span>
               </span>
               {c.unread && <i className="unread-dot" aria-label="Unread" />}
