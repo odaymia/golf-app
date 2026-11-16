@@ -11,6 +11,8 @@ import {
   parseIndex,
   teamOptions,
   usesTeams,
+  gameLimitText,
+  MAX_PLAYERS,
 } from '../lib/roundSetup.js';
 import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
@@ -69,6 +71,15 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     setCourse((c) => ({ ...c, holes: c.holes.map((h, j) => (j === i ? { ...h, [field]: value } : h)) }));
   const setPlayer = (i, field, value) =>
     setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, [field]: value } : p)));
+  // Grow or shrink the player list (new rows are blank; extra rows come off the bottom).
+  function setCount(n) {
+    setPlayers((ps) => {
+      if (n > ps.length) return [...ps, ...Array.from({ length: n - ps.length }, () => newPlayer())];
+      const cut = ps.slice(n).filter((p) => p.name.trim());
+      if (cut.length && !confirm(`Remove ${cut.map((p) => p.name).join(', ')}?`)) return ps;
+      return ps.slice(0, n);
+    });
+  }
   const setGame = (type, field, value) =>
     setSettings((s) => ({ ...s, [type]: { ...s[type], [field]: value } }));
 
@@ -78,7 +89,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     setPlayers((ps) => {
       const empty = ps.findIndex((x) => !x.name.trim());
       if (empty >= 0) return ps.map((x, i) => (i === empty ? { ...filled, id: x.id } : x));
-      return ps.length < 4 ? [...ps, filled] : ps;
+      return ps.length < MAX_PLAYERS ? [...ps, filled] : ps;
     });
   }
 
@@ -259,6 +270,22 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
 
       <section className="card">
         <h2>Players</h2>
+        <label className="field player-count">
+          <span>How many players</span>
+          <select value={players.length} onChange={(e) => setCount(Number(e.target.value))} aria-label="How many players">
+            {Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n} player{n === 1 ? '' : 's'}
+              </option>
+            ))}
+          </select>
+        </label>
+        {players.length > 4 && (
+          <p className="hint big-group">
+            Everyone in this round is scored on this phone. Playing in several groups? A one-day tournament (from Home) lets each
+            group score on its own phone, with a live leaderboard and side games.
+          </p>
+        )}
         {saved.length > 0 && (
           <div className="chips">
             {saved
@@ -268,7 +295,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
                   key={p.id}
                   className="chip"
                   onClick={() => addSaved(p)}
-                  disabled={players.length >= 4 && players.every((x) => x.name.trim())}
+                  disabled={players.length >= MAX_PLAYERS && players.every((x) => x.name.trim())}
                 >
                   + {p.name}
                 </button>
@@ -306,7 +333,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
               onChange={(e) => setPlayer(i, 'indexText', e.target.value)}
               aria-label={`Player ${i + 1} handicap index`}
             />
-            {players.length > 2 && (
+            {players.length > 1 && (
               <button
                 className="btn btn-ghost btn-small"
                 onClick={() => setPlayers((ps) => ps.filter((_, j) => j !== i))}
@@ -317,7 +344,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             )}
           </div>
         ))}
-        {players.length < 4 && (
+        {players.length < MAX_PLAYERS && (
           <button className="btn btn-ghost full" onClick={() => setPlayers((ps) => [...ps, newPlayer()])}>
             + Add player
           </button>
@@ -360,7 +387,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
               <div className="game-head">
                 <div>
                   <strong>{GAME_INFO[type].name}</strong>
-                  {!available && <span className="muted"> · needs 4 players</span>}
+                  {!available && <span className="muted"> · {gameLimitText(type)}</span>}
                 </div>
                 <Switch
                   label={`Play ${GAME_INFO[type].name}`}
@@ -413,7 +440,7 @@ function names(players, ids) {
 function GameOptions({ type, s, set, playerCount }) {
   const stakeLabel = {
     nassau: 'Per bet (front / back / 18)',
-    skins: 'Per skin, from each player',
+    skins: s.mode === 'pot' ? 'Buy-in per player' : 'Per skin, from each player',
     match: 'Per match',
     stroke: s.mode === 'perStroke' ? 'Per stroke' : 'Per player you beat',
     stableford:
@@ -431,9 +458,26 @@ function GameOptions({ type, s, set, playerCount }) {
         <span>{stakeLabel}</span>
         <div className="money-input">
           <span>$</span>
-          <input inputMode="decimal" value={s.stake} onChange={(e) => set('stake', e.target.value)} />
+          {type === 'skins' && s.mode === 'pot' ? (
+            <input inputMode="decimal" value={s.buyIn} onChange={(e) => set('buyIn', e.target.value)} />
+          ) : (
+            <input inputMode="decimal" value={s.stake} onChange={(e) => set('stake', e.target.value)} />
+          )}
         </div>
       </label>
+      {type === 'skins' && (
+        <div className="seg wide">
+          <button className={s.mode !== 'pot' ? 'on' : ''} onClick={() => set('mode', 'perSkin')}>
+            Pay per skin
+          </button>
+          <button className={s.mode === 'pot' ? 'on' : ''} onClick={() => set('mode', 'pot')}>
+            Pot (buy-in)
+          </button>
+        </div>
+      )}
+      {type === 'skins' && s.mode === 'pot' && (
+        <p className="hint">Everyone puts in the buy-in; the pot is split by skins won. Good for big groups.</p>
+      )}
       <div className="seg wide">
         <button className={s.net ? 'on' : ''} onClick={() => set('net', true)}>
           Net

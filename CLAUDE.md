@@ -133,7 +133,9 @@ src/
       pairings.js   Pairing order (manual/random/last round/standings,
                     leaders first or last), groups that keep teams and
                     matches whole, singles/team matches, tee sheet
-      league.test.js, pro.test.js, pairings.test.js
+      sideGames.js  Side games for a league/tournament round (skins, Stableford,
+                    stroke across the field) via the casual money engine
+      league.test.js, pro.test.js, pairings.test.js, sideGames.test.js
     leagueApi.js    The only league Supabase code; offline cache + score queue
     supabase.js     Supabase client (URL + publishable key; safe to ship)
     account.js      The only Supabase code: email-code sign-in, profile,
@@ -164,6 +166,7 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/side_games.sql  league_events.side_games (bets for league/tournament rounds)
 supabase/read_receipts.sql  read_receipts setting, conversation_read_times()
 supabase/comment_replies.sql  post_comments.parent_id (one level), reply +
                     mention notifications
@@ -279,6 +282,15 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   (`flushScores`); refused cards are dropped so they can't block the queue.
 
 ## Tournaments
+
+- Side games (league and tournament rounds, `event.sideGames`,
+  supabase/side_games.sql): the commissioner turns on skins (pot buy-in or
+  per skin), Stableford points and stroke play in Manage, with stakes, net or
+  gross, and everyone or picked players. Results shows each player's money
+  and a settle-up ("If it ended now" until every hole is in), live as each
+  group scores. Computed by `computeSideGames` with the casual-round engine,
+  so the same zero-sum, integer-cents rules apply; a hole counts once
+  everyone in has finished it.
 
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
@@ -451,6 +463,10 @@ docs/instructors.md.
 - New round starts blank: tapping the empty course search shows Recent
   courses (saved on the phone, last played first); typing shows results,
   with misspellings matched under "Similar names". No games start selected.
+  Casual rounds take 1–24 players (`MAX_PLAYERS`, a "How many players"
+  dropdown); games are limited by `GAME_LIMITS` (Nassau/match 2–6, skins/
+  stroke/Stableford 2–24, Wolf/Vegas 4). Skins can be a pot (buy-in split by
+  skins won). 5+ players shows a tip pointing to one-day tournaments.
   The Teams card (4 players) shows below Games only when a chosen game plays
   2 vs 2 (`usesTeams`: Nassau/match/Stableford set to teams, or Vegas).
   Tees: a dropdown ("Blue · 6,850 yds · 72.4/131", plus "+ Add a tee…");

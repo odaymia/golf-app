@@ -116,7 +116,7 @@ export function defaultSettings() {
     handicap: { allowance: 100, offLow: true },
     teamsIndex: 0,
     nassau: { on: false, stake: 5, autoPress: 2, net: true, format: 'teams' },
-    skins: { on: false, stake: 1, net: true, carryover: true, validate: false },
+    skins: { on: false, stake: 1, net: true, carryover: true, validate: false, mode: 'perSkin', buyIn: 10 },
     match: { on: false, stake: 5, net: true, format: 'teams' },
     stroke: { on: false, stake: 5, net: true, mode: 'perOpponent' },
     stableford: {
@@ -145,9 +145,32 @@ export function usesTeams(settings, playerCount) {
   );
 }
 
+// A casual round is scored on one phone, for 1 to MAX_PLAYERS players.
+export const MAX_PLAYERS = 24;
+
+// How many players each game works for. Pairwise games (Nassau, match play)
+// grow fast (everyone vs everyone), so they stop at 6.
+export const GAME_LIMITS = {
+  nassau: [2, 6],
+  match: [2, 6],
+  skins: [2, MAX_PLAYERS],
+  stroke: [2, MAX_PLAYERS],
+  stableford: [2, MAX_PLAYERS],
+  wolf: [4, 4],
+  vegas: [4, 4],
+};
+
 export function gameAvailable(type, playerCount) {
-  if (type === 'wolf' || type === 'vegas') return playerCount === 4;
-  return playerCount >= 2 && playerCount <= 4;
+  const [min, max] = GAME_LIMITS[type] ?? [2, 4];
+  return playerCount >= min && playerCount <= max;
+}
+
+// "needs 4 players", "2–6 players", "needs 2+ players" for unavailable games.
+export function gameLimitText(type) {
+  const [min, max] = GAME_LIMITS[type] ?? [2, 4];
+  if (min === max) return `needs ${min} players`;
+  if (max >= MAX_PLAYERS) return `needs ${min}+ players`;
+  return `${min}–${max} players`;
 }
 
 // Turn setup-screen settings (dollars) into engine game configs (cents).
@@ -179,8 +202,9 @@ export function buildGames(settings, players) {
       net: s.net,
       carryover: s.carryover,
       validate: s.validate,
-      mode: 'perSkin',
-      stake: dollarsToCents(s.stake),
+      ...(s.mode === 'pot'
+        ? { mode: 'pot', buyIn: dollarsToCents(s.buyIn) }
+        : { mode: 'perSkin', stake: dollarsToCents(s.stake) }),
     });
   }
   if (on('match')) {

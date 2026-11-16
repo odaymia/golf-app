@@ -3577,3 +3577,14 @@ a:focus-visible {
 }
 .tee-summary strong { color: var(--text); }
 .custom-course { margin-top: 8px; }
+
+/* Side games (league / tournament rounds) */
+.side-money { list-style: none; margin: 8px 0 0; padding: 0; }
+.side-money li { display: flex; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid var(--hairline); }
+.side-money li.mine { background: var(--green-soft); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.side-money strong { font-variant-numeric: tabular-nums; }
+.side-money strong.up { color: var(--up); }
+.side-money strong.down { color: var(--down); }
+.side-skins { font-size: 14px; margin: 6px 0; }
+.side-pay li { font-size: 14px; }
+.big-group { background: #fdf6e3; border-radius: 10px; padding: 8px 10px; color: #7a5a0c; }

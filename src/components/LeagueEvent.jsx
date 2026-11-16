@@ -10,6 +10,7 @@ import { useLeagueComputed } from './useLeagueComputed.js';
 import { Seg } from './controls.jsx';
 import { canScore, groupOf } from '../lib/league/groups.js';
 import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
+import { SideGamesBoard, SideGamesEditor } from './SideGames.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -60,6 +61,16 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           holes={event.course.holes}
           live={!final}
           reload={reload}
+        />
+      )}
+      {tab === 'results' && (
+        <SideGamesBoard
+          event={event}
+          members={data.members}
+          scores={data.scores[event.id] ?? {}}
+          indexes={computed.indexes[event.id] ?? {}}
+          handicap={settings.handicap}
+          meId={me?.id}
         />
       )}
       {tab === 'results' && <TeeSheet event={event} members={data.members} meId={me?.id} />}
@@ -632,6 +643,14 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         busy={busy}
         setError={setError}
         onSave={(patch) => act(() => updateEvent(event.id, patch))}
+      />
+
+      <SideGamesEditor
+        key={event.id}
+        event={event}
+        members={members}
+        busy={busy}
+        onSave={(sideGames) => act(() => updateEvent(event.id, { sideGames }))}
       />
 
       <section className="card">

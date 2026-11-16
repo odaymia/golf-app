@@ -10,6 +10,9 @@ import {
   defaultSettings,
   newRound,
   usesTeams,
+  gameAvailable,
+  gameLimitText,
+  MAX_PLAYERS,
 } from './roundSetup.js';
 import { computeRound } from './games/round.js';
 
@@ -64,6 +67,45 @@ describe('buildGames', () => {
     expect(usesTeams(s, 4)).toBe(false);
     s.vegas.on = true;
     expect(usesTeams(s, 4)).toBe(true);
+  });
+
+  it('which games work for how many players', () => {
+    expect(MAX_PLAYERS).toBe(24);
+    expect(gameAvailable('skins', 24)).toBe(true);
+    expect(gameAvailable('skins', 1)).toBe(false);
+    expect(gameAvailable('nassau', 6)).toBe(true);
+    expect(gameAvailable('nassau', 7)).toBe(false);
+    expect(gameAvailable('wolf', 5)).toBe(false);
+    expect(gameLimitText('wolf')).toBe('needs 4 players');
+    expect(gameLimitText('nassau')).toBe('2–6 players');
+    expect(gameLimitText('skins')).toBe('needs 2+ players');
+  });
+
+  it('a 24-player round: skins pot, stroke and Stableford all net to zero', () => {
+    const players = Array.from({ length: 24 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, index: (i * 7) % 30 }));
+    const s = defaultSettings();
+    s.skins.on = true;
+    s.skins.mode = 'pot';
+    s.skins.buyIn = 10;
+    s.stroke.on = true;
+    s.stableford.on = true;
+    s.nassau.on = true; // not available for 24: left out
+    const course = { ...blankCourse(), name: 'Big Day' };
+    const round = newRound({ course, tee: course.tees[0], players, settings: s });
+    expect(round.games.map((g) => g.type)).toEqual(['skins', 'stroke', 'stableford']);
+    expect(round.games[0]).toMatchObject({ mode: 'pot', buyIn: 1000 });
+    // Fill in scores: everyone shoots par except a few birdies and bogeys.
+    for (const [i, p] of players.entries()) round.scores[p.id] = course.holes.map((h, k) => h.par + (((i + k) % 5) - 2 === 0 ? -1 : ((i * k) % 3) - 1 > 0 ? 1 : 0));
+    const r = computeRound(round);
+    expect(Object.values(r.totals).reduce((a, b) => a + b, 0)).toBe(0);
+    for (const g of r.games) expect(Object.values(g.balances).reduce((a, b) => a + b, 0)).toBe(0);
+    // Settle-up pays everything back exactly.
+    const paid = Object.fromEntries(players.map((p) => [p.id, 0]));
+    for (const pay of r.payments) {
+      paid[pay.from] -= pay.cents;
+      paid[pay.to] += pay.cents;
+    }
+    expect(paid).toEqual(r.totals);
   });
 
   it('defaults: no games until you pick them', () => {
