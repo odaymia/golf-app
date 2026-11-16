@@ -3588,3 +3588,5 @@ a:focus-visible {
 .side-skins { font-size: 14px; margin: 6px 0; }
 .side-pay li { font-size: 14px; }
 .big-group { background: #fdf6e3; border-radius: 10px; padding: 8px 10px; color: #7a5a0c; }
+.invite-email-btn { margin-top: 8px; }
+.me-row { display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; border-radius: 12px; background: #eef3ea; }

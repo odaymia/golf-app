@@ -7,7 +7,7 @@ import Avatar from './social/Avatar.jsx';
 // friends you follow, then other Scribble golfers. Picking one fills in the
 // name and their handicap index (if they share it). Typing any name still
 // works for golfers who aren't on Scribble.
-export default function PlayerSearch({ value, onChange, onPick, saved = [], meId, exclude = [], placeholder, ariaLabel }) {
+export default function PlayerSearch({ value, onChange, onPick, saved = [], recent = [], meId, exclude = [], placeholder, ariaLabel }) {
   const [open, setOpen] = useState(false);
   const [golfers, setGolfers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,9 +35,15 @@ export default function PlayerSearch({ value, onChange, onPick, saved = [], meId
   const lower = q.toLowerCase();
   const savedMatches = saved.filter((p) => !exclude.includes(`saved:${p.id}`) && (!lower || p.name.toLowerCase().includes(lower))).slice(0, 5);
   const golferMatches = golfers.filter((g) => !exclude.includes(`user:${g.id}`) && g.id !== meId);
-  const friends = golferMatches.filter((g) => g.friend);
-  const others = golferMatches.filter((g) => !g.friend);
-  const any = savedMatches.length + golferMatches.length > 0;
+  // Recent players (remembered on this phone; works offline), then friends, then everyone else.
+  const recentMatches = recent
+    .filter((g) => !exclude.includes(`user:${g.id}`) && g.id !== meId)
+    .filter((g) => !lower || `${g.name} ${g.username}`.toLowerCase().includes(lower))
+    .slice(0, 5);
+  const notRecent = (g) => !recentMatches.some((r) => r.id === g.id);
+  const friends = golferMatches.filter((g) => g.friend && notRecent(g));
+  const others = golferMatches.filter((g) => !g.friend && notRecent(g));
+  const any = savedMatches.length + recentMatches.length + friends.length + others.length > 0;
 
   function pick(p) {
     clearTimeout(blurTimer.current);
@@ -62,7 +68,7 @@ export default function PlayerSearch({ value, onChange, onPick, saved = [], meId
         onBlur={() => (blurTimer.current = setTimeout(() => setOpen(false), 150))}
         onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
       />
-      {open && (any || loading) && (
+      {open && (any || loading || q.length >= 2) && (
         <div className="ps-menu" role="listbox" onMouseDown={(e) => e.preventDefault()}>
           {savedMatches.length > 0 && (
             <>
@@ -83,6 +89,10 @@ export default function PlayerSearch({ value, onChange, onPick, saved = [], meId
               ))}
             </>
           )}
+          {recentMatches.length > 0 && <p className="ps-h">Recent players</p>}
+          {recentMatches.map((g) => (
+            <GolferRow key={`r-${g.id}`} g={g} pick={pick} indexLabel={indexLabel} />
+          ))}
           {friends.length > 0 && <p className="ps-h">Friends</p>}
           {friends.map((g) => (
             <GolferRow key={g.id} g={g} pick={pick} indexLabel={indexLabel} />
@@ -92,6 +102,7 @@ export default function PlayerSearch({ value, onChange, onPick, saved = [], meId
             <GolferRow key={g.id} g={g} pick={pick} indexLabel={indexLabel} />
           ))}
           {loading && !golferMatches.length && <p className="ps-h muted">Searching…</p>}
+          {!loading && q.length >= 2 && !any && <p className="ps-h muted">No Scribble member named “{q}”. Invite them below.</p>}
         </div>
       )}
     </div>

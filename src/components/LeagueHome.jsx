@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AddMembers from './AddMembers.jsx';
 import { myTeeTime } from '../lib/league/pairings.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
@@ -344,6 +345,7 @@ function Members({ data, computed, me, isAdmin, reload }) {
   const { members } = data;
   const { settings } = computed;
   const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const usesTeams = settings.unit !== 'individual';
@@ -540,9 +542,26 @@ function Members({ data, computed, me, isAdmin, reload }) {
             )}
           </section>
         ) : (
-          <button className="btn btn-primary btn-xl" onClick={() => setEditing({ ...blankMember })}>
-            + Invite player
-          </button>
+          <>
+            {adding ? (
+              <AddMembers
+                league={data.league}
+                members={members}
+                meId={me?.userId}
+                onClose={() => setAdding(false)}
+                onAdded={async () => {
+                  await reload();
+                }}
+              />
+            ) : (
+              <button className="btn btn-primary btn-xl" onClick={() => setAdding(true)}>
+                + Add Scribble members
+              </button>
+            )}
+            <button className="btn btn-ghost outline full invite-email-btn" onClick={() => setEditing({ ...blankMember })}>
+              Invite someone by email
+            </button>
+          </>
         ))}
       {!isAdmin && <p className="hint center">Only the commissioner can change members and teams.</p>}
     </>

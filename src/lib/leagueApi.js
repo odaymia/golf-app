@@ -189,6 +189,18 @@ export function addMember(leagueId, m) {
   );
 }
 
+// Add Scribble members straight to the league, linked to their accounts
+// (golfers: [{ id: userId, name, index }]). People already in are skipped.
+// Returns how many were added.
+export async function addAccounts(leagueId, golfers, members) {
+  const have = new Set(members.map((m) => m.userId).filter(Boolean));
+  const rows = golfers
+    .filter((g) => !have.has(g.id))
+    .map((g) => ({ league_id: leagueId, user_id: g.id, name: g.name.trim().slice(0, 60), handicap_index: g.index ?? null, role: 'member' }));
+  if (rows.length) await call(supabase.from('league_members').insert(rows));
+  return rows.length;
+}
+
 // Invite many at once (roster import).
 export function addMembers(leagueId, list) {
   return call(

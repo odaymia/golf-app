@@ -507,6 +507,16 @@ offline. The homepage centerpiece is a hand-operated-style leaderboard.
 
 ## Rules
 
+- Members only: everyone who plays (casual rounds, leagues, tournaments)
+  needs a Scribble account; the goal is that everyone downloads the app.
+  Casual rounds: row 1 is you (locked), every other player must be picked
+  from the list (recent players saved on the phone in `lib/recentGolfers.js`,
+  friends, Scribble members); typed names that aren't picked block tee off,
+  and "Invite someone to Scribble" shares the app link. Leagues/tournaments:
+  "+ Add Scribble members" (`AddMembers`, `addAccounts` in leagueApi) adds
+  people linked to their accounts; email invites remain for people not on
+  Scribble yet.
+
 - The game/money engine (Nassau, presses, skins, Wolf, Vegas, handicap strokes)
   is pure functions with tests. Money math must never be wrong.
 - The app tracks and settles bets; it never holds or moves money. Venmo-style

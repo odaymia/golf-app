@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import AddMembers from '../AddMembers.jsx';
 import { addMember, addMembers, inviteLink, removeMember, setMemberRole, updateMember } from '../../lib/leagueApi.js';
 import { looksLikeEmail } from '../../lib/account.js';
 import { formatIndex, parseIndex } from '../../lib/roundSetup.js';
@@ -22,6 +23,7 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
   const [editing, setEditing] = useState(null); // member id or 'new'
   const [form, setForm] = useState(null);
   const [selected, setSelected] = useState(new Set());
+  const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -115,12 +117,18 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
             <button className="btn btn-ghost outline" onClick={() => setImporting((v) => !v)}>
               {importing ? 'Close import' : 'Import roster'}
             </button>
-            <button className="btn btn-primary" onClick={() => startEdit(null)}>
-              + Invite player
+            <button className="btn btn-ghost outline" onClick={() => startEdit(null)}>
+              Invite by email
+            </button>
+            <button className="btn btn-primary" onClick={() => setAdding((v) => !v)}>
+              {adding ? 'Close' : '+ Add Scribble members'}
             </button>
           </div>
         )}
       </div>
+      {adding && (
+        <AddMembers league={league} members={members} meId={me?.userId} onClose={() => setAdding(false)} onAdded={() => reload()} />
+      )}
       <p className="hint">
         Every player needs a Scribble account. Invited players join their spot when they sign in with the email you entered, or
         open your invite link:{' '}

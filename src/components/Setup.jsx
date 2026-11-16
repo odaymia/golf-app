@@ -18,8 +18,8 @@ import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
 import { NumberField, Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
-import { listSavedPlayers } from '../lib/account.js';
 import PlayerSearch from './PlayerSearch.jsx';
+import { listRecentGolfers, rememberGolfers } from '../lib/recentGolfers.js';
 
 // "Blue · 6,850 yds · 72.4/131" for the tee dropdown.
 const teeLabel = (t, i) =>
@@ -39,17 +39,13 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const [teeIdx, setTeeIdx] = useState(0);
   const [showHoles, setShowHoles] = useState(false);
   const [editTee, setEditTee] = useState(false);
-  const [players, setPlayers] = useState(() => [newPlayer(profile), newPlayer()]);
-  const [saved, setSaved] = useState([]);
+  // Row 1 is you. Everyone else must be a Scribble member picked from the list.
+  const [players, setPlayers] = useState(() => [{ ...newPlayer(profile), userId: meId, me: true }, newPlayer()]);
+  const [recentGolfers] = useState(() => (meId ? listRecentGolfers(meId) : []));
   const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState([]);
   const [courseNotes, setCourseNotes] = useState([]);
 
-  useEffect(() => {
-    listSavedPlayers()
-      .then(setSaved)
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     listCourses()
@@ -71,6 +67,21 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     setCourse((c) => ({ ...c, holes: c.holes.map((h, j) => (j === i ? { ...h, [field]: value } : h)) }));
   const setPlayer = (i, field, value) =>
     setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, [field]: value } : p)));
+  // Share the app so friends can make an account and join the round.
+  async function inviteToScribble() {
+    const url = 'https://scribblegolfclub.com/app/';
+    const text = 'Join me on Scribble Golf Club: we score our rounds and settle the bets in the app.';
+    try {
+      if (navigator.share) await navigator.share({ title: 'Scribble Golf Club', text, url });
+      else {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        alert('Invite link copied. Paste it in a text to your friend.');
+      }
+    } catch {
+      // closed the share sheet
+    }
+  }
+
   // Grow or shrink the player list (new rows are blank; extra rows come off the bottom).
   function setCount(n) {
     setPlayers((ps) => {
@@ -83,15 +94,6 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const setGame = (type, field, value) =>
     setSettings((s) => ({ ...s, [type]: { ...s[type], [field]: value } }));
 
-  // Fill the first empty row with a saved player, or add a row.
-  function addSaved(p) {
-    const filled = newPlayer({ ...p, savedId: p.id });
-    setPlayers((ps) => {
-      const empty = ps.findIndex((x) => !x.name.trim());
-      if (empty >= 0) return ps.map((x, i) => (i === empty ? { ...filled, id: x.id } : x));
-      return ps.length < MAX_PLAYERS ? [...ps, filled] : ps;
-    });
-  }
 
   function pickImported({ course: imported, warnings }) {
     // A course already saved on this phone keeps any fixes made to it.
@@ -121,6 +123,16 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     const numericTee = { ...tee, rating: Number(tee.rating), slope: Number(tee.slope) };
     const problems = courseProblems(course, numericTee);
     const parsed = named.map((p) => ({ ...p, index: parseIndex(p.indexText) }));
+    // Everyone plays with a Scribble account.
+    const outsiders = players.filter((p) => !p.me && !p.userId);
+    if (outsiders.length) {
+      const typed = outsiders.filter((p) => p.name.trim()).map((p) => p.name.trim());
+      problems.push(
+        typed.length
+          ? `${typed.join(', ')}: pick ${typed.length === 1 ? 'them' : 'each player'} from the list. Everyone in a round needs a Scribble account; not on Scribble yet? Send them an invite.`
+          : `Pick a Scribble member for every player spot (or lower the number of players).`,
+      );
+    }
     parsed.forEach((p) => {
       if (p.index === null) problems.push(`${p.name}: handicap index should be a number like 12.4 or +2.1.`);
     });
@@ -135,6 +147,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
       tees: course.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })),
     };
     await saveCourse(cleanCourse).catch(() => {});
+    if (meId) rememberGolfers(meId, players.filter((p) => p.userId && !p.me).map((p) => ({ id: p.userId, name: p.name, username: p.username, avatarUrl: p.avatarUrl, index: parseIndex(p.indexText) })));
     onStart(newRound({ course: cleanCourse, tee: numericTee, players: parsed, settings }));
   }
 
@@ -288,30 +301,19 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             group score on its own phone, with a live leaderboard and side games.
           </p>
         )}
-        {saved.length > 0 && (
-          <div className="chips">
-            {saved
-              .filter((p) => !players.some((x) => x.savedId === p.id))
-              .map((p) => (
-                <button
-                  key={p.id}
-                  className="chip"
-                  onClick={() => addSaved(p)}
-                  disabled={players.length >= MAX_PLAYERS && players.every((x) => x.name.trim())}
-                >
-                  + {p.name}
-                </button>
-              ))}
-          </div>
-        )}
         {players.map((p, i) => (
           <div className="player-row" key={p.id}>
+            {p.me ? (
+              <div className="grow me-row" aria-label="You">
+                <strong>{p.name || 'You'}</strong> <span className="muted">(you)</span>
+              </div>
+            ) : (
             <PlayerSearch
               value={p.name}
               placeholder={`Player ${i + 1}`}
               ariaLabel={`Player ${i + 1} name`}
               meId={meId}
-              saved={saved}
+              recent={recentGolfers}
               exclude={players.flatMap((x) => [x.savedId && `saved:${x.savedId}`, x.userId && `user:${x.userId}`]).filter(Boolean)}
               onChange={(name) =>
                 // Editing the name by hand unlinks the picked golfer.
@@ -321,12 +323,21 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
                 setPlayers((ps) =>
                   ps.map((x, j) =>
                     j === i
-                      ? { ...x, name: picked.name, indexText: picked.index == null ? x.indexText : formatIndex(picked.index), savedId: picked.savedId, userId: picked.userId }
+                      ? {
+                          ...x,
+                          name: picked.name,
+                          indexText: picked.index == null ? x.indexText : formatIndex(picked.index),
+                          savedId: picked.savedId,
+                          userId: picked.userId,
+                          username: picked.username ?? '',
+                          avatarUrl: picked.avatarUrl ?? null,
+                        }
                       : x,
                   ),
                 )
               }
             />
+            )}
             <input
               className="index-input"
               inputMode="decimal"
@@ -335,7 +346,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
               onChange={(e) => setPlayer(i, 'indexText', e.target.value)}
               aria-label={`Player ${i + 1} handicap index`}
             />
-            {players.length > 1 && (
+            {players.length > 1 && !p.me && (
               <button
                 className="btn btn-ghost btn-small"
                 onClick={() => setPlayers((ps) => ps.filter((_, j) => j !== i))}
@@ -351,10 +362,22 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             + Add player
           </button>
         )}
+        {players.some((p) => !p.me && p.name.trim() && !p.userId) && (
+          <p className="search-error">
+            {players
+              .filter((p) => !p.me && p.name.trim() && !p.userId)
+              .map((p) => p.name.trim())
+              .join(', ')}
+            : pick from the list. Only Scribble members can play.
+          </p>
+        )}
         <p className="hint">
-          Start typing a name to add a friend: their handicap index fills in from their profile. Anyone else, just type their name
-          and index. Plus handicap? Type +2.1.
+          Everyone in the round needs a Scribble account. Start typing to find friends and members: their handicap index fills in
+          from their profile. Plus handicap? Type +2.1.
         </p>
+        <button className="btn btn-ghost outline full" onClick={inviteToScribble}>
+          Invite someone to Scribble
+        </button>
         <div className="row2">
           <label className="field">
             <span>Handicap allowance</span>
