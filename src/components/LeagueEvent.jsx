@@ -37,12 +37,16 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
         <h1>{event.name}</h1>
         <span />
       </div>
-      <p className="muted center">
-        {event.tier === 'major' && settings.season === 'points' && <span className="major-tag">Major</span>} {event.date} ·{' '}
-        {event.course.name} · {event.course.tee.name} {event.course.tee.rating}/{event.course.tee.slope}
-        {final ? ' · Final' : ''}
-      </p>
-      <MyTeeTime event={event} members={data.members} meId={me?.id} />
+      {tab !== 'score' && (
+        <>
+          <p className="muted center">
+            {event.tier === 'major' && settings.season === 'points' && <span className="major-tag">Major</span>} {event.date} ·{' '}
+            {event.course.name} · {event.course.tee.name} {event.course.tee.rating}/{event.course.tee.slope}
+            {final ? ' · Final' : ''}
+          </p>
+          <MyTeeTime event={event} members={data.members} meId={me?.id} />
+        </>
+      )}
 
       <div className="tabs wide-tabs" role="tablist">
         {[
@@ -90,7 +94,6 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
             indexes={computed.indexes[event.id]}
             settings={settings}
             reload={reload}
-            computedStandings={computed.standings}
           />
         ) : (
           <p className="muted center">This round is final. Ask the commissioner to reopen it to change scores.</p>
@@ -227,7 +230,19 @@ function Results({ settings, result, members, holes, live, reload, standings = [
   );
 }
 
-function ScoreEntry({ data, event, me, result, indexes, settings, reload, computedStandings = [] }) {
+// Scroll the score box being typed into so the keypad doesn't cover it.
+function keepAboveKeypad(el) {
+  if (!el) return;
+  requestAnimationFrame(() => {
+    const kp = document.querySelector('.keypad');
+    if (!kp) return;
+    const box = el.getBoundingClientRect();
+    const top = kp.getBoundingClientRect().top;
+    if (box.bottom > top - 8) window.scrollBy({ top: box.bottom - top + 16, behavior: 'smooth' });
+  });
+}
+
+function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   const holes = event.course.holes;
   const scored = useMemo(() => data.scores[event.id] ?? {}, [data.scores, event.id]);
   // Open straight on my foursome's card (players and a playing commissioner).
@@ -442,9 +457,8 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
     };
   };
   // Keypad: the active row, typing, undo and save.
-  const firstEmpty = rows.findIndex((r) => rowScore(r, hole - 1) == null);
-  const activeKey =
-    cursor && cursor.hole === hole ? cursor.key : (rows[firstEmpty >= 0 ? firstEmpty : 0]?.key ?? null);
+  // The keypad opens only when a score box is tapped.
+  const activeKey = cursor && cursor.hole === hole ? cursor.key : null;
   const typed = cursor && cursor.hole === hole ? cursor.typed ?? '' : '';
   const activeIdx = rows.findIndex((r) => r.key === activeKey);
   const focus = (key, t = '') => setCursor({ hole, key, typed: t });
@@ -518,9 +532,6 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
 
   return (
     <>
-      {settings.unit === 'ryder' && (
-        <RyderLive sides={settings.sides} standings={computedStandings} result={live} myIds={picked} />
-      )}
       {badHoles.length > 0 && (
         <button className="card disc-banner" onClick={() => goHole(badHoles[0] + 1)}>
           ⚠ Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Tap to check.
@@ -585,6 +596,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
                 onClick={() => focus(row.key)}
                 aria-label={toConfirm ? `${row.name} score ${s}, type it to confirm or change` : `${row.name} score`}
                 aria-pressed={row.key === activeKey}
+                ref={row.key === activeKey ? keepAboveKeypad : undefined}
               >
                 {s ?? (row.key === activeKey ? '' : '–')}
                 {row.key === activeKey && <span className="caret" />}
@@ -628,34 +640,41 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
         <button className="btn btn-ghost" onClick={() => setReview(true)}>
           Card
         </button>
+        {activeIdx < 0 && (
+          <button className="btn btn-primary" onClick={save} disabled={!holeDone}>
+            {hole < holes.length ? 'Next hole' : 'Review round'}
+          </button>
+        )}
       </div>
-      <div className="keypad-space" />
-      <div className="keypad" role="group" aria-label="Score keypad">
-        <div className="keypad-keys">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-            <button key={d} onClick={() => press(d)} disabled={activeIdx < 0}>
-              {d}
+      {activeIdx >= 0 && <div className="keypad-space" />}
+      {activeIdx >= 0 && (
+        <div className="keypad" role="group" aria-label="Score keypad">
+          <div className="keypad-keys">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+              <button key={d} onClick={() => press(d)} disabled={activeIdx < 0}>
+                {d}
+              </button>
+            ))}
+            <button className="kp-word" onClick={clear} disabled={activeIdx < 0}>
+              Clear
             </button>
-          ))}
-          <button className="kp-word" onClick={clear} disabled={activeIdx < 0}>
-            Clear
-          </button>
-          <button onClick={() => press(0)} disabled={typed !== '1'}>
-            0
-          </button>
-          <button className="kp-word" onClick={() => setCursor({ hole, key: null, typed: '' })} aria-label="Close keypad" disabled={activeIdx < 0}>
-            ✕
-          </button>
+            <button onClick={() => press(0)} disabled={typed !== '1'}>
+              0
+            </button>
+            <button className="kp-word" onClick={() => setCursor({ hole, key: null, typed: '' })} aria-label="Close keypad" disabled={activeIdx < 0}>
+              ✕
+            </button>
+          </div>
+          <div className="keypad-actions">
+            <button className="kp-undo" onClick={undo}>
+              Undo changes
+            </button>
+            <button className="kp-save" onClick={save}>
+              {holeDone ? (hole < holes.length ? 'Save scores' : 'Save & review') : 'Save scores'}
+            </button>
+          </div>
         </div>
-        <div className="keypad-actions">
-          <button className="kp-undo" onClick={undo}>
-            Undo changes
-          </button>
-          <button className="kp-save" onClick={save}>
-            {holeDone ? (hole < holes.length ? 'Save scores' : 'Save & review') : 'Save scores'}
-          </button>
-        </div>
-      </div>
+      )}
     </>
   );
 }

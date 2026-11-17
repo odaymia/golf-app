@@ -300,14 +300,16 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker
   (commissioners can score any group).
-- Score entry layout: green hole bar (‹ prev / Hole n, par, stroke index,
+- Score entry layout (no date line, tee time or team board; those are on
+  Results): green hole bar (‹ prev / Hole n, par, stroke index,
   tee / next ›), slim hole dots, then one row per player: name (playing
   handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
-  and the running total (points, or to par). A keypad is fixed at the
-  bottom (1–9, Clear, 0, ✕ to hide; Undo changes / Save scores): the
+  and the running total (points, or to par). Tapping a score box opens a
+  keypad fixed at the bottom (1–9, Clear, 0, ✕ to hide; Undo changes /
+  Save scores) and scrolls that row above it; the
   active score box shows a cursor, a digit enters it and moves to the next
   player (a 1 waits for 0–5 to make 10–15; the last player keeps the
-  cursor). Tap a score box to move the cursor. Undo changes puts the hole
+  cursor). With the keypad closed, Next hole / Review round shows. Undo changes puts the hole
   back as it was when opened; Save scores sends now and, once everyone
   has a score, goes to the next hole (last hole: the round review).
 - Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
@@ -325,16 +327,14 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   then `MatchBoard`: Pts | side A (names, home clubs) | status | side B |
   Pts per match, the winner's side filled in team color (blue/red) with an
   arrow on the status pointing at the side that's up, halved grey, a
-  totals footer for the round; tap a match for its scorecard. Score entry
-  still uses the compact RyderLive.
+  totals footer for the round; tap a match for its scorecard.
 - Multiple scorekeepers: each keeps their own card in `score_entries`
   (`saveScore(…, official, mine)`); the official `event_scores` card is my
   numbers merged over what's there (never wipes others' holes; latest wins).
   Holes I haven't entered show the official score faded ("tap to agree").
   `discrepancies()` flags holes where scorekeepers differ: red hole dot,
   banner, "Mike 3 · You 4" with Use buttons, and "Scores to check" on
-  Results. Ryder Cup score entry shows `RyderLive` (cup points, projected,
-  every match in the round, live).
+  Results.
 
 - Side games (league and tournament rounds, `event.sideGames`,
   supabase/side_games.sql): the commissioner turns on skins (pot buy-in or
