@@ -300,6 +300,13 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker
   (commissioners can score any group).
+- End of round review (`RoundReview` in LeagueEvent): after the last hole,
+  "Review round" (or "Card" anytime) shows the group's full scorecard
+  (birdies circled, bogeys boxed, Out/In, totals and to par, match results);
+  tap a score to fix that hole; Submit is blocked while scores disagree.
+- Ryder Cup Results is a match results board (`RyderLive` with
+  onOpenMatch): Cup points + this round's points, one row per match in team
+  colors with status/FINAL badge and format; tap for the match scorecard.
 - Multiple scorekeepers: each keeps their own card in `score_entries`
   (`saveScore(…, official, mine)`); the official `event_scores` card is my
   numbers merged over what's there (never wipes others' holes; latest wins).

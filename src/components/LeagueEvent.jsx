@@ -63,6 +63,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           holes={event.course.holes}
           live={!final}
           reload={reload}
+          standings={computed.standings}
         />
       )}
       {tab === 'results' && <ScoreChecks data={data} event={event} />}
@@ -99,7 +100,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
   );
 }
 
-function Results({ settings, result, members, holes, live, reload }) {
+function Results({ settings, result, members, holes, live, reload, standings = [] }) {
   useLiveRefresh(live, reload);
   const [open, setOpen] = useState(null);
   if (settings.scoring === 'match') {
@@ -114,6 +115,25 @@ function Results({ settings, result, members, holes, live, reload }) {
         if (side >= 0) leading[side]++;
       }
     }
+    if (settings.unit === 'ryder')
+      return (
+        <>
+          <RyderLive sides={settings.sides} standings={standings} result={result} onOpenMatch={setOpen} roundPoints />
+          {open != null && result.matches[open] && (
+            <MatchScorecard
+              match={result.matches[open]}
+              holes={holes}
+              grossOf={(id) => result.players[id]?.gross ?? holes.map(() => null)}
+              nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
+              net={settings.net}
+              label={MATCH_FORMATS[result.matches[open].format].label}
+              sideNames={settings.sides}
+              onClose={() => setOpen(null)}
+            />
+          )}
+          <p className="hint center">Tap a match for its scorecard.{live ? ' Live: updates every 20 seconds as groups enter scores.' : ''}</p>
+        </>
+      );
     return (
       <>
         {cup && (
@@ -243,6 +263,8 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
     return i < 0 ? holes.length : i + 1;
   });
   const [status, setStatus] = useState('');
+  const [review, setReview] = useState(false); // end-of-round scorecard
+  const [submitted, setSubmitted] = useState(false);
   const dirty = useRef(new Set());
   const timer = useRef(null);
 
@@ -388,6 +410,30 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
   const myScore = (row, i) => cards[row.ids[0]][i];
   const badHoles = discrepancyHoles(disc, people.map((p) => p.id));
+  if (review) {
+    return (
+      <RoundReview
+        holes={holes}
+        rows={rows}
+        cardOf={(row) => holes.map((_, i) => rowScore(row, i))}
+        strokesOf={(row) => (matchFor(row.ids[0])?.strokes?.[row.ids[0]] ?? result.players[row.ids[0]]?.strokes ?? [])}
+        net={settings.net}
+        badHoles={badHoles}
+        matches={myMatches}
+        submitted={submitted}
+        onHole={(h) => {
+          setReview(false);
+          setHole(h);
+        }}
+        onBack={() => setReview(false)}
+        onSubmit={async () => {
+          await flush();
+          setSubmitted(true);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       {settings.unit === 'ryder' && (
@@ -492,13 +538,23 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
         >
           Change group
         </button>
+        <button className="btn btn-ghost" onClick={() => setReview(true)}>
+          Card
+        </button>
         {hole < holes.length ? (
           <button className="btn btn-primary" onClick={() => setHole(hole + 1)} disabled={!rows.every((r) => rowScore(r, hole - 1) != null)}>
             Next hole
           </button>
         ) : (
-          <button className="btn btn-primary" onClick={flush}>
-            Save card
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              await flush();
+              setReview(true);
+            }}
+            disabled={!rows.every((r) => rowScore(r, hole - 1) != null)}
+          >
+            Review round
           </button>
         )}
       </div>
@@ -820,6 +876,104 @@ function ScoreChecks({ data, event }) {
         ))}
       </ul>
       <p className="hint">The scorekeepers fix it by entering the same score. Until then the latest one counts.</p>
+    </section>
+  );
+}
+
+// End of round: the whole group's card to check before submitting. Tap a
+// score to go back to that hole and fix it.
+function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, submitted, onHole, onBack, onSubmit }) {
+  const n = holes.length;
+  const front = Math.min(9, n);
+  const sum = (arr, a, b) => {
+    let t = 0;
+    let any = false;
+    for (let i = a; i < b; i++) if (arr[i] != null) (t += arr[i]), (any = true);
+    return any ? t : '';
+  };
+  const par = holes.map((h) => h.par);
+  const missing = rows.some((r) => cardOf(r).some((g) => g == null));
+  const cellClass = (g, p) => (g == null ? 'empty' : g <= p - 2 ? 'eagle' : g === p - 1 ? 'birdie' : g === p + 1 ? 'bogey' : g >= p + 2 ? 'double' : '');
+  const half = (from, to, label) => (
+    <table className="review-card">
+      <thead>
+        <tr>
+          <th className="rc-name">Hole</th>
+          {holes.slice(from, to).map((_, i) => (
+            <th key={i} className={badHoles.includes(from + i) ? 'disc' : ''}>
+              {from + i + 1}
+            </th>
+          ))}
+          <th className="rc-tot">{label}</th>
+        </tr>
+        <tr className="rc-par">
+          <td className="rc-name">Par</td>
+          {par.slice(from, to).map((p, i) => (
+            <td key={i}>{p}</td>
+          ))}
+          <td className="rc-tot">{sum(par, from, to)}</td>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => {
+          const card = cardOf(r);
+          return (
+            <tr key={r.key}>
+              <td className="rc-name">{r.name}</td>
+              {card.slice(from, to).map((g, i) => (
+                <td key={i} className={badHoles.includes(from + i) ? 'disc' : ''}>
+                  <button className={`rc-score ${cellClass(g, par[from + i])}`} onClick={() => onHole(from + i + 1)} aria-label={`${r.name} hole ${from + i + 1}`}>
+                    {g ?? '–'}
+                  </button>
+                </td>
+              ))}
+              <td className="rc-tot">{sum(card, from, to)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+  return (
+    <section className="card round-review">
+      <h3>Your group’s scorecard</h3>
+      <p className="hint">Check every score. Tap one to go back to that hole and fix it.</p>
+      <div className="review-scroll">{half(0, front, n > 9 ? 'Out' : 'Tot')}</div>
+      {n > 9 && <div className="review-scroll">{half(front, n, 'In')}</div>}
+      <ul className="lines review-totals">
+        {rows.map((r) => {
+          const card = cardOf(r);
+          const gross = sum(card, 0, n);
+          const strokes = strokesOf(r);
+          const netTotal = gross === '' ? '' : gross - card.reduce((t, g, i) => t + (g == null ? 0 : strokes[i] ?? 0), 0);
+          const toPar = gross === '' ? null : gross - sum(par.filter((_, i) => card[i] != null), 0, n || 0);
+          return (
+            <li key={r.key}>
+              <strong>{r.name}</strong>
+              <span>
+                {gross === '' ? '–' : gross}
+                {toPar != null && <em> ({toPar === 0 ? 'E' : toPar > 0 ? `+${toPar}` : toPar})</em>}
+                {net && netTotal !== '' && <span className="muted"> · net {netTotal}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {matches.map((m, i) => (
+        <MatchCard key={i} names={m.names} status={m.status} label={MATCH_FORMATS[m.format].short} compact />
+      ))}
+      {badHoles.length > 0 && <p className="search-error">Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Fix them before submitting.</p>}
+      {missing && <p className="hint">Some holes are still blank.</p>}
+      {submitted ? (
+        <p className="share-status">Scores submitted ✓ They’re on the leaderboard.</p>
+      ) : (
+        <button className="btn btn-primary btn-xl" disabled={badHoles.length > 0} onClick={onSubmit}>
+          Submit scores
+        </button>
+      )}
+      <button className="btn btn-ghost full" onClick={onBack}>
+        ‹ Back to scoring
+      </button>
     </section>
   );
 }
