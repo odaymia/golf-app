@@ -649,6 +649,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       {activeIdx >= 0 && <div className="keypad-space" />}
       {activeIdx >= 0 && (
         <div className="keypad" role="group" aria-label="Score keypad">
+          {typed === '1' && (
+            <p className="keypad-hint" role="status">
+              10 or more? Tap 0–5 now for 10–15. A hole-in-one? Tap the next player.
+            </p>
+          )}
           <div className="keypad-keys">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
               <button key={d} onClick={() => press(d)} disabled={activeIdx < 0}>

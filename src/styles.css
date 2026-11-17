@@ -3860,3 +3860,4 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .keypad-keys button { height: 50px; }
 .keypad-actions button { height: 52px; }
 .keypad-space { height: calc(4 * 50px + 52px + env(safe-area-inset-bottom) + 12px); }
+.keypad-hint { margin: 0; padding: 8px 12px; background: #fff7e0; border-bottom: 1px solid #ecdcae; font-size: 13px; font-weight: 600; text-align: center; color: #6b5310; }

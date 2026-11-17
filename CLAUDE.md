@@ -308,7 +308,7 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   keypad fixed at the bottom (1–9, Clear, 0, ✕ to hide; Undo changes /
   Save scores) and scrolls that row above it; the
   active score box shows a cursor, a digit enters it and moves to the next
-  player (a 1 waits for 0–5 to make 10–15; the last player keeps the
+  player (a 1 waits for 0–5 to make 10–15, with a hint above the keypad; the last player keeps the
   cursor). With the keypad closed, Next hole / Review round shows. Undo changes puts the hole
   back as it was when opened; Save scores sends now and, once everyone
   has a score, goes to the next hole (last hole: the round review).
