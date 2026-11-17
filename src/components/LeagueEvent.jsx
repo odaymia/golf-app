@@ -11,6 +11,8 @@ import { Seg } from './controls.jsx';
 import { canScore, groupOf } from '../lib/league/groups.js';
 import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
 import { SideGamesBoard, SideGamesEditor } from './SideGames.jsx';
+import RyderLive from './RyderLive.jsx';
+import { discrepancies, discrepancyHoles } from '../lib/league/ryder.js';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -63,6 +65,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           reload={reload}
         />
       )}
+      {tab === 'results' && <ScoreChecks data={data} event={event} />}
       {tab === 'results' && (
         <SideGamesBoard
           event={event}
@@ -84,6 +87,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
             indexes={computed.indexes[event.id]}
             settings={settings}
             reload={reload}
+            computedStandings={computed.standings}
           />
         ) : (
           <p className="muted center">This round is final. Ask the commissioner to reopen it to change scores.</p>
@@ -208,14 +212,25 @@ function Results({ settings, result, members, holes, live, reload }) {
   );
 }
 
-function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
+function ScoreEntry({ data, event, me, result, indexes, settings, reload, computedStandings = [] }) {
   const holes = event.course.holes;
   const scored = useMemo(() => data.scores[event.id] ?? {}, [data.scores, event.id]);
   // Default group: the people in a match with you, or nobody.
   const [picked, setPicked] = useState([]);
+  const myUserId = me?.userId ?? null;
+  const entries = useMemo(() => data.entries?.[event.id] ?? [], [data.entries, event.id]);
+  // Each scorekeeper keeps their own card. It starts from what I entered
+  // before; holes I haven't entered show the official score to confirm.
   const [cards, setCards] = useState(() =>
-    Object.fromEntries(data.members.map((m) => [m.id, (scored[m.id] ?? holes.map(() => null)).slice()])),
+    Object.fromEntries(
+      data.members.map((m) => {
+        const mine = entries.find((e) => e.memberId === m.id && e.scorerId === myUserId);
+        return [m.id, holes.map((_, i) => mine?.gross?.[i] ?? null)];
+      }),
+    ),
   );
+  // The official card with my numbers on top (never wipes holes I left blank).
+  const merged = (id) => holes.map((_, i) => cards[id]?.[i] ?? scored[id]?.[i] ?? null);
   const [hole, setHole] = useState(1);
   const [status, setStatus] = useState('');
   const dirty = useRef(new Set());
@@ -228,13 +243,14 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       if (!ids.length) return;
       let allSent = true;
       for (const id of ids) {
-        const r = await saveScore(data.league.id, event.id, id, cards[id]);
+        const r = await saveScore(data.league.id, event.id, id, merged(id), cards[id]);
         if (!r.sent) allSent = false;
       }
       setStatus(allSent ? 'Saved' : 'Saved on this phone. Will send when you have signal.');
       reload({ quiet: true });
     },
-    [cards, data.league.id, event.id, reload],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- merged reads cards + scored
+    [cards, scored, data.league.id, event.id, reload],
   );
 
   useEffect(() => {
@@ -270,11 +286,24 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
         settings,
         event,
         members: data.members,
-        scores: { ...scored, ...Object.fromEntries(picked.map((id) => [id, cards[id]])) },
+        scores: { ...scored, ...Object.fromEntries(picked.map((id) => [id, merged(id)])) },
         indexes,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- merged reads cards + scored
     [settings, event, data.members, scored, picked, cards, indexes],
   );
+  // Scorekeepers who disagree, using my latest numbers for my own card.
+  const disc = useMemo(
+    () =>
+      discrepancies([
+        ...entries.filter((e) => e.scorerId !== myUserId),
+        ...Object.entries(cards)
+          .filter(([, g]) => g.some((x) => x != null))
+          .map(([memberId, gross]) => ({ memberId, scorerId: myUserId ?? 'me', gross })),
+      ]),
+    [entries, cards, myUserId],
+  );
+  const scorerName = (uid) => (uid === myUserId ? 'You' : data.members.find((m) => m.userId === uid)?.name ?? 'Someone');
   const myMatches = live.matches.filter((m) => m.sides.flat().some((id) => picked.includes(id)));
   const matchFor = (id) => result.matches.find((m) => m.sides.flat().includes(id));
   const strokesFor = (id) => (matchFor(id)?.strokes?.[id] ?? result.players[id]?.strokes ?? [])[hole - 1] ?? 0;
@@ -346,9 +375,19 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       format: m?.teamBall ? MATCH_FORMATS[m.format].short : null,
     });
   }
-  const rowScore = (row, i) => cards[row.ids[0]][i];
+  const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
+  const myScore = (row, i) => cards[row.ids[0]][i];
+  const badHoles = discrepancyHoles(disc, people.map((p) => p.id));
   return (
     <>
+      {settings.unit === 'ryder' && (
+        <RyderLive sides={settings.sides} standings={computedStandings} result={live} myIds={picked} />
+      )}
+      {badHoles.length > 0 && (
+        <button className="card disc-banner" onClick={() => setHole(badHoles[0] + 1)}>
+          ⚠ Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Tap to check.
+        </button>
+      )}
       <div className="hole-head">
         <button className="nav-btn" onClick={() => setHole(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
           ‹
@@ -367,7 +406,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
         {holes.map((_, i) => (
           <button
             key={i}
-            className={`dot ${rows.every((r) => rowScore(r, i) != null) ? 'done' : ''} ${i === hole - 1 ? 'here' : ''}`}
+            className={`dot ${rows.every((r) => rowScore(r, i) != null) ? 'done' : ''} ${i === hole - 1 ? 'here' : ''} ${badHoles.includes(i) ? 'disc' : ''}`}
             onClick={() => setHole(i + 1)}
             aria-label={`Hole ${i + 1}`}
           >
@@ -381,10 +420,13 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       <div className="score-rows">
         {rows.map((row) => {
           const s = rowScore(row, hole - 1);
+          const mineHere = myScore(row, hole - 1);
+          const toConfirm = mineHere == null && s != null; // someone else entered it
+          const conflict = disc[row.ids[0]]?.[hole - 1];
           const strokes = settings.net ? strokesFor(row.ids[0]) : 0;
           const diff = s == null ? null : s - info.par;
           return (
-            <div key={row.key} className="score-row card">
+            <div key={row.key} className={`score-row card ${conflict ? 'conflict' : ''}`}>
               <div className="score-name">
                 <strong>{row.name}</strong>
                 <span className="muted">
@@ -399,9 +441,9 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
                   −
                 </button>
                 <button
-                  className={`score-val ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'}`}
-                  onClick={() => s == null && setScore(row, info.par)}
-                  aria-label={`${row.name} score`}
+                  className={`score-val ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${toConfirm ? 'unconfirmed' : ''}`}
+                  onClick={() => (s == null ? setScore(row, info.par) : toConfirm ? setScore(row, s) : null)}
+                  aria-label={toConfirm ? `${row.name} score ${s}, tap to confirm` : `${row.name} score`}
                 >
                   {s ?? 'Par?'}
                 </button>
@@ -409,6 +451,22 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
                   +
                 </button>
               </div>
+              {conflict && (
+                <div className="conflict-note">
+                  <span>
+                    ⚠ Scores don’t match:{' '}
+                    {conflict.map((c) => `${scorerName(c.scorerId)} ${c.value}`).join(' · ')}
+                  </span>
+                  <span className="conflict-fix">
+                    {[...new Set(conflict.map((c) => c.value))].map((v) => (
+                      <button key={v} className="btn btn-small outline btn-ghost" onClick={() => setScore(row, v)}>
+                        Use {v}
+                      </button>
+                    ))}
+                  </span>
+                </div>
+              )}
+              {toConfirm && !conflict && <p className="confirm-note">Entered by another scorekeeper. Tap the score to agree.</p>}
             </div>
           );
         })}
@@ -728,6 +786,30 @@ function RoundDetails({ event, busy, onSave }) {
           Save details
         </button>
       )}
+    </section>
+  );
+}
+
+// Holes where two scorekeepers entered different scores, for everyone to see.
+function ScoreChecks({ data, event }) {
+  const disc = discrepancies(data.entries?.[event.id] ?? []);
+  const items = Object.entries(disc).flatMap(([memberId, holes]) =>
+    Object.entries(holes).map(([h, vals]) => ({ memberId, hole: Number(h) + 1, vals })),
+  );
+  if (!items.length) return null;
+  const name = (id) => data.members.find((m) => m.id === id)?.name ?? '?';
+  const scorer = (uid) => data.members.find((m) => m.userId === uid)?.name ?? 'Someone';
+  return (
+    <section className="card disc-list">
+      <h3>⚠ Scores to check</h3>
+      <ul className="lines">
+        {items.map((d) => (
+          <li key={`${d.memberId}-${d.hole}`}>
+            <strong>{name(d.memberId)}</strong>, hole {d.hole}: {d.vals.map((v) => `${scorer(v.scorerId)} has ${v.value}`).join(' · ')}
+          </li>
+        ))}
+      </ul>
+      <p className="hint">The scorekeepers fix it by entering the same score. Until then the latest one counts.</p>
     </section>
   );
 }

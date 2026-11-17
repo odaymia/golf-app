@@ -3590,3 +3590,53 @@ a:focus-visible {
 .big-group { background: #fdf6e3; border-radius: 10px; padding: 8px 10px; color: #7a5a0c; }
 .invite-email-btn { margin-top: 8px; }
 .me-row { display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; border-radius: 12px; background: #eef3ea; }
+
+/* Ryder Cup setup */
+.ryder-steps { margin-bottom: 10px; }
+.ryder-teams { display: grid; gap: 12px; }
+@media (min-width: 760px) { .ryder-teams { grid-template-columns: 1fr 1fr; } }
+.ryder-team.side-0 { border-top: 4px solid #1d4ed8; }
+.ryder-team.side-1 { border-top: 4px solid #b91c1c; }
+.team-buttons { display: flex; gap: 6px; }
+.ryder-pick .chips { margin-top: 4px; }
+.vs-label { text-align: center; margin: 4px 0; font-weight: 800; color: var(--muted); }
+.round-chips { margin-bottom: 4px; }
+.ryder-matches { margin: 0; padding-left: 22px; }
+.ryder-matches li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.ryder-match-names em { font-style: normal; color: var(--muted); }
+.ryder-match-actions { display: flex; flex: none; }
+
+/* Ryder Cup live board while scoring */
+.ryder-live { padding: 12px; }
+.ryder-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; text-align: center; }
+.ryder-score .side { display: flex; flex-direction: column; }
+.ryder-score .side span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.ryder-score .side strong { font-family: var(--serif); font-size: 34px; line-height: 1.1; }
+.ryder-score .side em { font-style: normal; font-size: 12px; color: var(--muted); }
+.ryder-score .side-0 strong, .ryder-score .side-0 span { color: #1d4ed8; }
+.ryder-score .side-1 strong, .ryder-score .side-1 span { color: #b91c1c; }
+.ryder-vs { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.ryder-live-matches { list-style: none; margin: 10px 0 0; padding: 0; }
+.ryder-live-matches li { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; padding: 6px 4px; border-top: 1px solid var(--hairline); font-size: 13px; }
+.ryder-live-matches li.mine { background: var(--green-soft); border-radius: 8px; }
+.lm-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lm-name.right { text-align: right; }
+.lm-name.lead { font-weight: 800; }
+.lm-name.lead.side-0 { color: #1d4ed8; }
+.lm-name.lead.side-1 { color: #b91c1c; }
+.lm-status { display: flex; flex-direction: column; align-items: center; min-width: 76px; }
+.lm-status b { font-size: 12px; }
+.lm-status small { font-size: 10px; color: var(--muted); }
+.lm-status.side-0 b { color: #1d4ed8; }
+.lm-status.side-1 b { color: #b91c1c; }
+
+/* Scorekeeper checks */
+.disc-banner { display: block; width: 100%; text-align: left; border: none; background: #fdf0ef; color: var(--down); font: inherit; font-weight: 700; }
+.hole-dots .dot.disc { background: var(--down); color: #fff; border-color: var(--down); }
+.score-row { flex-wrap: wrap; }
+.score-row.conflict { box-shadow: 0 0 0 2px var(--down); }
+.conflict-note { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--down); }
+.conflict-fix { display: flex; gap: 6px; }
+.score-val.unconfirmed { opacity: 0.55; border-style: dashed; }
+.confirm-note { flex-basis: 100%; margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.disc-list { border: 1px solid #f3c9c9; }

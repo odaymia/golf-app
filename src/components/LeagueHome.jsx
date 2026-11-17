@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import RyderSetup from './RyderSetup.jsx';
 import CoursePicker from './CoursePicker.jsx';
 import AddMembers from './AddMembers.jsx';
 import { myTeeTime } from '../lib/league/pairings.js';
@@ -16,10 +17,14 @@ const fmtDate = (d) =>
   d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 
 export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat, onBack }) {
-  const [tab, setTab] = useState('standings');
   const computed = useLeagueComputed(data);
   const isAdmin = me?.role === 'commissioner';
   const { league, members, events } = data;
+  // Ryder Cup: the commissioner sets it up step by step (teams, rounds, matches).
+  const ryderSetup = isAdmin && computed.settings.unit === 'ryder';
+  const [tab, setTab] = useState(() =>
+    ryderSetup && (events.length === 0 || events.some((e) => !e.matchups.length)) ? 'setup' : 'standings',
+  );
 
   async function share() {
     const text = `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
@@ -67,6 +72,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
 
       <div className="tabs wide-tabs" role="tablist">
         {[
+          ...(ryderSetup ? [['setup', 'Set up']] : []),
           ['standings', computed.settings.kind === 'tournament' ? 'Leaderboard' : 'Standings'],
           ['rounds', 'Rounds'],
           ['members', computed.settings.kind === 'tournament' ? 'Players' : 'Members'],
@@ -77,6 +83,9 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
         ))}
       </div>
 
+      {tab === 'setup' && ryderSetup && (
+        <RyderSetup data={data} computed={computed} me={me} reload={reload} onOpenEvent={onOpenEvent} />
+      )}
       {tab === 'standings' &&
         (computed.settings.kind === 'tournament' ? (
           <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} />
@@ -87,7 +96,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
         <Rounds data={data} computed={computed} isAdmin={isAdmin} meId={me?.id} reload={reload} onOpenEvent={onOpenEvent} />
       )}
       {tab === 'members' && <Members data={data} computed={computed} me={me} isAdmin={isAdmin} reload={reload} />}
-      {members.length < 2 && tab !== 'members' && (
+      {members.length < 2 && tab !== 'members' && tab !== 'setup' && (
         <p className="hint center">
           Invite players with the code above, or add them under {computed.settings.kind === 'tournament' ? 'Players' : 'Members'}.
         </p>

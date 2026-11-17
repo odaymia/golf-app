@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import RyderSetup from '../RyderSetup.jsx';
 import { describeLeague } from '../../lib/league/format.js';
 import { inviteLink } from '../../lib/leagueApi.js';
 import { useLeagueComputed } from '../useLeagueComputed.js';
@@ -22,7 +23,9 @@ const SECTIONS = [
 export default function ProConsole({ data, me, reload, onBack, onSaveFormat, onDelete }) {
   const computed = useLeagueComputed(data);
   const isAdmin = me?.role === 'commissioner';
-  const [section, setSection] = useState('overview');
+  const ryder = computed.settings.unit === 'ryder';
+  const needsSetup = ryder && (data.events.length === 0 || data.events.some((e) => !e.matchups.length));
+  const [section, setSection] = useState(isAdmin && needsSetup ? 'ryder' : 'overview');
   const [eventId, setEventId] = useState(null);
   const [copied, setCopied] = useState(false);
   const { league } = data;
@@ -47,7 +50,8 @@ export default function ProConsole({ data, me, reload, onBack, onSaveFormat, onD
     }
   }
 
-  const sections = isAdmin ? [...SECTIONS, ['format', 'Format & settings']] : SECTIONS.filter(([k]) => !['scores'].includes(k));
+  const base = isAdmin && ryder ? [['ryder', 'Ryder Cup setup'], ...SECTIONS] : SECTIONS;
+  const sections = isAdmin ? [...base, ['format', 'Format & settings']] : base.filter(([k]) => !['scores'].includes(k));
 
   return (
     <div className="pro-layout">
@@ -79,6 +83,11 @@ export default function ProConsole({ data, me, reload, onBack, onSaveFormat, onD
         {eventId ? (
           <div className="pro-event">
             <LeagueEvent data={data} eventId={eventId} me={me} reload={reload} onBack={() => setEventId(null)} />
+          </div>
+        ) : section === 'ryder' ? (
+          <div className="pro-page">
+            <h2 className="pro-h">Ryder Cup setup</h2>
+            <RyderSetup data={data} computed={computed} me={me} reload={reload} onOpenEvent={openEvent} />
           </div>
         ) : section === 'overview' ? (
           <ProOverview data={data} computed={computed} isAdmin={isAdmin} go={go} openEvent={openEvent} />

@@ -133,6 +133,8 @@ src/
       pairings.js   Pairing order (manual/random/last round/standings,
                     leaders first or last), groups that keep teams and
                     matches whole, singles/team matches, tee sheet
+      ryder.js      Ryder Cup: foursomes from matches, match checks, scorekeeper
+                    discrepancies (tested)
       sideGames.js  Side games for a league/tournament round (skins, Stableford,
                     stroke across the field) via the casual money engine
       league.test.js, pro.test.js, pairings.test.js, sideGames.test.js
@@ -166,6 +168,8 @@ supabase/saves_messages.sql  saved posts + folders, DMs (conversations, members,
                     messages, start_dm())
 supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
+supabase/ryder_scoring.sql  league_events.match_format, score_entries (each
+                    scorekeeper's own card)
 supabase/side_games.sql  league_events.side_games (bets for league/tournament rounds)
 supabase/read_receipts.sql  read_receipts setting, conversation_read_times()
 supabase/comment_replies.sql  post_comments.parent_id (one level), reply +
@@ -282,6 +286,24 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   (`flushScores`); refused cards are dropped so they can't block the queue.
 
 ## Tournaments
+
+- Ryder Cup setup (`RyderSetup`: "Set up" tab on the phone, "Ryder Cup
+  setup" in the desktop console; opens first while any round has no
+  matches): 1 Teams (Scribble members per side, move/remove, add with
+  `AddMembers` team=side), 2 Rounds (how many, a day and format per round,
+  one course for new rounds; format saved in `league_events.match_format`),
+  3 Matches (pick 2 per side for 2 vs 2 or 1 per side for singles, reorder,
+  remove). Foursomes are automatic (`foursomesForMatches`): each 2 vs 2
+  match is a foursome; singles pair up 1+2, 3+4, … and are saved as the
+  round's groups, so anyone in the foursome can score it.
+- Multiple scorekeepers: each keeps their own card in `score_entries`
+  (`saveScore(…, official, mine)`); the official `event_scores` card is my
+  numbers merged over what's there (never wipes others' holes; latest wins).
+  Holes I haven't entered show the official score faded ("tap to agree").
+  `discrepancies()` flags holes where scorekeepers differ: red hole dot,
+  banner, "Mike 3 · You 4" with Use buttons, and "Scores to check" on
+  Results. Ryder Cup score entry shows `RyderLive` (cup points, projected,
+  every match in the round, live).
 
 - Side games (league and tournament rounds, `event.sideGames`,
   supabase/side_games.sql): the commissioner turns on skins (pot buy-in or

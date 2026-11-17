@@ -74,6 +74,7 @@ const toEvent = (r) => ({
   groups: r.groups ?? [],
   teeSheet: r.tee_sheet ?? null,
   sideGames: r.side_games ?? null,
+  matchFormat: r.match_format ?? null,
   status: r.status,
   tier: r.tier ?? 'regular',
 });
@@ -132,12 +133,20 @@ export async function loadLeague(id) {
       call(supabase.from('league_events').select('*').eq('league_id', id).order('event_date')),
       call(supabase.from('event_scores').select('event_id, member_id, gross').eq('league_id', id)),
     ]);
+    // Each scorekeeper's own cards (to spot disagreements); missing table is fine.
+    const entryRows = await call(
+      supabase.from('score_entries').select('event_id, member_id, scorer_id, gross').eq('league_id', id),
+    ).catch(() => []);
     const data = {
       league: toLeague(league),
       members: members.map(toMember),
       events: events.map(toEvent),
       scores: {},
+      entries: {},
     };
+    for (const e of entryRows) {
+      (data.entries[e.event_id] ??= []).push({ memberId: e.member_id, scorerId: e.scorer_id, gross: e.gross });
+    }
     for (const s of scores) {
       data.scores[s.event_id] = data.scores[s.event_id] ?? {};
       data.scores[s.event_id][s.member_id] = s.gross;
@@ -189,14 +198,26 @@ export function addMember(leagueId, m) {
   );
 }
 
+// Put players on a team / Ryder Cup side ('' takes them off).
+export function setTeam(memberIds, team) {
+  return call(supabase.from('league_members').update({ team: team?.trim() || null }).in('id', memberIds));
+}
+
 // Add Scribble members straight to the league, linked to their accounts
 // (golfers: [{ id: userId, name, index }]). People already in are skipped.
 // Returns how many were added.
-export async function addAccounts(leagueId, golfers, members) {
+export async function addAccounts(leagueId, golfers, members, team = null) {
   const have = new Set(members.map((m) => m.userId).filter(Boolean));
   const rows = golfers
     .filter((g) => !have.has(g.id))
-    .map((g) => ({ league_id: leagueId, user_id: g.id, name: g.name.trim().slice(0, 60), handicap_index: g.index ?? null, role: 'member' }));
+    .map((g) => ({
+      league_id: leagueId,
+      user_id: g.id,
+      name: g.name.trim().slice(0, 60),
+      handicap_index: g.index ?? null,
+      role: 'member',
+      ...(team ? { team } : {}),
+    }));
   if (rows.length) await call(supabase.from('league_members').insert(rows));
   return rows.length;
 }
@@ -257,6 +278,7 @@ export function updateEvent(id, patch) {
   if ('groups' in patch) row.groups = patch.groups;
   if ('teeSheet' in patch) row.tee_sheet = patch.teeSheet;
   if ('sideGames' in patch) row.side_games = patch.sideGames;
+  if ('matchFormat' in patch) row.match_format = patch.matchFormat;
   return call(supabase.from('league_events').update(row).eq('id', id));
 }
 
@@ -283,14 +305,17 @@ function withQueued(data) {
 }
 
 // Save one member's card. Always lands in the queue first, then sends.
+// gross: the official card; mine (optional): this scorekeeper's own numbers,
+// kept separately so two scorekeepers can be compared.
 // Returns { sent: boolean }.
-export async function saveScore(leagueId, eventId, memberId, gross) {
+export async function saveScore(leagueId, eventId, memberId, gross, mine = null) {
   const q = queue();
   q[`${eventId}:${memberId}`] = {
     league_id: leagueId,
     event_id: eventId,
     member_id: memberId,
     gross,
+    ...(mine ? { mine } : {}),
     updated_at: new Date().toISOString(),
   };
   write(QUEUE, q);
@@ -310,7 +335,21 @@ export async function flushScores() {
   let sent = 0;
   for (const r of rows) {
     try {
-      await call(supabase.from('event_scores').upsert(r, { onConflict: 'event_id,member_id' }));
+      const { mine, ...official } = r;
+      await call(supabase.from('event_scores').upsert(official, { onConflict: 'event_id,member_id' }));
+      if (mine) {
+        // My own copy; quietly skipped if the table isn't set up yet.
+        await call(
+          supabase
+            .from('score_entries')
+            .upsert(
+              { event_id: r.event_id, member_id: r.member_id, league_id: r.league_id, gross: mine, updated_at: r.updated_at },
+              { onConflict: 'event_id,member_id,scorer_id' },
+            ),
+        ).catch((e) => {
+          if (e.offline) throw e;
+        });
+      }
       sent++;
     } catch (e) {
       if (e.offline) throw e;

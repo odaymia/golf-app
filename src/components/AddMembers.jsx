@@ -7,7 +7,7 @@ import Avatar from './social/Avatar.jsx';
 // Commissioner: add players who have Scribble accounts (friends first, then
 // search everyone). They join linked to their account with their shared
 // handicap index. People not on Scribble get an invite (link or email).
-export default function AddMembers({ league, members, meId, onAdded, onClose }) {
+export default function AddMembers({ league, members, meId, onAdded, onClose, team = null, title = 'Add Scribble members' }) {
   const [q, setQ] = useState('');
   const [list, setList] = useState(null);
   const [picked, setPicked] = useState([]);
@@ -37,7 +37,7 @@ export default function AddMembers({ league, members, meId, onAdded, onClose }) 
     setBusy(true);
     setError('');
     try {
-      const n = await addAccounts(league.id, picked, members);
+      const n = await addAccounts(league.id, picked, members, team);
       setPicked([]);
       onAdded(n);
     } catch (e) {
@@ -51,7 +51,7 @@ export default function AddMembers({ league, members, meId, onAdded, onClose }) 
   return (
     <section className="card add-members">
       <div className="pro-card-head">
-        <h3>Add Scribble members</h3>
+        <h3>{title}</h3>
         {onClose && (
           <button className="btn btn-ghost btn-small" onClick={onClose}>
             Done

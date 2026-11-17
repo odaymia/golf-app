@@ -1,0 +1,389 @@
+import { useState } from 'react';
+import { createEvent, setTeam, updateEvent } from '../lib/leagueApi.js';
+import { orderEvents } from '../lib/league/season.js';
+import { MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
+import { foursomesForMatches, matchProblem, sideSize } from '../lib/league/ryder.js';
+import { courseProblems } from '../lib/roundSetup.js';
+import { saveCourse } from '../lib/storage.js';
+import AddMembers from './AddMembers.jsx';
+import CoursePicker from './CoursePicker.jsx';
+import { NumberField } from './controls.jsx';
+
+const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'No date');
+const addDays = (iso, n) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+// Commissioner's Ryder Cup setup, in order: 1 Teams, 2 Rounds, 3 Matches.
+export default function RyderSetup({ data, computed, me, reload, onOpenEvent }) {
+  const sides = computed.settings.sides;
+  const events = orderEvents(data.events);
+  const players = data.members.filter((m) => m.active !== false);
+  const onTeams = sides.map((s) => players.filter((m) => m.team === s));
+  const teamsDone = onTeams.every((t) => t.length > 0);
+  const roundsDone = events.length > 0;
+  const [step, setStep] = useState(!teamsDone ? 'teams' : !roundsDone ? 'rounds' : 'matches');
+
+  const steps = [
+    ['teams', '1 Teams', teamsDone],
+    ['rounds', '2 Rounds', roundsDone],
+    ['matches', '3 Matches', roundsDone && events.every((e) => e.matchups.length > 0)],
+  ];
+
+  return (
+    <div className="ryder-setup">
+      <div className="tabs wide-tabs ryder-steps" role="tablist">
+        {steps.map(([k, label, done]) => (
+          <button key={k} role="tab" aria-selected={step === k} className={step === k ? 'on' : ''} onClick={() => setStep(k)}>
+            {done ? '✓ ' : ''}
+            {label}
+          </button>
+        ))}
+      </div>
+      {step === 'teams' && <TeamsStep data={data} sides={sides} onTeams={onTeams} players={players} me={me} reload={reload} next={() => setStep('rounds')} />}
+      {step === 'rounds' && <RoundsStep data={data} computed={computed} events={events} reload={reload} next={() => setStep('matches')} />}
+      {step === 'matches' && <MatchesStep data={data} sides={sides} events={events} reload={reload} onOpenEvent={onOpenEvent} />}
+    </div>
+  );
+}
+
+function TeamsStep({ data, sides, onTeams, players, me, reload, next }) {
+  const [adding, setAdding] = useState(null); // side name
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const loose = players.filter((m) => !sides.includes(m.team));
+
+  async function move(ids, team) {
+    setBusy(true);
+    setError('');
+    try {
+      await setTeam(ids, team);
+      await reload();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <p className="hint">Pick who plays for each team. Only Scribble members can play.</p>
+      <div className="ryder-teams">
+        {sides.map((side, i) => (
+          <section key={side} className={`card ryder-team side-${i}`}>
+            <div className="pro-card-head">
+              <h3>
+                {side} <span className="muted">({onTeams[i].length})</span>
+              </h3>
+            </div>
+            {onTeams[i].length === 0 && <p className="muted small">No players yet.</p>}
+            <ul className="lines">
+              {onTeams[i].map((m) => (
+                <li key={m.id} className="match-line">
+                  <span>{m.name}</span>
+                  <span>
+                    <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => move([m.id], sides[1 - i])} aria-label={`Move ${m.name} to ${sides[1 - i]}`}>
+                      ⇄
+                    </button>
+                    <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => move([m.id], '')} aria-label={`Take ${m.name} off ${side}`}>
+                      ✕
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {adding === side ? (
+              <AddMembers
+                league={data.league}
+                members={data.members}
+                meId={me?.userId}
+                team={side}
+                title={`Add to ${side}`}
+                onClose={() => setAdding(null)}
+                onAdded={() => reload()}
+              />
+            ) : (
+              <button className="btn btn-ghost outline full" onClick={() => setAdding(side)}>
+                + Add players to {side}
+              </button>
+            )}
+          </section>
+        ))}
+      </div>
+      {loose.length > 0 && (
+        <section className="card">
+          <h3>Not on a team yet</h3>
+          <ul className="lines">
+            {loose.map((m) => (
+              <li key={m.id} className="match-line">
+                <span>{m.name}</span>
+                <span className="team-buttons">
+                  {sides.map((s) => (
+                    <button key={s} className="btn btn-ghost btn-small outline" disabled={busy} onClick={() => move([m.id], s)}>
+                      {s}
+                    </button>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {error && <div className="card error-box">{error}</div>}
+      <button className="btn btn-primary btn-xl" disabled={!onTeams.every((t) => t.length)} onClick={next}>
+        Next: rounds
+      </button>
+    </>
+  );
+}
+
+function RoundsStep({ data, computed, events, reload, next }) {
+  const today = new Date().toLocaleDateString('en-CA');
+  const [count, setCount] = useState(Math.max(events.length, computed.settings.rounds ?? 1, 1));
+  const [rows, setRows] = useState(() =>
+    Array.from({ length: 10 }, (_, i) => {
+      const e = events[i];
+      return e
+        ? { id: e.id, date: e.date ?? today, format: e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball'), matches: e.matchups.length }
+        : { id: null, date: addDays(events.at(-1)?.date ?? today, events.length ? i - events.length + 1 : i), format: i === Math.max(2, count) - 1 ? 'singles' : 'fourball', matches: 0 };
+    }),
+  );
+  const [pick, setPick] = useState({ course: null, teeIdx: 0, notes: [] });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const needCourse = rows.slice(0, count).some((r) => !r.id);
+  const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  async function save() {
+    setError('');
+    let course = null;
+    let tee = null;
+    if (needCourse) {
+      if (!pick.course) return setError('Pick the course for the new rounds.');
+      const raw = pick.course.tees[pick.teeIdx] ?? pick.course.tees[0];
+      tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
+      const problems = courseProblems(pick.course, tee);
+      if (problems.length) return setError(problems[0]);
+      course = pick.course;
+    }
+    for (const [i, r] of rows.slice(0, count).entries()) {
+      const e = events.find((x) => x.id === r.id);
+      if (e?.matchups.length && sideSize(matchFormat(e.matchups[0])) !== sideSize(r.format))
+        return setError(`Round ${i + 1} already has ${sideSize(matchFormat(e.matchups[0])) === 1 ? 'singles' : '2 vs 2'} matches. Remove them under Matches to change it.`);
+    }
+    setBusy(true);
+    try {
+      if (course) await saveCourse({ ...course, tees: course.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
+      for (const [i, r] of rows.slice(0, count).entries()) {
+        const e = events.find((x) => x.id === r.id);
+        if (e) {
+          const patch = {};
+          if ((e.date ?? '') !== r.date) patch.date = r.date;
+          if ((e.matchFormat ?? '') !== r.format) patch.matchFormat = r.format;
+          if (e.matchups.length && matchFormat(e.matchups[0]) !== r.format) patch.matchups = e.matchups.map((mu) => ({ ...mu, format: r.format }));
+          if (Object.keys(patch).length) await updateEvent(e.id, patch);
+        } else {
+          const ev = await createEvent(data.league.id, {
+            name: `Round ${i + 1}`,
+            date: r.date,
+            course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
+          });
+          await updateEvent(ev.id, { matchFormat: r.format });
+        }
+      }
+      await reload();
+      next();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <section className="card">
+        <div className="count-row">
+          <div>
+            <strong>How many rounds?</strong>
+            <span className="muted">One round per day or session</span>
+          </div>
+          <div className="stepper">
+            <button type="button" className="step" onClick={() => setCount((c) => Math.max(1, c - 1))} aria-label="Fewer rounds">
+              −
+            </button>
+            <NumberField className="count-input" aria-label="Number of rounds" value={count} min={1} max={10} onChange={setCount} />
+            <button type="button" className="step" onClick={() => setCount((c) => Math.min(10, c + 1))} aria-label="More rounds">
+              +
+            </button>
+          </div>
+        </div>
+        {count < events.length && <p className="hint">There are {events.length} rounds already. Delete extra rounds from the round’s Manage page.</p>}
+      </section>
+      {rows.slice(0, count).map((r, i) => (
+        <section key={i} className="card ryder-round">
+          <h3>
+            Round {i + 1}
+            {r.id && r.matches > 0 && <span className="muted small"> · {r.matches} matches set</span>}
+          </h3>
+          <div className="row2">
+            <label className="field">
+              <span>Day</span>
+              <input type="date" value={r.date} onChange={(e) => setRow(i, { date: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Format</span>
+              <select value={r.format} onChange={(e) => setRow(i, { format: e.target.value })}>
+                {Object.entries(MATCH_FORMATS).map(([k, f]) => (
+                  <option key={k} value={k}>
+                    {f.size === 1 ? 'Singles · 1 vs 1' : `${f.short} · 2 vs 2`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="muted small">{fmtDate(r.date)}</p>
+        </section>
+      ))}
+      {needCourse && (
+        <section className="card">
+          <h3>Course for the new rounds</h3>
+          <CoursePicker course={pick.course} teeIdx={pick.teeIdx} notes={pick.notes} onChange={setPick} />
+        </section>
+      )}
+      {error && <div className="card error-box">{error}</div>}
+      <button className="btn btn-primary btn-xl" disabled={busy} onClick={save}>
+        {busy ? 'Saving…' : 'Save rounds · Next: matches'}
+      </button>
+    </>
+  );
+}
+
+function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
+  const [eventId, setEventId] = useState(events.find((e) => !e.matchups.length)?.id ?? events[0]?.id);
+  const event = events.find((e) => e.id === eventId);
+  const [a, setA] = useState([]);
+  const [b, setB] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!event) return <p className="muted center">Add rounds first.</p>;
+
+  const format = event.matchFormat ?? (event.matchups[0] ? matchFormat(event.matchups[0]) : 'fourball');
+  const n = sideSize(format);
+  const name = (id) => data.members.find((m) => m.id === id)?.name ?? '?';
+  const teamOf = (id) => data.members.find((m) => m.id === id)?.team;
+  const used = new Set(event.matchups.flatMap((mu) => mu.sides.flat()));
+  const team = (side) => data.members.filter((m) => m.active !== false && m.team === side && !used.has(m.id));
+  const groups = foursomesForMatches(event.matchups);
+  const foursomeOf = (mu) => groups.findIndex((g) => mu.sides.flat().every((id) => g.includes(id))) + 1;
+
+  async function saveMatches(matchups) {
+    setBusy(true);
+    setError('');
+    try {
+      await updateEvent(event.id, { matchups, groups: foursomesForMatches(matchups), matchFormat: format });
+      await reload();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addMatch() {
+    const problem = matchProblem({ a, b, format, sides, teamOf, used });
+    if (problem) return setError(problem);
+    await saveMatches([...event.matchups, { sides: [a, b], format }]);
+    setA([]);
+    setB([]);
+  }
+
+  const moveMatch = (i, d) => {
+    const list = [...event.matchups];
+    const [m] = list.splice(i, 1);
+    list.splice(i + d, 0, m);
+    saveMatches(list);
+  };
+
+  const pickList = (side, sel, setSel) => (
+    <div className="ryder-pick">
+      <p className="ps-h">{side}</p>
+      <div className="chips">
+        {team(side).map((m) => (
+          <button
+            key={m.id}
+            className={`chip ${sel.includes(m.id) ? 'on' : ''}`}
+            onClick={() => setSel((s) => (s.includes(m.id) ? s.filter((x) => x !== m.id) : s.length < n ? [...s, m.id] : n === 1 ? [m.id] : s))}
+          >
+            {m.name}
+          </button>
+        ))}
+        {team(side).length === 0 && <span className="muted small">Everyone has a match.</span>}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="chips round-chips">
+        {events.map((e, i) => (
+          <button key={e.id} className={`chip ${e.id === eventId ? 'on' : ''}`} onClick={() => (setEventId(e.id), setA([]), setB([]), setError(''))}>
+            Round {i + 1}
+            {e.matchups.length ? ` · ${e.matchups.length}` : ''}
+          </button>
+        ))}
+      </div>
+      <section className="card">
+        <h3>
+          {event.name} · {MATCH_FORMATS[format].short}
+        </h3>
+        <p className="hint">
+          {n === 2
+            ? `Pick 2 players from each team for each match. Each match plays as its own foursome.`
+            : `Set the singles matches one at a time. Matches 1 and 2 play together as a foursome, then 3 and 4, and so on.`}
+        </p>
+        {pickList(sides[0], a, setA)}
+        <p className="vs-label">vs</p>
+        {pickList(sides[1], b, setB)}
+        <button className="btn btn-primary full" disabled={busy || a.length !== n || b.length !== n} onClick={addMatch}>
+          Add match {event.matchups.length + 1}
+        </button>
+        {error && <p className="search-error">{error}</p>}
+      </section>
+      <section className="card">
+        <h3>Matches</h3>
+        {event.matchups.length === 0 && <p className="muted">No matches yet.</p>}
+        <ol className="ryder-matches">
+          {event.matchups.map((mu, i) => (
+            <li key={i}>
+              <span className="ryder-match-names">
+                <strong>{mu.sides[0].map(name).join(' & ')}</strong> <em>vs</em> <strong>{mu.sides[1].map(name).join(' & ')}</strong>
+                <span className="muted small"> · Foursome {foursomeOf(mu)}</span>
+              </span>
+              <span className="ryder-match-actions">
+                <button className="btn btn-ghost btn-small" disabled={busy || i === 0} onClick={() => moveMatch(i, -1)} aria-label="Move up">
+                  ↑
+                </button>
+                <button className="btn btn-ghost btn-small" disabled={busy || i === event.matchups.length - 1} onClick={() => moveMatch(i, 1)} aria-label="Move down">
+                  ↓
+                </button>
+                <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => saveMatches(event.matchups.filter((_, j) => j !== i))} aria-label="Remove match">
+                  ✕
+                </button>
+              </span>
+            </li>
+          ))}
+        </ol>
+        {event.matchups.length > 0 && (
+          <button className="btn btn-ghost outline full" onClick={() => onOpenEvent(event.id)}>
+            Tee times, side games and more ›
+          </button>
+        )}
+      </section>
+    </>
+  );
+}
+
