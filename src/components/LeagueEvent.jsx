@@ -215,8 +215,13 @@ function Results({ settings, result, members, holes, live, reload }) {
 function ScoreEntry({ data, event, me, result, indexes, settings, reload, computedStandings = [] }) {
   const holes = event.course.holes;
   const scored = useMemo(() => data.scores[event.id] ?? {}, [data.scores, event.id]);
-  // Default group: the people in a match with you, or nobody.
-  const [picked, setPicked] = useState([]);
+  // Open straight on my foursome's card (players and a playing commissioner).
+  // Not in a group yet: show the picker.
+  const [picked, setPicked] = useState(() => {
+    if (!me) return [];
+    const mine = groupOf(event, me.id);
+    return mine.length > 1 ? mine : [];
+  });
   const myUserId = me?.userId ?? null;
   const entries = useMemo(() => data.entries?.[event.id] ?? [], [data.entries, event.id]);
   // Each scorekeeper keeps their own card. It starts from what I entered
@@ -231,7 +236,12 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   );
   // The official card with my numbers on top (never wipes holes I left blank).
   const merged = (id) => holes.map((_, i) => cards[id]?.[i] ?? scored[id]?.[i] ?? null);
-  const [hole, setHole] = useState(1);
+  // Start on the first hole my group hasn't finished.
+  const [hole, setHole] = useState(() => {
+    if (!picked.length) return 1;
+    const i = holes.findIndex((_, h) => picked.some((id) => scored[id]?.[h] == null));
+    return i < 0 ? holes.length : i + 1;
+  });
   const [status, setStatus] = useState('');
   const dirty = useRef(new Set());
   const timer = useRef(null);

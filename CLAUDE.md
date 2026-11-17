@@ -290,12 +290,16 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Ryder Cup setup (`RyderSetup`: "Set up" tab on the phone, "Ryder Cup
   setup" in the desktop console; opens first while any round has no
   matches): 1 Teams (Scribble members per side, move/remove, add with
-  `AddMembers` team=side), 2 Rounds (how many, a day and format per round,
-  one course for new rounds; format saved in `league_events.match_format`),
+  `AddMembers` team=side), 2 Rounds (how many, and a day, format and course
+  per round; picking a course fills later new rounds; a round's course can
+  change until scores are in; format saved in `league_events.match_format`),
   3 Matches (pick 2 per side for 2 vs 2 or 1 per side for singles, reorder,
   remove). Foursomes are automatic (`foursomesForMatches`): each 2 vs 2
   match is a foursome; singles pair up 1+2, 3+4, … and are saved as the
   round's groups, so anyone in the foursome can score it.
+- Enter scores opens straight on your own foursome's card (at the first
+  hole the group hasn't finished); Change group shows the picker
+  (commissioners can score any group).
 - Multiple scorekeepers: each keeps their own card in `score_entries`
   (`saveScore(…, official, mine)`); the official `event_scores` card is my
   numbers merged over what's there (never wipes others' holes; latest wins).

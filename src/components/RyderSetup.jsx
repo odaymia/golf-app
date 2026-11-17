@@ -140,57 +140,91 @@ function TeamsStep({ data, sides, onTeams, players, me, reload, next }) {
   );
 }
 
+// A round's course as saved on the round (name, holes, chosen tee).
+const snapshot = (course, teeIdx) => {
+  const raw = course.tees[teeIdx] ?? course.tees[0];
+  return { name: course.name, holes: course.holes, tee: { name: raw.name, rating: Number(raw.rating), slope: Number(raw.slope) } };
+};
+
 function RoundsStep({ data, computed, events, reload, next }) {
   const today = new Date().toLocaleDateString('en-CA');
   const [count, setCount] = useState(Math.max(events.length, computed.settings.rounds ?? 1, 1));
+  // Each round: its day, format and course. Existing rounds keep their course
+  // unless you change it (only before any scores are in).
   const [rows, setRows] = useState(() =>
     Array.from({ length: 10 }, (_, i) => {
       const e = events[i];
+      const lastFormat = i === Math.max(2, count) - 1 ? 'singles' : 'fourball';
       return e
-        ? { id: e.id, date: e.date ?? today, format: e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball'), matches: e.matchups.length }
-        : { id: null, date: addDays(events.at(-1)?.date ?? today, events.length ? i - events.length + 1 : i), format: i === Math.max(2, count) - 1 ? 'singles' : 'fourball', matches: 0 };
+        ? {
+            id: e.id,
+            date: e.date ?? today,
+            format: e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball'),
+            matches: e.matchups.length,
+            scored: Object.keys(data.scores[e.id] ?? {}).length > 0,
+            saved: e.course,
+            pick: null,
+            changing: false,
+          }
+        : {
+            id: null,
+            date: addDays(events.at(-1)?.date ?? today, events.length ? i - events.length + 1 : i),
+            format: lastFormat,
+            matches: 0,
+            scored: false,
+            saved: null,
+            pick: null,
+            changing: true,
+          };
     }),
   );
-  const [pick, setPick] = useState({ course: null, teeIdx: 0, notes: [] });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const needCourse = rows.slice(0, count).some((r) => !r.id);
   const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  // Picking a course for a round also fills the same course into later new
+  // rounds that don't have one yet (most events stay at one course).
+  function pickCourse(i, pick) {
+    setRows((rs) =>
+      rs.map((r, j) => {
+        if (j === i) return { ...r, pick };
+        if (j > i && j < count && !r.id && !r.pick && pick.course) return { ...r, pick };
+        return r;
+      }),
+    );
+    setError('');
+  }
 
   async function save() {
     setError('');
-    let course = null;
-    let tee = null;
-    if (needCourse) {
-      if (!pick.course) return setError('Pick the course for the new rounds.');
-      const raw = pick.course.tees[pick.teeIdx] ?? pick.course.tees[0];
-      tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
-      const problems = courseProblems(pick.course, tee);
-      if (problems.length) return setError(problems[0]);
-      course = pick.course;
-    }
-    for (const [i, r] of rows.slice(0, count).entries()) {
+    const list = rows.slice(0, count);
+    for (const [i, r] of list.entries()) {
+      if (!r.id && !r.pick?.course) return setError(`Pick a course for Round ${i + 1}.`);
+      if (r.pick?.course) {
+        const problems = courseProblems(r.pick.course, snapshot(r.pick.course, r.pick.teeIdx).tee);
+        if (problems.length) return setError(`Round ${i + 1}: ${problems[0]}`);
+      }
       const e = events.find((x) => x.id === r.id);
       if (e?.matchups.length && sideSize(matchFormat(e.matchups[0])) !== sideSize(r.format))
         return setError(`Round ${i + 1} already has ${sideSize(matchFormat(e.matchups[0])) === 1 ? 'singles' : '2 vs 2'} matches. Remove them under Matches to change it.`);
     }
     setBusy(true);
     try {
-      if (course) await saveCourse({ ...course, tees: course.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
-      for (const [i, r] of rows.slice(0, count).entries()) {
+      for (const [i, r] of list.entries()) {
+        if (r.pick?.course) {
+          const c = r.pick.course;
+          await saveCourse({ ...c, tees: c.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
+        }
         const e = events.find((x) => x.id === r.id);
         if (e) {
           const patch = {};
           if ((e.date ?? '') !== r.date) patch.date = r.date;
           if ((e.matchFormat ?? '') !== r.format) patch.matchFormat = r.format;
           if (e.matchups.length && matchFormat(e.matchups[0]) !== r.format) patch.matchups = e.matchups.map((mu) => ({ ...mu, format: r.format }));
+          if (r.pick?.course && !r.scored) patch.course = snapshot(r.pick.course, r.pick.teeIdx);
           if (Object.keys(patch).length) await updateEvent(e.id, patch);
         } else {
-          const ev = await createEvent(data.league.id, {
-            name: `Round ${i + 1}`,
-            date: r.date,
-            course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
-          });
+          const ev = await createEvent(data.league.id, { name: `Round ${i + 1}`, date: r.date, course: snapshot(r.pick.course, r.pick.teeIdx) });
           await updateEvent(ev.id, { matchFormat: r.format });
         }
       }
@@ -209,7 +243,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
         <div className="count-row">
           <div>
             <strong>How many rounds?</strong>
-            <span className="muted">One round per day or session</span>
+            <span className="muted">Each round has its own day, format and course</span>
           </div>
           <div className="stepper">
             <button type="button" className="step" onClick={() => setCount((c) => Math.max(1, c - 1))} aria-label="Fewer rounds">
@@ -246,14 +280,40 @@ function RoundsStep({ data, computed, events, reload, next }) {
             </label>
           </div>
           <p className="muted small">{fmtDate(r.date)}</p>
+          <div className="field">
+            <span>Course</span>
+          </div>
+          {r.saved && !r.changing ? (
+            <p className="course-picked">
+              <span>
+                <strong>{r.saved.name}</strong>
+                <span className="muted"> · {r.saved.tee?.name} {r.saved.tee?.rating}/{r.saved.tee?.slope}</span>
+              </span>
+              {r.scored ? (
+                <span className="muted small">scores in</span>
+              ) : (
+                <button className="link small-link" onClick={() => setRow(i, { changing: true })}>
+                  Change
+                </button>
+              )}
+            </p>
+          ) : (
+            <>
+              <CoursePicker
+                course={r.pick?.course ?? null}
+                teeIdx={r.pick?.teeIdx ?? 0}
+                notes={r.pick?.notes ?? []}
+                onChange={(pick) => pickCourse(i, pick)}
+              />
+              {r.saved && (
+                <button className="link small-link" onClick={() => setRow(i, { changing: false, pick: null })}>
+                  Keep {r.saved.name}
+                </button>
+              )}
+            </>
+          )}
         </section>
       ))}
-      {needCourse && (
-        <section className="card">
-          <h3>Course for the new rounds</h3>
-          <CoursePicker course={pick.course} teeIdx={pick.teeIdx} notes={pick.notes} onChange={setPick} />
-        </section>
-      )}
       {error && <div className="card error-box">{error}</div>}
       <button className="btn btn-primary btn-xl" disabled={busy} onClick={save}>
         {busy ? 'Saving…' : 'Save rounds · Next: matches'}
