@@ -474,6 +474,9 @@ docs/instructors.md.
   courses keep the edit boxes open. Imported tees carry `yards`.
   No separate Course name box: a course not in the database is added from
   the search box ("+ Use “…” as a new course", CourseSearch `onCustom`).
+  League/tournament rounds (Add round on the phone, Schedule builder on
+  desktop) use the same picker via `CoursePicker` (recents on tap, close
+  matches, new course, tees dropdown).
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).

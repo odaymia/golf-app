@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createEvent } from '../../lib/leagueApi.js';
 import { orderEvents } from '../../lib/league/season.js';
 import { seasonDates } from '../../lib/league/pro.js';
 import { normalizeTeeSheet, teeGroups, formatTime } from '../../lib/league/pairings.js';
 import { MATCH_FORMATS, matchFormat } from '../../lib/league/event.js';
 import { courseProblems } from '../../lib/roundSetup.js';
-import { listCourses, saveCourse } from '../../lib/storage.js';
-import CourseSearch from '../CourseSearch.jsx';
+import { saveCourse } from '../../lib/storage.js';
+import CoursePicker from '../CoursePicker.jsx';
 import { Seg } from '../controls.jsx';
 
 const fmtDate = (d) =>
@@ -116,32 +116,23 @@ function ScheduleBuilder({ leagueId, count, label, usesTiers, defaultRounds, onD
   const [every, setEvery] = useState(7);
   const [prefix, setPrefix] = useState(label);
   const [tier, setTier] = useState('regular');
-  const [courses, setCourses] = useState([]);
-  const [course, setCourse] = useState(null);
-  const [teeIdx, setTeeIdx] = useState(0);
+  const [pick, setPick] = useState({ course: null, teeIdx: 0, notes: [] });
+  const { course, teeIdx } = pick;
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    listCourses()
-      .then((list) => {
-        setCourses(list);
-        if (list[0]) setCourse(list[0]);
-      })
-      .catch(() => {});
-  }, []);
 
   const dates = seasonDates(start, Math.min(52, Math.max(1, Number(rounds) || 1)), Number(every) || 7);
 
   async function create() {
-    if (!course) return setError('Pick a course.');
-    const tee = course.tees[teeIdx] ?? course.tees[0];
+    if (!course) return setError('Pick a course: search for it, or type its name and add it as a new course.');
+    const raw = course.tees[teeIdx] ?? course.tees[0];
+    const tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
     const problems = courseProblems(course, tee);
     if (problems.length) return setError(problems[0]);
     setError('');
     setProgress(0);
     try {
-      await saveCourse(course).catch(() => {});
+      await saveCourse({ ...course, tees: course.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
       for (let i = 0; i < dates.length; i++) {
         await createEvent(leagueId, {
           name: `${prefix.trim() || label} ${count + i + 1}`,
@@ -195,32 +186,15 @@ function ScheduleBuilder({ leagueId, count, label, usesTiers, defaultRounds, onD
         />
       )}
       <div className="pro-course-pick">
-        <CourseSearch
-          onPick={({ course: c }) => {
-            const saved = courses.find((x) => x.id === c.id);
-            setCourse(saved ?? c);
-            setTeeIdx(0);
+        <CoursePicker
+          course={course}
+          teeIdx={teeIdx}
+          notes={pick.notes}
+          onChange={(next) => {
+            setPick(next);
+            setError('');
           }}
         />
-        {courses.length > 0 && (
-          <div className="chips">
-            {courses.slice(0, 8).map((c) => (
-              <button key={c.id} className={`chip ${course?.id === c.id ? 'on' : ''}`} onClick={() => (setCourse(c), setTeeIdx(0))}>
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
-        {course && (
-          <div className="chips">
-            <strong className="pro-course-name">{course.name}</strong>
-            {course.tees.map((t, i) => (
-              <button key={i} className={`chip ${i === teeIdx ? 'on' : ''}`} onClick={() => setTeeIdx(i)}>
-                {t.name} {t.rating}/{t.slope}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
       <p className="hint">
         Creates {dates.length} round{dates.length === 1 ? '' : 's'}: {dates.slice(0, 4).map(fmtDate).join(', ')}

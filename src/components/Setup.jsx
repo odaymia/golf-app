@@ -11,6 +11,7 @@ import {
   parseIndex,
   teamOptions,
   usesTeams,
+  teeLabel,
   gameLimitText,
   MAX_PLAYERS,
 } from '../lib/roundSetup.js';
@@ -20,10 +21,6 @@ import { NumberField, Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
 import PlayerSearch from './PlayerSearch.jsx';
 import { listRecentGolfers, rememberGolfers } from '../lib/recentGolfers.js';
-
-// "Blue · 6,850 yds · 72.4/131" for the tee dropdown.
-const teeLabel = (t, i) =>
-  [t.name || `Tee ${i + 1}`, t.yards ? `${Number(t.yards).toLocaleString()} yds` : null, `${t.rating}/${t.slope}`].filter(Boolean).join(' · ');
 
 const newPlayer = (from) => ({
   id: makeId(),

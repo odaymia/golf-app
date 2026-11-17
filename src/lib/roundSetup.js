@@ -11,6 +11,10 @@ export function makeId() {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// "Blue · 6,850 yds · 72.4/131" for tee dropdowns.
+export const teeLabel = (t, i = 0) =>
+  [t.name || `Tee ${i + 1}`, t.yards ? `${Number(t.yards).toLocaleString()} yds` : null, `${t.rating}/${t.slope}`].filter(Boolean).join(' · ');
+
 export function blankCourse() {
   return {
     id: makeId(),

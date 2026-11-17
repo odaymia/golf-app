@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import CoursePicker from './CoursePicker.jsx';
 import AddMembers from './AddMembers.jsx';
 import { myTeeTime } from '../lib/league/pairings.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { addMember, createEvent, inviteLink, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
 import { looksLikeEmail } from '../lib/account.js';
-import { listCourses, saveCourse } from '../lib/storage.js';
+import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
-import CourseSearch from './CourseSearch.jsx';
 import { Seg } from './controls.jsx';
 import TournamentBoard from './TournamentBoard.jsx';
 
@@ -218,32 +218,22 @@ function Rounds({ data, computed, isAdmin, meId, reload, onOpenEvent }) {
 function AddRound({ leagueId, usesTiers, count, label, onDone }) {
   const [name, setName] = useState(`${label} ${count + 1}`);
   const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA')); // local YYYY-MM-DD
-  const [courses, setCourses] = useState([]);
-  const [course, setCourse] = useState(null);
-  const [teeIdx, setTeeIdx] = useState(0);
+  const [pick, setPick] = useState({ course: null, teeIdx: 0, notes: [] });
   const [tier, setTier] = useState('regular');
-  const [notes, setNotes] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    listCourses()
-      .then((list) => {
-        setCourses(list);
-        if (list[0]) setCourse(list[0]);
-      })
-      .catch(() => {});
-  }, []);
-
   async function save() {
-    if (!course) return setError('Pick a course.');
-    const tee = course.tees[teeIdx] ?? course.tees[0];
+    const { course, teeIdx } = pick;
+    if (!course) return setError('Pick a course: search for it, or type its name and add it as a new course.');
+    const raw = course.tees[teeIdx] ?? course.tees[0];
+    const tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
     const problems = courseProblems(course, tee);
     if (problems.length) return setError(`${problems[0]} Fix it in a casual round's course editor first.`);
     setBusy(true);
     setError('');
     try {
-      await saveCourse(course).catch(() => {});
+      await saveCourse({ ...course, tees: course.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
       const ev = await createEvent(leagueId, {
         name: name.trim() || `${label} ${count + 1}`,
         date,
@@ -280,52 +270,15 @@ function AddRound({ leagueId, usesTiers, count, label, onDone }) {
           onChange={setTier}
         />
       )}
-      <CourseSearch
-        onPick={({ course: c, warnings }) => {
-          const saved = courses.find((x) => x.id === c.id);
-          setCourse(saved ?? c);
-          setTeeIdx(0);
-          setNotes(saved ? [] : warnings);
+      <CoursePicker
+        course={pick.course}
+        teeIdx={pick.teeIdx}
+        notes={pick.notes}
+        onChange={(next) => {
+          setPick(next);
+          setError('');
         }}
       />
-      {courses.length > 0 && (
-        <div className="chips">
-          {courses.map((c) => (
-            <button
-              key={c.id}
-              className={`chip ${course?.id === c.id ? 'on' : ''}`}
-              onClick={() => {
-                setCourse(c);
-                setTeeIdx(0);
-                setNotes([]);
-              }}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {course && (
-        <>
-          <p>
-            <strong>{course.name}</strong> <span className="muted">{course.place}</span>
-          </p>
-          {notes.length > 0 && (
-            <div className="warn-box course-notes">
-              {notes.map((n) => (
-                <p key={n}>{n}</p>
-              ))}
-            </div>
-          )}
-          <div className="chips">
-            {course.tees.map((t, i) => (
-              <button key={i} className={`chip ${i === teeIdx ? 'on' : ''}`} onClick={() => setTeeIdx(i)}>
-                {t.name} {t.rating}/{t.slope}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
       {error && <p className="search-error">{error}</p>}
       <div className="row2">
         <button className="btn btn-ghost" onClick={() => onDone(null)}>
