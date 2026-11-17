@@ -1344,14 +1344,22 @@ select {
   text-align: right;
 }
 
+.match-name.side-a {
+  color: #1d4ed8;
+}
+
+.match-name.side-b {
+  color: #dc2626;
+}
+
 .match-name.leading.side-a {
-  border-color: var(--green);
-  background: var(--green-soft);
+  border-color: #1d4ed8;
+  background: #eef2fd;
 }
 
 .match-name.leading.side-b {
-  border-color: #b8466f;
-  background: #f6e1ea;
+  border-color: #dc2626;
+  background: #fdf0f0;
 }
 
 .match-status {
@@ -1368,11 +1376,11 @@ select {
 }
 
 .match-status.side-a strong {
-  color: var(--green);
+  color: #1d4ed8;
 }
 
 .match-status.side-b strong {
-  color: #b8466f;
+  color: #dc2626;
 }
 
 .match-status span {
@@ -1404,19 +1412,19 @@ select {
 }
 
 .mh.a {
-  background: var(--green);
-  border-color: var(--green);
+  background: #1d4ed8;
+  border-color: #1d4ed8;
   color: #fff;
 }
 
 .mh.b {
-  background: #b8466f;
-  border-color: #b8466f;
+  background: #dc2626;
+  border-color: #dc2626;
   color: #fff;
 }
 
 .mh.halved {
-  background: #ece5d2;
+  background: #d1d5db;
 }
 
 .mh.after {
@@ -1468,11 +1476,11 @@ select {
 }
 
 .side-a-text {
-  color: var(--green);
+  color: #1d4ed8;
 }
 
 .side-b-text {
-  color: #b8466f;
+  color: #dc2626;
 }
 
 .cup-vs {
@@ -1675,52 +1683,6 @@ tr.clickable {
 
 .sheet-head h2 {
   margin: 0;
-}
-
-/* Match scorecard */
-.match-sc td.after {
-  opacity: 0.35;
-}
-
-.match-sc tr.team td,
-.match-sc tr.team-ball td {
-  font-weight: 800;
-  background: #f7f2e4;
-}
-
-.match-sc tr.team .sc-name {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.match-sc tr.side-a .sc-name {
-  border-left: 4px solid var(--green);
-}
-
-.match-sc tr.side-b .sc-name {
-  border-left: 4px solid #b8466f;
-}
-
-.match-sc .status-row td {
-  font-weight: 800;
-  font-size: 12px;
-  background: #fff;
-}
-
-.match-sc .status-row .lead-a {
-  background: var(--green);
-  color: #fff;
-}
-
-.match-sc .status-row .lead-b {
-  background: #b8466f;
-  color: #fff;
-}
-
-.match-sc .status-row .as {
-  background: #ece5d2;
 }
 
 .match-card.tappable {
