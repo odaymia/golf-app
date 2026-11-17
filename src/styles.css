@@ -3771,3 +3771,74 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .pc-s.double { border-color: var(--bogey); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--bogey); color: var(--bogey); }
 .pc-s i { position: absolute; top: -5px; right: -5px; font-style: normal; font-size: 9px; letter-spacing: -1px; color: var(--text); }
 .pc-pts td { font-weight: 700; color: var(--green-deep); }
+
+/* Ryder Cup results: team points + match board (Golf Genius style) */
+.tp { padding: 12px 0 6px; }
+.tp-title { display: block; padding: 0 14px 8px; font-family: var(--serif); font-size: 18px; }
+.tp-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tp-table th { padding: 7px 8px; background: #33373d; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+.tp-table th.left { text-align: left; padding-left: 14px; }
+.tp-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--hairline); font-weight: 600; }
+.tp-team { text-align: left !important; padding-left: 14px !important; font-weight: 800 !important; font-size: 16px; }
+.tp-team i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.tp-table tr.side-0 .tp-team { color: #1d4ed8; }
+.tp-table tr.side-1 .tp-team { color: #dc2626; }
+.tp-table tr.side-0 i { background: #1d4ed8; }
+.tp-table tr.side-1 i { background: #dc2626; }
+.tp-total { font-family: var(--serif); font-size: 24px; font-weight: 800 !important; }
+.tp-proj { color: var(--muted); font-weight: 600; }
+
+.mb { padding: 12px 0 8px; overflow: hidden; }
+.mb-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 14px 10px; }
+.mb-title strong { font-family: var(--serif); font-size: 18px; }
+.mb-title span { font-size: 12px; color: var(--muted); text-align: right; }
+.mb-grid { display: grid; grid-template-columns: 34px minmax(0, 1fr) 66px minmax(0, 1fr) 34px; align-items: stretch; }
+.mb-head, .mb-foot { background: #33373d; color: #fff; font-size: 12px; font-weight: 800; }
+.mb-head > span, .mb-foot > span { padding: 9px 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-head .mb-a, .mb-foot .mb-a { text-align: right; }
+.mb-head .mb-b, .mb-foot .mb-b { text-align: left; }
+.mb-foot > span:first-child, .mb-foot > span:last-child { font-size: 15px; }
+.mb-row { width: 100%; padding: 0; border: none; border-bottom: 1px solid #e3dccb; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mb-row.mine { box-shadow: inset 4px 0 0 var(--gold, #d9b04a); }
+.mb-pts { display: grid; place-items: center; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mb-side { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 8px 6px; }
+.mb-side.mb-a { text-align: right; align-items: flex-end; }
+.mb-side b, .mb-side em { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-side b { font-weight: 600; font-size: 14px; color: #1d4ed8; }
+.mb-side.mb-b b { color: #dc2626; }
+.mb-side em { font-size: 11px; color: var(--muted); }
+.mb-status { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 2px; background: #f1ece0; color: var(--text); font-variant-numeric: tabular-nums; }
+.mb-status b { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.mb-status small { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.mb-status.halved { background: #9ca3af; color: #fff; }
+/* Leader's color; an arrow points at the side that's up or won */
+.mb-status.side-0, .mb-status.side-1 { color: #fff; }
+.mb-status.side-0 { background: #1d4ed8; }
+.mb-status.side-1 { background: #dc2626; }
+.mb-status.live.side-0 { background: #6d8de6; }
+.mb-status.live.side-1 { background: #ec7b7b; }
+.mb-status.left { margin-left: -12px; padding-left: 14px; clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); }
+.mb-status.right { margin-right: -12px; padding-right: 14px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
+/* Winners: their names and points filled in team color */
+.mb-row:has(.mb-pts.won.side-0) .mb-pts:first-child,
+.mb-side.won.side-0 { background: #2d4be0; }
+.mb-row:has(.mb-pts.won.side-1) .mb-pts:last-child,
+.mb-side.won.side-1 { background: #f03a3a; }
+.mb-pts.won, .mb-side.won b, .mb-side.won em { color: #fff; }
+.mb-side.ahead.side-0 { background: #eef2fd; }
+.mb-side.ahead.side-1 { background: #fdf0f0; }
+.mb-grid { grid-template-columns: 28px minmax(0, 1fr) 60px minmax(0, 1fr) 28px; }
+.mb-side.mb-a { padding-right: 16px; }
+.mb-side.mb-b { padding-left: 16px; }
+.mb-side b { white-space: normal; overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.2; }
+.mb-head > span, .mb-foot > span { padding-left: 2px; padding-right: 2px; }
+.mb-head > span:first-child, .mb-head > span:last-child { font-size: 10px; }
+.mb-foot > span:first-child, .mb-foot > span:last-child { font-size: 13px; padding: 9px 0; overflow: visible; }
+.mb-status b { font-size: 14px; }
+.mb-status.live b { font-size: 12.5px; white-space: normal; text-align: center; line-height: 1.1; }
+.mb-side, .mb-side.mb-a { align-items: stretch; }
+.mb-side b, .mb-side em { display: block; }
+.mb-grid { grid-template-columns: 24px minmax(0, 1fr) 56px minmax(0, 1fr) 24px; }
+.mb-side.mb-a { padding: 8px 13px 8px 3px; }
+.mb-side.mb-b { padding: 8px 3px 8px 13px; }
+.mb-side b { font-size: 13px; }

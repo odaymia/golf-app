@@ -316,9 +316,13 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   "Review round" (or "Card" anytime) shows the group's full scorecard
   (birdies circled, bogeys boxed, Out/In, totals and to par, match results);
   tap a score to fix that hole; Submit is blocked while scores disagree.
-- Ryder Cup Results is a match results board (`RyderLive` with
-  onOpenMatch): Cup points + this round's points, one row per match in team
-  colors with status/FINAL badge and format; tap for the match scorecard.
+- Ryder Cup Results (`RyderLive` with onOpenMatch, Golf Genius style):
+  `TeamPoints` (each side's points per round, total, projected) on top,
+  then `MatchBoard`: Pts | side A (names, home clubs) | status | side B |
+  Pts per match, the winner's side filled in team color (blue/red) with an
+  arrow on the status pointing at the side that's up, halved grey, a
+  totals footer for the round; tap a match for its scorecard. Score entry
+  still uses the compact RyderLive.
 - Multiple scorekeepers: each keeps their own card in `score_entries`
   (`saveScore(…, official, mine)`); the official `event_scores` card is my
   numbers merged over what's there (never wipes others' holes; latest wins).

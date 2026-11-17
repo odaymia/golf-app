@@ -120,7 +120,7 @@ function Results({ settings, result, members, holes, live, reload, standings = [
     if (settings.unit === 'ryder')
       return (
         <>
-          <RyderLive sides={settings.sides} standings={standings} result={result} onOpenMatch={setOpen} roundPoints />
+          <RyderLive sides={settings.sides} standings={standings} result={result} onOpenMatch={setOpen} members={members} title={event?.name} />
           {open != null && result.matches[open] && (
             <MatchScorecard
               match={result.matches[open]}
