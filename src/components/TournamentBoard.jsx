@@ -176,7 +176,6 @@ function RyderBoard({ settings, standings, events, results, members, open, onOpe
           nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
           net={settings.net}
           label={MATCH_FORMATS[results[card.eventId].matches[card.index].format].label}
-          sideNames={settings.sides}
           onClose={() => setCard(null)}
         />
       )}

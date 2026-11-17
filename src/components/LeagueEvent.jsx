@@ -132,7 +132,6 @@ function Results({ settings, result, members, holes, live, reload, standings = [
               nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
               net={settings.net}
               label={MATCH_FORMATS[result.matches[open].format].label}
-              sideNames={settings.sides}
               onClose={() => setOpen(null)}
             />
           )}
@@ -177,7 +176,6 @@ function Results({ settings, result, members, holes, live, reload, standings = [
             nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
             net={settings.net}
             label={settings.unit === 'individual' ? null : MATCH_FORMATS[result.matches[open].format].label}
-            sideNames={settings.unit === 'ryder' ? settings.sides : null}
             onClose={() => setOpen(null)}
           />
         )}

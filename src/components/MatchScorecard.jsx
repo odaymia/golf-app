@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import MatchCard from './MatchCard.jsx';
 
-const TEAM_ROW = { fourball: 'Team', shamble: 'Team', singles: null };
-
-// Full hole-by-hole card for one match, in a panel over the screen.
-// match: { sides, names, format?, teamBall?, status, results, running, sideScores, strokes }
+// A plain scorecard for one match, in a panel over the screen: hole, par,
+// then each player's scores (birdies circled, bogeys boxed, stroke dots),
+// one row across all 18 holes that you swipe sideways. One-ball formats
+// (scramble, foursomes) show one row per team.
+// match: { sides, names, teamBall?, status, strokes }
 // holes: [{ par, hcp }]; grossOf(id) -> [scores]; nameOf(id) -> name.
-export default function MatchScorecard({ match, holes, grossOf, nameOf, net, label, sideNames, onClose }) {
+export default function MatchScorecard({ match, holes, grossOf, nameOf, net, label, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -18,89 +19,50 @@ export default function MatchScorecard({ match, holes, grossOf, nameOf, net, lab
     };
   }, [onClose]);
 
-  const played = match.status.played;
-  const teamLabel = match.teamBall ? null : TEAM_ROW[match.format ?? (match.sides[0].length > 1 ? 'fourball' : 'singles')];
-  // A side's rows: each player (own ball), plus the team score; or one team row.
-  const rowsFor = (side, s) => {
+  const short = (name) => {
+    const [first, ...rest] = name.split(' ');
+    return rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
+  };
+  const rows = match.sides.flatMap((ids, s) => {
     if (match.teamBall) {
-      const ids = match.sides[s];
       const team = holes.map((_, h) => {
         const id = ids.find((x) => grossOf(x)[h] != null);
         return id == null ? null : grossOf(id)[h];
       });
-      return [{ key: `t${s}`, name: match.names[s], scores: team, strokes: match.strokes[ids[0]], kind: 'team-ball' }];
+      return [{ key: `t${s}`, side: s, name: ids.map((id) => nameOf(id).split(' ')[0]).join(' & '), scores: team, strokes: match.strokes[ids[0]] }];
     }
-    const rows = side.map((id) => ({ key: id, name: nameOf(id), scores: grossOf(id), strokes: match.strokes[id], kind: 'player' }));
-    if (side.length > 1 && teamLabel) {
-      rows.push({ key: `team${s}`, name: teamLabel, scores: match.sideScores[s], kind: 'team' });
-    }
-    return rows;
-  };
-  const rowsA = rowsFor(match.sides[0], 0);
-  const rowsB = rowsFor(match.sides[1], 1);
+    return ids.map((id) => ({ key: id, side: s, name: short(nameOf(id)), scores: grossOf(id), strokes: match.strokes[id] }));
+  });
 
-  const nine = (from, to, title) => {
-    const range = holes.slice(from, to).map((_, i) => from + i);
-    const sum = (arr) => {
-      const vals = range.map((h) => arr[h]).filter((v) => v != null);
-      return vals.length ? vals.reduce((x, y) => x + y, 0) : '';
-    };
-    const row = (r, side) => (
-      <tr key={r.key} className={`${r.kind} side-${side}`}>
-        <td className="sc-name">{r.name}</td>
-        {range.map((h) => {
-          const v = r.scores[h];
-          const diff = v == null ? null : v - holes[h].par;
-          const dots = net && r.strokes ? r.strokes[h] : 0;
-          return (
-            <td
-              key={h}
-              className={`${h >= played ? 'after' : ''} ${r.kind !== 'team' && diff != null ? (diff < 0 ? 'under' : diff > 0 ? 'over' : '') : ''}`}
-            >
-              {v ?? ''}
-              {dots > 0 && <sup>{'•'.repeat(dots)}</sup>}
-            </td>
-          );
-        })}
-        <td className="sc-total">{sum(r.scores)}</td>
-      </tr>
-    );
-    return (
-      <table className="scorecard match-sc" key={title}>
-        <thead>
-          <tr>
-            <th>Hole</th>
-            {range.map((h) => (
-              <th key={h}>{h + 1}</th>
-            ))}
-            <th>{title}</th>
-          </tr>
-          <tr className="par-row">
-            <td>Par</td>
-            {range.map((h) => (
-              <td key={h}>{holes[h].par}</td>
-            ))}
-            <td>{sum(holes.map((x) => x.par))}</td>
-          </tr>
-        </thead>
-        <tbody>
-          {rowsA.map((r) => row(r, 'a'))}
-          <tr className="status-row">
-            <td className="sc-name">Match</td>
-            {range.map((h) => {
-              const u = match.running[h];
-              return (
-                <td key={h} className={u == null ? '' : u > 0 ? 'lead-a' : u < 0 ? 'lead-b' : 'as'}>
-                  {u == null ? '' : u === 0 ? 'AS' : Math.abs(u)}
-                </td>
-              );
-            })}
-            <td />
-          </tr>
-          {rowsB.map((r) => row(r, 'b'))}
-        </tbody>
-      </table>
-    );
+  const n = holes.length;
+  const front = Math.min(9, n);
+  const segs = n > 9 ? [[0, front, 'Out'], [front, n, 'In']] : [[0, n, 'Tot']];
+  const sum = (arr, a, b) => {
+    let t = 0;
+    let any = false;
+    for (let i = a; i < b; i++) if (arr[i] != null) (t += arr[i]), (any = true);
+    return any ? t : '';
+  };
+  const cls = (g, par) => (g == null ? '' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'double' : '');
+  const par = holes.map((h) => h.par);
+  // Each hole's cells, then each nine's total (and the 18-hole total).
+  const cells = (valueOf, totalOf, key, head = false) => {
+    const Tag = head ? 'th' : 'td';
+    return [
+      ...segs.flatMap(([a, b, label]) => [
+        ...holes.slice(a, b).map((_, i) => <Tag key={`${key}${a + i}`}>{valueOf(a + i)}</Tag>),
+        <Tag key={`${key}${label}`} className="msc-tot">
+          {totalOf(a, b, label)}
+        </Tag>,
+      ]),
+      ...(n > 9
+        ? [
+            <Tag key={`${key}all`} className="msc-tot">
+              {totalOf(0, n, 'Tot')}
+            </Tag>,
+          ]
+        : []),
+    ];
   };
 
   return (
@@ -112,20 +74,43 @@ export default function MatchScorecard({ match, holes, grossOf, nameOf, net, lab
             Close
           </button>
         </div>
-        <MatchCard names={match.names} status={match.status} results={match.results} label={label} />
-        <div className="scorecard-wrap">
-          {nine(0, Math.min(9, holes.length), 'Out')}
-          {holes.length > 9 && nine(9, holes.length, 'In')}
+        <MatchCard names={match.names} status={match.status} label={label} compact />
+        <div className="msc-scroll">
+          <table className="msc">
+            <thead>
+              <tr>
+                <th className="msc-name">Hole</th>
+                {cells((h) => h + 1, (a, b, label) => label, 'h', true)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="msc-par">
+                <td className="msc-name">Par</td>
+                {cells((h) => par[h], (a, b) => sum(par, a, b), 'p')}
+              </tr>
+              {rows.map((r) => (
+                <tr key={r.key} className={`msc-player side-${r.side}`}>
+                  <td className="msc-name">{r.name}</td>
+                  {cells(
+                    (h) => {
+                      const g = r.scores[h];
+                      const dots = net && r.strokes ? r.strokes[h] : 0;
+                      return (
+                        <span className={`pc-s ${cls(g, par[h])}`}>
+                          {g ?? ''}
+                          {dots > 0 && <i>{'•'.repeat(dots)}</i>}
+                        </span>
+                      );
+                    },
+                    (a, b) => sum(r.scores, a, b),
+                    r.key,
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <p className="hint">
-          Match row: holes up after each hole, in the leader&apos;s color
-          {sideNames ? ` (${sideNames[0]} green, ${sideNames[1]} pink)` : ''}; AS = all square.
-          {net ? ' Dots are handicap strokes in this match.' : ''}
-          {teamLabel
-            ? ` Team row: the team's ${match.format === 'shamble' ? 'combined score' : 'best score'} on each hole${net ? ', net' : ''}.`
-            : ''}
-          {played < holes.length && match.status.closedOut ? ' Holes after the match ended are faded.' : ''}
-        </p>
+        <p className="hint center">Swipe sideways for every hole.</p>
       </div>
     </div>
   );

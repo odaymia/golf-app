@@ -364,10 +364,12 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   handicap (scramble 35% low + 15% high; foursomes half the total) off the
   low team; the team score is saved on every partner's card and score entry
   shows one row per team.
-- Tapping a match card opens `MatchScorecard` (bottom sheet): every player's
-  gross with stroke dots, the team row (best ball / both added, net), the
-  team ball for one-ball formats, and a running match row. Matches expose
-  `sideScores` and `running` (league/event.js and games/match.js) for it.
+- Tapping a match card opens `MatchScorecard` (bottom sheet): the match
+  status on top, then one plain scorecard you swipe sideways (Hole, Par,
+  each player's gross with birdies circled, bogeys boxed and stroke dots,
+  Out/In/Tot; a team row instead for one-ball formats; a side-color bar on
+  each name). No team or match rows. Matches still expose `sideScores`
+  and `running` (league/event.js and games/match.js).
 
 ## Social feed
 

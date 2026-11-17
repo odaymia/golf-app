@@ -3861,3 +3861,18 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .keypad-actions button { height: 52px; }
 .keypad-space { height: calc(4 * 50px + 52px + env(safe-area-inset-bottom) + 12px); }
 .keypad-hint { margin: 0; padding: 8px 12px; background: #fff7e0; border-bottom: 1px solid #ecdcae; font-size: 13px; font-weight: 600; text-align: center; color: #6b5310; }
+
+/* Match scorecard: one plain card, swipe sideways */
+.msc-scroll { overflow-x: auto; margin: 12px -4px 0; -webkit-overflow-scrolling: touch; border: 1px solid #e3dccb; border-radius: 10px; background: #fff; }
+.msc { border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.msc th, .msc td { border-right: 1px solid #ece6d8; border-bottom: 1px solid #ece6d8; padding: 6px 4px; min-width: 32px; text-align: center; }
+.msc th { background: #f1ece0; font-weight: 700; }
+.msc .msc-name { position: sticky; left: 0; z-index: 1; min-width: 92px; max-width: 110px; text-align: left; padding-left: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; box-shadow: 1px 0 0 #e3dccb; }
+.msc th.msc-name { background: #f1ece0; }
+.msc-par td { color: var(--muted); }
+.msc-tot { font-weight: 800; background: #f8f5ec; min-width: 38px !important; }
+.msc th.msc-tot { background: #e9e2d2; }
+.msc-player.side-0 .msc-name { border-left: 4px solid #1d4ed8; }
+.msc-player.side-1 .msc-name { border-left: 4px solid #dc2626; }
+.msc-player.side-1:first-of-type .msc-name, .msc tr.side-0 + tr.side-1 td { border-top: 2px solid #d6cfbd; }
+.msc .pc-s i { font-size: 10px; }
