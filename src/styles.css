@@ -3744,9 +3744,6 @@ button.lm-row:active { background: var(--fill); }
 .lb2-row td { padding: 9px 6px; border-bottom: 1px solid var(--hairline); text-align: center; vertical-align: middle; }
 .lb2-row:hover td { background: rgb(28 42 32 / 3%); }
 tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
-.lb2-star { width: 34px; }
-.star { background: none; border: none; font-size: 20px; line-height: 1; color: #b8466f; padding: 0; }
-.star.on { color: #d9b04a; }
 .lb2-pos { width: 38px; font-weight: 700; }
 .lb2-name { text-align: left !important; min-width: 120px; max-width: 0; width: 100%; }
 .lb2-name strong, .lb2-name em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

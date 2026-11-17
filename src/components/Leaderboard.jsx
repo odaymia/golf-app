@@ -2,21 +2,11 @@ import { useEffect, useState } from 'react';
 import { homeCourses } from '../lib/social.js';
 import { holeStableford } from '../lib/league/event.js';
 
-const followKey = (leagueId) => `golf-app:follow:${leagueId}`;
-const readFollow = (leagueId) => {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(followKey(leagueId)) ?? '[]'));
-  } catch {
-    return new Set();
-  }
-};
-
-// A leaderboard you can tap open: ☆ to follow players (pinned on top), each
-// golfer's home club under their name, and the full scorecard under any row.
+// A leaderboard you can tap open: each golfer's home club under their name,
+// and the full scorecard under any row.
 // rows: [{ key, pos, name, ids, value, valueClass, thru }]
 // round: { holes, course, players } for scorecards (result of one round)
-export default function Leaderboard({ leagueId, rows, valueLabel, nameLabel = 'Player', round, members, settings, extraHead, extraCell }) {
-  const [follow, setFollow] = useState(() => readFollow(leagueId));
+export default function Leaderboard({ rows, valueLabel, nameLabel = 'Player', round, members, settings, extraHead, extraCell }) {
   const [open, setOpen] = useState(() => new Set());
   const [clubs, setClubs] = useState(new Map());
 
@@ -26,19 +16,6 @@ export default function Leaderboard({ leagueId, rows, valueLabel, nameLabel = 'P
       .catch(() => {});
   }, [members]);
 
-  const toggleFollow = (key) => {
-    setFollow((f) => {
-      const next = new Set(f);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      try {
-        localStorage.setItem(followKey(leagueId), JSON.stringify([...next]));
-      } catch {
-        // storage blocked
-      }
-      return next;
-    });
-  };
   const toggleOpen = (key) =>
     setOpen((o) => {
       const next = new Set(o);
@@ -52,23 +29,10 @@ export default function Leaderboard({ leagueId, rows, valueLabel, nameLabel = 'P
     const m = members.find((x) => x.id === ids[0]);
     return clubs.get(m?.userId) ?? '';
   };
-  const following = rows.filter((r) => follow.has(r.key));
 
-  const row = (r, pinned) => (
-    <tbody key={`${pinned ? 'f' : 'r'}-${r.key}`} className={open.has(r.key) ? 'expanded' : ''}>
+  const row = (r) => (
+    <tbody key={r.key} className={open.has(r.key) ? 'expanded' : ''}>
       <tr className="lb2-row" onClick={() => round && toggleOpen(r.key)}>
-        <td className="lb2-star">
-          <button
-            className={`star ${follow.has(r.key) ? 'on' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFollow(r.key);
-            }}
-            aria-label={follow.has(r.key) ? `Unfollow ${r.name}` : `Follow ${r.name}`}
-          >
-            {follow.has(r.key) ? '★' : '☆'}
-          </button>
-        </td>
         <td className="lb2-pos">{r.pos}</td>
         <td className="lb2-name">
           <strong>{r.name}</strong>
@@ -104,7 +68,6 @@ export default function Leaderboard({ leagueId, rows, valueLabel, nameLabel = 'P
         <table className="lb2-table">
           <thead>
             <tr>
-              <th aria-label="Follow" />
               <th>Pos.</th>
               <th className="left">{nameLabel}</th>
               <th>{valueLabel}</th>
@@ -112,25 +75,10 @@ export default function Leaderboard({ leagueId, rows, valueLabel, nameLabel = 'P
               {extraHead}
             </tr>
           </thead>
-          {following.length > 0 && (
-            <>
-              <tbody>
-                <tr className="lb2-section">
-                  <td colSpan={40}>Following</td>
-                </tr>
-              </tbody>
-              {following.map((r) => row(r, true))}
-              <tbody>
-                <tr className="lb2-section">
-                  <td colSpan={40}>Everyone</td>
-                </tr>
-              </tbody>
-            </>
-          )}
-          {rows.map((r) => row(r, false))}
+          {rows.map(row)}
         </table>
       </div>
-      {round && <p className="hint">Tap a player to see their scorecard. ☆ follows them at the top.</p>}
+      {round && <p className="hint">Tap a player to see their scorecard.</p>}
     </section>
   );
 }

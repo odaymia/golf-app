@@ -307,10 +307,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   `ScorePad` (bottom sheet: 1–10 labeled Eagle…Double, 11+); picking
   jumps to the next player without a score on that hole.
 - Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
-  use `Leaderboard.jsx`: ☆ follows a player (device only,
-  localStorage `golf-app:follow:<leagueId>`; followed rows pinned under
-  "Following"), home club under each name (`homeCourses` in social.js),
-  tap a row (or Expand all) for `PlayerCard`: tee/slope/rating, par,
+  use `Leaderboard.jsx`: home club under each name (`homeCourses` in
+  social.js), tap a row (or Expand all) for `PlayerCard`: tee/slope/rating, par,
   stroke index, score (circles/boxes, stroke dots), Stableford pts,
   Out/In/Tot/Net. Multi-round boards add Today + R1..Rn; their cards show
   the latest round with scores.

@@ -50,7 +50,6 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
   return (
     <>
       <Leaderboard
-        leagueId={data.league.id}
         rows={rows}
         valueLabel={stableford ? 'Pts' : settings.net ? 'Net' : 'Total'}
         nameLabel={settings.unit === 'individual' ? 'Player' : 'Team'}

@@ -66,7 +66,6 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           reload={reload}
           standings={computed.standings}
           event={event}
-          leagueId={data.league.id}
         />
       )}
       {tab === 'results' && <ScoreChecks data={data} event={event} />}
@@ -103,7 +102,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
   );
 }
 
-function Results({ settings, result, members, holes, live, reload, standings = [], event, leagueId }) {
+function Results({ settings, result, members, holes, live, reload, standings = [], event }) {
   useLiveRefresh(live, reload);
   const [open, setOpen] = useState(null);
   if (settings.scoring === 'match') {
@@ -214,7 +213,6 @@ function Results({ settings, result, members, holes, live, reload, standings = [
   return (
     <>
       <Leaderboard
-        leagueId={leagueId}
         rows={rows}
         valueLabel={stableford ? 'Pts' : settings.net ? 'Net' : 'Score'}
         nameLabel={settings.unit === 'individual' ? 'Player' : 'Team'}
