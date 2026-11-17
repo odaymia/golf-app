@@ -216,6 +216,16 @@ export async function listFollows(userId, kind, meId) {
     }));
 }
 
+// Golfers' home courses (public profile), for leaderboards: Map(userId -> name).
+// Fails soft to an empty map.
+export async function homeCourses(userIds) {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return new Map();
+  const { data, error } = await supabase.from('public_profiles').select('id, home_course').in('id', ids);
+  if (error || !data) return new Map();
+  return new Map(data.filter((r) => r.home_course).map((r) => [r.id, r.home_course]));
+}
+
 // Golfers' handicap indexes (only those who share them): Map(userId -> index).
 // Fails soft to an empty map (offline, or handicap_sharing.sql not run).
 export async function golferIndexes(userIds) {

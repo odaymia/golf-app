@@ -300,6 +300,20 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker
   (commissioners can score any group).
+- Score entry layout: green hole bar (‹ prev / Hole n, par, stroke index,
+  tee / next ›), slim hole dots, then one row per player: name (playing
+  handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
+  and the running total (points, or to par). Tapping a score opens
+  `ScorePad` (bottom sheet: 1–10 labeled Eagle…Double, 11+); picking
+  jumps to the next player without a score on that hole.
+- Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
+  use `Leaderboard.jsx`: ☆ follows a player (device only,
+  localStorage `golf-app:follow:<leagueId>`; followed rows pinned under
+  "Following"), home club under each name (`homeCourses` in social.js),
+  tap a row (or Expand all) for `PlayerCard`: tee/slope/rating, par,
+  stroke index, score (circles/boxes, stroke dots), Stableford pts,
+  Out/In/Tot/Net. Multi-round boards add Today + R1..Rn; their cards show
+  the latest round with scores.
 - End of round review (`RoundReview` in LeagueEvent): after the last hole,
   "Review round" (or "Card" anytime) shows the group's full scorecard
   (birdies circled, bogeys boxed, Out/In, totals and to par, match results);

@@ -2,6 +2,7 @@ import { orderEvents } from '../lib/league/season.js';
 import { MATCH_FORMATS } from '../lib/league/event.js';
 import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
+import Leaderboard from './Leaderboard.jsx';
 import MatchScorecard from './MatchScorecard.jsx';
 import { useLiveRefresh } from './useLiveRefresh.js';
 
@@ -34,58 +35,55 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent })
 
   const stableford = settings.scoring === 'stableford';
   const multi = events.length > 1;
+  // Scorecards show the latest round anyone has scored.
+  const latest = [...events].reverse().find((e) => Object.values(results[e.id]?.players ?? {}).some((p) => p.thru > 0)) ?? events[0];
+  const rows = standings.map((r, i) => ({
+    key: r.key,
+    pos: r.position == null ? '' : standings.some((o, j) => j !== i && o.position === r.position) ? `T${r.position}` : String(r.position),
+    name: r.name,
+    ids: settings.unit === 'individual' ? [r.key] : data.members.filter((m) => m.team === r.key).map((m) => m.id),
+    value: !r.started ? '–' : stableford ? r.total : toParText(r.toPar),
+    valueClass: stableford ? '' : toParClass(r.toPar) === 'red' ? 'under' : '',
+    thru: r.thru ?? '–',
+    r,
+  }));
   return (
-    <section className="card leaderboard">
-      <div className="lb-head">
-        <span className="flag dark" />
-        <strong>Leaderboard</strong>
-        <span className="flag dark" />
-      </div>
-      <div className="lb-scroll">
-        <table className="lb">
-          <thead>
-            <tr>
-              <th>Pos</th>
-              <th className="left">{settings.unit === 'individual' ? 'Player' : 'Team'}</th>
-              <th>{stableford ? 'Pts' : 'Total'}</th>
-              {multi && <th>Today</th>}
-              <th>Thru</th>
-              {multi && events.map((e, i) => <th key={e.id}>R{i + 1}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((r, i) => (
-              <tr key={r.key} className={r.started ? '' : 'not-started'}>
-                <td className="pos">
-                  {r.position == null ? '' : standings.some((o, j) => j !== i && o.position === r.position) ? `T${r.position}` : r.position}
-                </td>
-                <td className="left name-cell">{r.name}</td>
-                <td className={`big ${stableford ? '' : toParClass(r.toPar)}`}>
-                  {!r.started ? '–' : stableford ? r.total : toParText(r.toPar)}
-                </td>
-                {multi && <td className={stableford ? '' : toParClass(r.today)}>{stableford ? (r.today ?? '–') : toParText(r.today)}</td>}
-                <td className="muted">{r.thru ?? '–'}</td>
-                {multi &&
-                  r.rounds.map((round, j) => (
-                    <td key={j} className="muted">
-                      {!round
-                ? '–'
-                : round.complete
-                  ? round.value
-                  : `${stableford ? round.value : toParText(round.toPar)} (${round.thru})`}
-                    </td>
-                  ))}
-              </tr>
+    <>
+      <Leaderboard
+        leagueId={data.league.id}
+        rows={rows}
+        valueLabel={stableford ? 'Pts' : settings.net ? 'Net' : 'Total'}
+        nameLabel={settings.unit === 'individual' ? 'Player' : 'Team'}
+        round={{ holes: latest.course.holes, course: latest.course, players: results[latest.id]?.players ?? {} }}
+        members={data.members}
+        settings={settings}
+        extraHead={
+          multi ? (
+            <>
+              <th>Today</th>
+              {events.map((e, i) => (
+                <th key={e.id}>R{i + 1}</th>
+              ))}
+            </>
+          ) : null
+        }
+        extraCell={({ r }) => (
+          <>
+            <td className={stableford ? '' : toParClass(r.today)}>{stableford ? (r.today ?? '–') : toParText(r.today)}</td>
+            {r.rounds.map((round, j) => (
+              <td key={j} className="muted">
+                {!round ? '–' : round.complete ? round.value : `${stableford ? round.value : toParText(round.toPar)} (${round.thru})`}
+              </td>
             ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="hint">
+          </>
+        )}
+      />
+      <p className="hint center">
         {settings.net ? 'Net scores' : 'Gross scores'}
-        {stableford ? ', Stableford points.' : ', to par.'} {multi ? 'Round columns show each finished round’s score; a round in progress shows the score so far (holes played).' : ''}{' '}
+        {stableford ? ', Stableford points.' : ', to par.'} {multi ? `Scorecards show ${latest.name}.` : ''}{' '}
         {open ? 'Live: updates every 20 seconds.' : 'Final.'}
       </p>
-    </section>
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteEvent, saveScore, updateEvent } from '../lib/leagueApi.js';
 import { roundRobinWeek } from '../lib/league/season.js';
-import { computeEvent, entityKey, MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
+import { computeEvent, entityKey, holeStableford, MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
 import MatchCard from './MatchCard.jsx';
 import MatchScorecard from './MatchScorecard.jsx';
@@ -12,6 +12,7 @@ import { canScore, groupOf } from '../lib/league/groups.js';
 import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
 import { SideGamesBoard, SideGamesEditor } from './SideGames.jsx';
 import RyderLive from './RyderLive.jsx';
+import Leaderboard from './Leaderboard.jsx';
 import { discrepancies, discrepancyHoles } from '../lib/league/ryder.js';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
@@ -64,6 +65,8 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           live={!final}
           reload={reload}
           standings={computed.standings}
+          event={event}
+          leagueId={data.league.id}
         />
       )}
       {tab === 'results' && <ScoreChecks data={data} event={event} />}
@@ -100,7 +103,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
   );
 }
 
-function Results({ settings, result, members, holes, live, reload, standings = [] }) {
+function Results({ settings, result, members, holes, live, reload, standings = [], event, leagueId }) {
   useLiveRefresh(live, reload);
   const [open, setOpen] = useState(null);
   if (settings.scoring === 'match') {
@@ -196,39 +199,33 @@ function Results({ settings, result, members, holes, live, reload, standings = [
   }
   const stableford = settings.scoring === 'stableford';
   if (!result.board.length) return <p className="muted center">No scores yet.</p>;
+  const posText = (e, i) => (result.board.some((o, j) => j !== i && o.position === e.position) ? `T${e.position}` : String(e.position));
+  const rows = result.board.map((e, i) => ({
+    key: e.key,
+    pos: posText(e, i),
+    name: e.name,
+    ids: e.ids,
+    value: stableford ? e.value : fmtToPar(e.toPar),
+    valueClass: !stableford && e.toPar < 0 ? 'under' : '',
+    thru: e.complete ? 'F' : e.thru,
+    points: e.points,
+  }));
+  const seasonPts = settings.season === 'points';
   return (
-    <section className="card">
-      <table className="standings">
-        <thead>
-          <tr>
-            <th />
-            <th className="left">{settings.unit === 'individual' ? 'Player' : 'Team'}</th>
-            <th>{stableford ? 'Pts' : settings.net ? 'Net' : 'Score'}</th>
-            <th>Thru</th>
-            {settings.season === 'points' && <th>Season pts</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {result.board.map((e, i) => (
-            <tr key={e.key}>
-              <td className="pos">{result.board.some((o, j) => j !== i && o.position === e.position) ? `T${e.position}` : e.position}</td>
-              <td className="left">
-                {e.name}
-                {settings.unit !== 'individual' && (
-                  <span className="muted small"> {e.ids.map((id) => members.find((m) => m.id === id)?.name).join(', ')}</span>
-                )}
-              </td>
-              <td>{stableford ? e.value : `${fmtToPar(e.toPar)}`}</td>
-              <td>{e.complete ? 'F' : e.thru}</td>
-              {settings.season === 'points' && <td>{e.points ?? '–'}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {settings.season === 'points' && (
-        <p className="hint">Season points go to finished rounds once the commissioner marks the round final.</p>
-      )}
-    </section>
+    <>
+      <Leaderboard
+        leagueId={leagueId}
+        rows={rows}
+        valueLabel={stableford ? 'Pts' : settings.net ? 'Net' : 'Score'}
+        nameLabel={settings.unit === 'individual' ? 'Player' : 'Team'}
+        round={{ holes, course: event.course, players: result.players }}
+        members={members}
+        settings={settings}
+        extraHead={seasonPts ? <th>Season pts</th> : null}
+        extraCell={(r) => <td key="sp">{r.points ?? '–'}</td>}
+      />
+      {seasonPts && <p className="hint">Season points go to finished rounds once the commissioner marks the round final.</p>}
+    </>
   );
 }
 
@@ -264,6 +261,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   });
   const [status, setStatus] = useState('');
   const [review, setReview] = useState(false); // end-of-round scorecard
+  const [pad, setPad] = useState(null); // { row } while the score picker is open
   const [submitted, setSubmitted] = useState(false);
   const dirty = useRef(new Set());
   const timer = useRef(null);
@@ -410,6 +408,32 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
   const myScore = (row, i) => cards[row.ids[0]][i];
   const badHoles = discrepancyHoles(disc, people.map((p) => p.id));
+  const stablefordGame = settings.scoring === 'stableford';
+  // This hole's points (or net score) and the running total for a row.
+  const rowTotals = (row) => {
+    const id = row.ids[0];
+    const card = holes.map((_, i) => rowScore(row, i));
+    const st = matchFor(id)?.strokes?.[id] ?? result.players[id]?.strokes ?? holes.map(() => 0);
+    const here = card[hole - 1];
+    if (stablefordGame) {
+      const ptsOf = (i) => holeStableford(settings, card[i], settings.net ? st[i] ?? 0 : 0, holes[i].par);
+      const total = card.reduce((t, g, i) => t + (g == null ? 0 : ptsOf(i)), 0);
+      return { hole: here == null ? null : ptsOf(hole - 1), total, unit: 'Pts', cls: 'pts' };
+    }
+    let toPar = 0;
+    let played = 0;
+    card.forEach((g, i) => {
+      if (g == null) return;
+      played++;
+      toPar += (settings.net ? g - (st[i] ?? 0) : g) - holes[i].par;
+    });
+    return {
+      hole: settings.net && here != null ? here - (st[hole - 1] ?? 0) : null,
+      total: played ? (toPar === 0 ? 'E' : toPar > 0 ? `+${toPar}` : String(toPar)) : '–',
+      unit: '',
+      cls: toPar < 0 ? 'under' : '',
+    };
+  };
   if (review) {
     return (
       <RoundReview
@@ -444,21 +468,21 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
           ⚠ Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Tap to check.
         </button>
       )}
-      <div className="hole-head">
-        <button className="nav-btn" onClick={() => setHole(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
-          ‹
+      <div className="gg-holebar">
+        <button className="gg-nav" onClick={() => setHole(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
+          {hole > 1 ? `‹ Hole ${hole - 1}` : ''}
         </button>
-        <div className="hole-title">
-          <div className="hole-num">Hole {hole}</div>
-          <div className="muted">
-            Par {info.par} · Hcp {info.hcp}
-          </div>
+        <div className="gg-hole">
+          <strong>Hole {hole}</strong>
+          <span>
+            Par {info.par} · Hcp {info.hcp} · {event.course.tee.name} tees
+          </span>
         </div>
-        <button className="nav-btn" onClick={() => setHole(Math.min(holes.length, hole + 1))} disabled={hole === holes.length} aria-label="Next hole">
-          ›
+        <button className="gg-nav right" onClick={() => setHole(Math.min(holes.length, hole + 1))} disabled={hole === holes.length} aria-label="Next hole">
+          {hole < holes.length ? `Hole ${hole + 1} ›` : ''}
         </button>
       </div>
-      <div className="hole-dots">
+      <div className="hole-dots slim">
         {holes.map((_, i) => (
           <button
             key={i}
@@ -473,45 +497,48 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
       {myMatches.map((m, i) => (
         <MatchCard key={i} names={m.names} status={m.status} label={MATCH_FORMATS[m.format].short} compact />
       ))}
-      <div className="score-rows">
-        {rows.map((row) => {
+      <div className="gg-table">
+        <div className="gg-head">
+          <span>Player</span>
+          <span>Score</span>
+          <span>{stablefordGame ? 'Pts' : settings.net ? 'Net' : ''}</span>
+          <span>Total</span>
+        </div>
+        {rows.map((row, ri) => {
+          const id = row.ids[0];
           const s = rowScore(row, hole - 1);
           const mineHere = myScore(row, hole - 1);
           const toConfirm = mineHere == null && s != null; // someone else entered it
-          const conflict = disc[row.ids[0]]?.[hole - 1];
-          const strokes = settings.net ? strokesFor(row.ids[0]) : 0;
+          const conflict = disc[id]?.[hole - 1];
+          const strokes = settings.net ? strokesFor(id) : 0;
           const diff = s == null ? null : s - info.par;
+          const t = rowTotals(row);
           return (
-            <div key={row.key} className={`score-row card ${conflict ? 'conflict' : ''}`}>
-              <div className="score-name">
-                <strong>{row.name}</strong>
-                <span className="muted">
-                  {row.team ? `${row.format} team score` : ''}
-                  {row.team && strokes !== 0 ? ' · ' : ''}
-                  {strokes > 0 ? `${'•'.repeat(strokes)} gets ${strokes}` : strokes < 0 ? `gives ${-strokes}` : ''}
-                  {s != null && strokes !== 0 ? ` · net ${s - strokes}` : ''}
-                </span>
+            <div key={row.key} className={`gg-row ${conflict ? 'conflict' : ''}`}>
+              <div className="gg-name">
+                <strong>
+                  {row.name}
+                  {!row.team && result.players[id] && <span className="gg-hcp"> ({result.players[id].playing})</span>}
+                </strong>
+                {row.team && <em>{row.format} team score</em>}
               </div>
-              <div className="stepper">
-                <button className="step" onClick={() => setScore(row, s == null ? info.par - 1 : s - 1)} aria-label={`${row.name} minus one`}>
-                  −
-                </button>
-                <button
-                  className={`score-val ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${toConfirm ? 'unconfirmed' : ''}`}
-                  onClick={() => (s == null ? setScore(row, info.par) : toConfirm ? setScore(row, s) : null)}
-                  aria-label={toConfirm ? `${row.name} score ${s}, tap to confirm` : `${row.name} score`}
-                >
-                  {s ?? 'Par?'}
-                </button>
-                <button className="step" onClick={() => setScore(row, s == null ? info.par + 1 : s + 1)} aria-label={`${row.name} plus one`}>
-                  +
-                </button>
-              </div>
+              <button
+                className={`gg-score ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${toConfirm ? 'unconfirmed' : ''}`}
+                onClick={() => setPad({ row: ri })}
+                aria-label={toConfirm ? `${row.name} score ${s}, tap to confirm or change` : `${row.name} score`}
+              >
+                {s ?? '–'}
+                {strokes > 0 && <i className="gg-dots">{'•'.repeat(strokes)}</i>}
+              </button>
+              <span className="gg-pts">{t.hole ?? ''}</span>
+              <span className={`gg-total ${t.cls}`}>
+                {t.total}
+                {t.unit && <small>{t.unit}</small>}
+              </span>
               {conflict && (
                 <div className="conflict-note">
                   <span>
-                    ⚠ Scores don’t match:{' '}
-                    {conflict.map((c) => `${scorerName(c.scorerId)} ${c.value}`).join(' · ')}
+                    ⚠ Scores don’t match: {conflict.map((c) => `${scorerName(c.scorerId)} ${c.value}`).join(' · ')}
                   </span>
                   <span className="conflict-fix">
                     {[...new Set(conflict.map((c) => c.value))].map((v) => (
@@ -522,11 +549,26 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
                   </span>
                 </div>
               )}
-              {toConfirm && !conflict && <p className="confirm-note">Entered by another scorekeeper. Tap the score to agree.</p>}
+              {toConfirm && !conflict && <p className="confirm-note">Entered by another scorekeeper. Tap it to agree or change.</p>}
             </div>
           );
         })}
       </div>
+      {pad && rows[pad.row] && (
+        <ScorePad
+          name={rows[pad.row].name}
+          hole={hole}
+          par={info.par}
+          value={rowScore(rows[pad.row], hole - 1)}
+          onPick={(v) => {
+            setScore(rows[pad.row], v);
+            // Move on to the next player without a score on this hole.
+            const next = rows.findIndex((r, j) => j > pad.row && rowScore(r, hole - 1) == null);
+            setPad(next >= 0 ? { row: next } : null);
+          }}
+          onClose={() => setPad(null)}
+        />
+      )}
       <p className="hint center">{status || 'Scores save automatically.'}</p>
       <div className="row2">
         <button
@@ -975,5 +1017,39 @@ function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, s
         ‹ Back to scoring
       </button>
     </section>
+  );
+}
+
+// Number picker for one player's score on a hole (opens from the score box).
+function ScorePad({ name, hole, par, value, onPick, onClose }) {
+  const nums = Array.from({ length: 10 }, (_, i) => i + 1);
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet score-pad" role="dialog" aria-modal="true" aria-label={`Score for ${name}`} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <h2>
+            {name} <span className="muted">· Hole {hole}</span>
+          </h2>
+          <button className="btn btn-ghost" onClick={onClose}>
+            Done
+          </button>
+        </div>
+        <div className="pad-grid">
+          {nums.map((n) => (
+            <button
+              key={n}
+              className={`pad-key ${n === value ? 'on' : ''} ${n === par ? 'par' : n < par ? 'under' : 'over'}`}
+              onClick={() => onPick(n)}
+            >
+              {n}
+              <small>{n === par ? 'Par' : n === par - 1 ? 'Birdie' : n === par - 2 ? 'Eagle' : n === par + 1 ? 'Bogey' : n === par + 2 ? 'Double' : ''}</small>
+            </button>
+          ))}
+          <button className="pad-key more" onClick={() => onPick(Math.min(15, Math.max(11, (value ?? 10) + 1)))}>
+            {value > 10 ? value + 1 : '11+'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
