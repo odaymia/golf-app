@@ -558,11 +558,10 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
           hole={hole}
           par={info.par}
           value={rowScore(rows[pad.row], hole - 1)}
-          onPick={(v) => {
+          onPick={(v, keepOpen) => {
             setScore(rows[pad.row], v);
-            // Move on to the next player without a score on this hole.
-            const next = rows.findIndex((r, j) => j > pad.row && rowScore(r, hole - 1) == null);
-            setPad(next >= 0 ? { row: next } : null);
+            // A number enters the score and closes the pad (11+ stays open to count up).
+            if (!keepOpen) setPad(null);
           }}
           onClose={() => setPad(null)}
         />
@@ -1029,7 +1028,7 @@ function ScorePad({ name, hole, par, value, onPick, onClose }) {
             {name} <span className="muted">· Hole {hole}</span>
           </h2>
           <button className="btn btn-ghost" onClick={onClose}>
-            Done
+            {value > 10 ? 'Done' : 'Cancel'}
           </button>
         </div>
         <div className="pad-grid">
@@ -1043,7 +1042,7 @@ function ScorePad({ name, hole, par, value, onPick, onClose }) {
               <small>{n === par ? 'Par' : n === par - 1 ? 'Birdie' : n === par - 2 ? 'Eagle' : n === par + 1 ? 'Bogey' : n === par + 2 ? 'Double' : ''}</small>
             </button>
           ))}
-          <button className="pad-key more" onClick={() => onPick(Math.min(15, Math.max(11, (value ?? 10) + 1)))}>
+          <button className="pad-key more" onClick={() => onPick(Math.min(15, Math.max(11, (value ?? 10) + 1)), true)}>
             {value > 10 ? value + 1 : '11+'}
           </button>
         </div>

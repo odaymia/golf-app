@@ -304,8 +304,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   tee / next ›), slim hole dots, then one row per player: name (playing
   handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
   and the running total (points, or to par). Tapping a score opens
-  `ScorePad` (bottom sheet: 1–10 labeled Eagle…Double, 11+); picking
-  jumps to the next player without a score on that hole.
+  `ScorePad` (bottom sheet: 1–10 labeled Eagle…Double, 11+); tapping a
+  number enters it and closes the pad (11+ stays open to count up).
 - Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
   use `Leaderboard.jsx`: home club under each name (`homeCourses` in
   social.js), tap a row (or Expand all) for `PlayerCard`: tee/slope/rating, par,
