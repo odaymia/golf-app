@@ -303,9 +303,13 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 - Score entry layout: green hole bar (‹ prev / Hole n, par, stroke index,
   tee / next ›), slim hole dots, then one row per player: name (playing
   handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
-  and the running total (points, or to par). Tapping a score opens
-  `ScorePad` (bottom sheet: 1–10 labeled Eagle…Double, 11+); tapping a
-  number enters it and closes the pad (11+ stays open to count up).
+  and the running total (points, or to par). A keypad is fixed at the
+  bottom (1–9, Clear, 0, ✕ to hide; Undo changes / Save scores): the
+  active score box shows a cursor, a digit enters it and moves to the next
+  player (a 1 waits for 0–5 to make 10–15; the last player keeps the
+  cursor). Tap a score box to move the cursor. Undo changes puts the hole
+  back as it was when opened; Save scores sends now and, once everyone
+  has a score, goes to the next hole (last hole: the round review).
 - Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
   use `Leaderboard.jsx`: home club under each name (`homeCourses` in
   social.js), tap a row (or Expand all) for `PlayerCard`: tee/slope/rating, par,

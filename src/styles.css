@@ -3717,17 +3717,6 @@ button.lm-row:active { background: var(--fill); }
 .gg-total small { font-size: 11px; font-weight: 600; }
 .gg-total.under { color: var(--birdie); }
 .gg-row .conflict-note, .gg-row .confirm-note { grid-column: 1 / -1; }
-.score-pad h2 { font-size: 18px; }
-.pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
-.pad-key {
-  min-height: 62px; border: none; border-radius: 12px; background: var(--card); box-shadow: var(--shadow);
-  font: inherit; font-size: 24px; font-weight: 800; color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.pad-key small { font-size: 10px; font-weight: 600; color: var(--muted); height: 12px; }
-.pad-key.under { color: var(--birdie); }
-.pad-key.par { background: #eef3ea; }
-.pad-key.on { outline: 3px solid var(--green); }
-.pad-key.more { font-size: 18px; }
 
 /* Golf Genius-style leaderboard */
 .lb2 { padding: 12px 0 10px; container-type: inline-size; }
@@ -3842,3 +3831,32 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .mb-side.mb-a { padding: 8px 13px 8px 3px; }
 .mb-side.mb-b { padding: 8px 3px 8px 13px; }
 .mb-side b { font-size: 13px; }
+
+/* Score keypad (fixed at the bottom while entering scores) */
+.gg-score.active { border: 2px solid var(--green); box-shadow: 0 0 0 3px rgb(6 80 37 / 15%); }
+.gg-score .caret { display: inline-block; width: 2px; height: 26px; margin-left: 2px; vertical-align: -4px; background: var(--green); animation: caret-blink 1s steps(1) infinite; }
+@keyframes caret-blink { 50% { opacity: 0; } }
+.keypad-space { height: calc(4 * 54px + 58px + env(safe-area-inset-bottom) + 12px); }
+.keypad {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0 auto; max-width: 640px;
+  background: #fff; border-top: 1px solid #ddd6c5; box-shadow: 0 -6px 20px rgb(28 42 32 / 10%);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.keypad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e6e0d1; }
+.keypad-keys button {
+  height: 54px; border: none; background: #fff; font: inherit; font-size: 26px; color: var(--text);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.keypad-keys button:active:not(:disabled) { background: #eef3ea; }
+.keypad-keys button:disabled { color: #c9c2ae; }
+.keypad-keys .kp-word { font-size: 17px; }
+.keypad-actions { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #e6e0d1; }
+.keypad-actions button { height: 58px; border: none; font: inherit; font-size: 17px; font-weight: 700; touch-action: manipulation; }
+.kp-undo { background: #fff; color: var(--down, #b91c1c); }
+.kp-save { background: var(--green); color: #fff; }
+.kp-save:active { background: var(--green-deep); }
+.gg-row { min-height: 56px; padding-top: 4px; padding-bottom: 4px; }
+.gg-score { width: 48px; height: 48px; }
+.keypad-keys button { height: 50px; }
+.keypad-actions button { height: 52px; }
+.keypad-space { height: calc(4 * 50px + 52px + env(safe-area-inset-bottom) + 12px); }

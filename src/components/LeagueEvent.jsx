@@ -259,7 +259,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   });
   const [status, setStatus] = useState('');
   const [review, setReview] = useState(false); // end-of-round scorecard
-  const [pad, setPad] = useState(null); // { row } while the score picker is open
+  // The score box the keypad types into: { hole, key, typed } (typed = '1'
+  // while waiting to see if it's 10–15). Another hole: first empty row.
+  const [cursor, setCursor] = useState(null);
+  // This hole's scores as they were when it opened, for Undo changes.
+  const snap = useRef({ hole: null, values: {} });
   const [submitted, setSubmitted] = useState(false);
   const dirty = useRef(new Set());
   const timer = useRef(null);
@@ -292,6 +296,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
   const flushRef = useRef(flush);
   flushRef.current = flush;
   useEffect(() => () => flushRef.current(), []);
+
+  useEffect(() => {
+    snap.current = { hole, values: Object.fromEntries(picked.map((id) => [id, cards[id]?.[hole - 1] ?? null])) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the hole or group changes
+  }, [hole, picked]);
 
   // One score for a row. A team row (scramble, foursomes) writes the team's
   // score onto every partner's card.
@@ -432,6 +441,57 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
       cls: toPar < 0 ? 'under' : '',
     };
   };
+  // Keypad: the active row, typing, undo and save.
+  const firstEmpty = rows.findIndex((r) => rowScore(r, hole - 1) == null);
+  const activeKey =
+    cursor && cursor.hole === hole ? cursor.key : (rows[firstEmpty >= 0 ? firstEmpty : 0]?.key ?? null);
+  const typed = cursor && cursor.hole === hole ? cursor.typed ?? '' : '';
+  const activeIdx = rows.findIndex((r) => r.key === activeKey);
+  const focus = (key, t = '') => setCursor({ hole, key, typed: t });
+  // Next player; the last one keeps the cursor so Clear still works.
+  const nextKey = () => rows[Math.min(activeIdx + 1, rows.length - 1)]?.key ?? null;
+  const press = (d) => {
+    const row = rows[activeIdx];
+    if (!row) return;
+    if (typed === '1' && d <= 5) {
+      setScore(row, 10 + d); // 10–15
+      return focus(nextKey());
+    }
+    if (d === 0) return;
+    setScore(row, d);
+    // A 1 waits a moment in case it's 10–15; any other digit moves on.
+    if (d === 1) return focus(row.key, '1');
+    focus(nextKey());
+  };
+  const clear = () => {
+    const row = rows[activeIdx];
+    if (row) setScore(row, null);
+    if (row) focus(row.key);
+  };
+  const undo = () => {
+    if (snap.current.hole !== hole) return;
+    const vals = snap.current.values;
+    Object.keys(vals).forEach((id) => dirty.current.add(id));
+    setCards((c) => {
+      const next = { ...c };
+      for (const id of Object.keys(vals)) next[id] = c[id].map((g, i) => (i === hole - 1 ? vals[id] : g));
+      return next;
+    });
+    setCursor(null);
+    setStatus('Changes undone');
+  };
+  const holeDone = rows.every((r) => rowScore(r, hole - 1) != null);
+  const goHole = (h) => {
+    setHole(h);
+    setCursor(null);
+  };
+  const save = async () => {
+    await flush();
+    if (!holeDone) return setStatus('Saved. Some players still need a score on this hole.');
+    if (hole < holes.length) goHole(hole + 1);
+    else setReview(true);
+  };
+
   if (review) {
     return (
       <RoundReview
@@ -445,7 +505,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
         submitted={submitted}
         onHole={(h) => {
           setReview(false);
-          setHole(h);
+          goHole(h);
         }}
         onBack={() => setReview(false)}
         onSubmit={async () => {
@@ -462,12 +522,12 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
         <RyderLive sides={settings.sides} standings={computedStandings} result={live} myIds={picked} />
       )}
       {badHoles.length > 0 && (
-        <button className="card disc-banner" onClick={() => setHole(badHoles[0] + 1)}>
+        <button className="card disc-banner" onClick={() => goHole(badHoles[0] + 1)}>
           ⚠ Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Tap to check.
         </button>
       )}
       <div className="gg-holebar">
-        <button className="gg-nav" onClick={() => setHole(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
+        <button className="gg-nav" onClick={() => goHole(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
           {hole > 1 ? `‹ Hole ${hole - 1}` : ''}
         </button>
         <div className="gg-hole">
@@ -476,7 +536,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
             Par {info.par} · Hcp {info.hcp} · {event.course.tee.name} tees
           </span>
         </div>
-        <button className="gg-nav right" onClick={() => setHole(Math.min(holes.length, hole + 1))} disabled={hole === holes.length} aria-label="Next hole">
+        <button className="gg-nav right" onClick={() => goHole(Math.min(holes.length, hole + 1))} disabled={hole === holes.length} aria-label="Next hole">
           {hole < holes.length ? `Hole ${hole + 1} ›` : ''}
         </button>
       </div>
@@ -485,7 +545,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
           <button
             key={i}
             className={`dot ${rows.every((r) => rowScore(r, i) != null) ? 'done' : ''} ${i === hole - 1 ? 'here' : ''} ${badHoles.includes(i) ? 'disc' : ''}`}
-            onClick={() => setHole(i + 1)}
+            onClick={() => goHole(i + 1)}
             aria-label={`Hole ${i + 1}`}
           >
             {i + 1}
@@ -502,7 +562,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
           <span>{stablefordGame ? 'Pts' : settings.net ? 'Net' : ''}</span>
           <span>Total</span>
         </div>
-        {rows.map((row, ri) => {
+        {rows.map((row) => {
           const id = row.ids[0];
           const s = rowScore(row, hole - 1);
           const mineHere = myScore(row, hole - 1);
@@ -521,11 +581,13 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
                 {row.team && <em>{row.format} team score</em>}
               </div>
               <button
-                className={`gg-score ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${toConfirm ? 'unconfirmed' : ''}`}
-                onClick={() => setPad({ row: ri })}
-                aria-label={toConfirm ? `${row.name} score ${s}, tap to confirm or change` : `${row.name} score`}
+                className={`gg-score ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${toConfirm ? 'unconfirmed' : ''} ${row.key === activeKey ? 'active' : ''}`}
+                onClick={() => focus(row.key)}
+                aria-label={toConfirm ? `${row.name} score ${s}, type it to confirm or change` : `${row.name} score`}
+                aria-pressed={row.key === activeKey}
               >
-                {s ?? '–'}
+                {s ?? (row.key === activeKey ? '' : '–')}
+                {row.key === activeKey && <span className="caret" />}
                 {strokes > 0 && <i className="gg-dots">{'•'.repeat(strokes)}</i>}
               </button>
               <span className="gg-pts">{t.hole ?? ''}</span>
@@ -547,25 +609,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
                   </span>
                 </div>
               )}
-              {toConfirm && !conflict && <p className="confirm-note">Entered by another scorekeeper. Tap it to agree or change.</p>}
+              {toConfirm && !conflict && <p className="confirm-note">Entered by another scorekeeper. Type it to agree or change.</p>}
             </div>
           );
         })}
       </div>
-      {pad && rows[pad.row] && (
-        <ScorePad
-          name={rows[pad.row].name}
-          hole={hole}
-          par={info.par}
-          value={rowScore(rows[pad.row], hole - 1)}
-          onPick={(v, keepOpen) => {
-            setScore(rows[pad.row], v);
-            // A number enters the score and closes the pad (11+ stays open to count up).
-            if (!keepOpen) setPad(null);
-          }}
-          onClose={() => setPad(null)}
-        />
-      )}
       <p className="hint center">{status || 'Scores save automatically.'}</p>
       <div className="row2">
         <button
@@ -580,22 +628,33 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload, comput
         <button className="btn btn-ghost" onClick={() => setReview(true)}>
           Card
         </button>
-        {hole < holes.length ? (
-          <button className="btn btn-primary" onClick={() => setHole(hole + 1)} disabled={!rows.every((r) => rowScore(r, hole - 1) != null)}>
-            Next hole
+      </div>
+      <div className="keypad-space" />
+      <div className="keypad" role="group" aria-label="Score keypad">
+        <div className="keypad-keys">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+            <button key={d} onClick={() => press(d)} disabled={activeIdx < 0}>
+              {d}
+            </button>
+          ))}
+          <button className="kp-word" onClick={clear} disabled={activeIdx < 0}>
+            Clear
           </button>
-        ) : (
-          <button
-            className="btn btn-primary"
-            onClick={async () => {
-              await flush();
-              setReview(true);
-            }}
-            disabled={!rows.every((r) => rowScore(r, hole - 1) != null)}
-          >
-            Review round
+          <button onClick={() => press(0)} disabled={typed !== '1'}>
+            0
           </button>
-        )}
+          <button className="kp-word" onClick={() => setCursor({ hole, key: null, typed: '' })} aria-label="Close keypad" disabled={activeIdx < 0}>
+            ✕
+          </button>
+        </div>
+        <div className="keypad-actions">
+          <button className="kp-undo" onClick={undo}>
+            Undo changes
+          </button>
+          <button className="kp-save" onClick={save}>
+            {holeDone ? (hole < holes.length ? 'Save scores' : 'Save & review') : 'Save scores'}
+          </button>
+        </div>
       </div>
     </>
   );
@@ -1017,36 +1076,4 @@ function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, s
   );
 }
 
-// Number picker for one player's score on a hole (opens from the score box).
-function ScorePad({ name, hole, par, value, onPick, onClose }) {
-  const nums = Array.from({ length: 10 }, (_, i) => i + 1);
-  return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet score-pad" role="dialog" aria-modal="true" aria-label={`Score for ${name}`} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head">
-          <h2>
-            {name} <span className="muted">· Hole {hole}</span>
-          </h2>
-          <button className="btn btn-ghost" onClick={onClose}>
-            {value > 10 ? 'Done' : 'Cancel'}
-          </button>
-        </div>
-        <div className="pad-grid">
-          {nums.map((n) => (
-            <button
-              key={n}
-              className={`pad-key ${n === value ? 'on' : ''} ${n === par ? 'par' : n < par ? 'under' : 'over'}`}
-              onClick={() => onPick(n)}
-            >
-              {n}
-              <small>{n === par ? 'Par' : n === par - 1 ? 'Birdie' : n === par - 2 ? 'Eagle' : n === par + 1 ? 'Bogey' : n === par + 2 ? 'Double' : ''}</small>
-            </button>
-          ))}
-          <button className="pad-key more" onClick={() => onPick(Math.min(15, Math.max(11, (value ?? 10) + 1)), true)}>
-            {value > 10 ? value + 1 : '11+'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
