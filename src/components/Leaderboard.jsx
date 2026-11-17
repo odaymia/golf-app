@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { homeCourses } from '../lib/social.js';
 import { holeStableford } from '../lib/league/event.js';
+import ScoreTable from './ScoreTable.jsx';
 
 // A leaderboard you can tap open: each golfer's home club under their name,
 // and the full scorecard under any row.
@@ -83,103 +84,26 @@ export default function Leaderboard({ rows, valueLabel, nameLabel = 'Player', ro
   );
 }
 
-// One player's full card for a round: yardage/par/stroke index, their
-// scores (birdies circled, bogeys boxed, handicap dots), Stableford points.
+// One player's full card for a round, in the shared scorecard look: tee
+// line, Par / Stroke index, their scores (birdies circled, bogeys boxed,
+// handicap dots), Stableford points.
 function PlayerCard({ id, round, members, settings }) {
   const { holes, course, players } = round;
   const p = players[id];
   const name = members.find((m) => m.id === id)?.name ?? '?';
   if (!p) return null;
-  const n = holes.length;
-  const front = Math.min(9, n);
   const stableford = settings.scoring === 'stableford';
   const pts = holes.map((h, i) => (p.gross[i] == null ? null : holeStableford(settings, p.gross[i], p.strokes[i], h.par)));
-  const sum = (arr, a, b) => {
-    let t = 0;
-    let any = false;
-    for (let i = a; i < b; i++) if (arr[i] != null) (t += arr[i]), (any = true);
-    return any ? t : '';
-  };
-  const cls = (g, par) => (g == null ? '' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'double' : '');
-  const par = holes.map((h) => h.par);
-  const idx = holes.map((h) => h.hcp);
-  const net = p.grossTotal ? p.netTotal : '';
-  const segs = n > 9 ? [[0, front, 'Out'], [front, n, 'In']] : [[0, n, 'Tot']];
+  const net = p.gross.map((g, i) => (g == null ? null : g - (p.strokes[i] ?? 0)));
+  const rows = [{ key: 'g', name: 'Score', values: p.gross, strokes: settings.net ? p.strokes : null }];
+  if (settings.net && !stableford) rows.push({ key: 'n', name: 'Net', values: net, kind: 'team' });
+  if (stableford) rows.push({ key: 's', name: 'Stableford pts', values: pts, kind: 'pts' });
   return (
     <div className="pc">
       <p className="pc-tee">
         <strong>{name}</strong> · {course.tee?.name} tee / Slope {course.tee?.slope} / Rating {course.tee?.rating} / {course.name} · playing {p.playing}
       </p>
-      <div className="pc-scroll">
-        <table className="pc-table">
-          <thead>
-            <tr>
-              <th className="pc-label">Hole</th>
-              {segs.map(([a, b, label]) => [
-                ...holes.slice(a, b).map((_, i) => <th key={`h${a + i}`}>{a + i + 1}</th>),
-                <th key={label} className="pc-tot">
-                  {label}
-                </th>,
-              ])}
-              {n > 9 && <th className="pc-tot">Tot</th>}
-              <th className="pc-tot">Net</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="pc-par">
-              <td className="pc-label">Par</td>
-              {segs.map(([a, b, label]) => [
-                ...par.slice(a, b).map((v, i) => <td key={`p${a + i}`}>{v}</td>),
-                <td key={label} className="pc-tot">
-                  {sum(par, a, b)}
-                </td>,
-              ])}
-              {n > 9 && <td className="pc-tot">{sum(par, 0, n)}</td>}
-              <td className="pc-tot" />
-            </tr>
-            <tr className="pc-idx">
-              <td className="pc-label">Stroke index</td>
-              {segs.map(([a, b, label]) => [
-                ...idx.slice(a, b).map((v, i) => <td key={`i${a + i}`}>{v}</td>),
-                <td key={label} className="pc-tot" />,
-              ])}
-              {n > 9 && <td className="pc-tot" />}
-              <td className="pc-tot" />
-            </tr>
-            <tr className="pc-score">
-              <td className="pc-label">Score</td>
-              {segs.map(([a, b, label]) => [
-                ...p.gross.slice(a, b).map((g, i) => (
-                  <td key={`g${a + i}`}>
-                    <span className={`pc-s ${cls(g, par[a + i])}`}>
-                      {g ?? ''}
-                      {settings.net && p.strokes[a + i] > 0 && <i>{'•'.repeat(p.strokes[a + i])}</i>}
-                    </span>
-                  </td>
-                )),
-                <td key={label} className="pc-tot">
-                  {sum(p.gross, a, b)}
-                </td>,
-              ])}
-              {n > 9 && <td className="pc-tot">{sum(p.gross, 0, n)}</td>}
-              <td className="pc-tot">{net}</td>
-            </tr>
-            {stableford && (
-              <tr className="pc-pts">
-                <td className="pc-label">Stableford pts</td>
-                {segs.map(([a, b, label]) => [
-                  ...pts.slice(a, b).map((v, i) => <td key={`s${a + i}`}>{v ?? ''}</td>),
-                  <td key={label} className="pc-tot">
-                    {sum(pts, a, b)}
-                  </td>,
-                ])}
-                {n > 9 && <td className="pc-tot">{sum(pts, 0, n)}</td>}
-                <td className="pc-tot" />
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ScoreTable holes={holes} marks info={[{ key: 'i', name: 'Stroke index', values: holes.map((h) => h.hcp) }]} rows={rows} />
     </div>
   );
 }

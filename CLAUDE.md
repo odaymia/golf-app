@@ -146,6 +146,7 @@ src/
                     Setup (+ CourseSearch), Play (Score/Money/Card tabs), Settle,
                     League -> LeagueHome / LeagueEvent / LeagueBuilder,
                     TournamentBoard, MatchCard, useLiveRefresh,
+                    ScoreTable (+ MatchDetail), ScoreKeypad + useKeypad,
                     PairingsEditor (+ TeeSheet, MyTeeTime),
                     controls.jsx (Switch, Toggle, Seg, OptionCards)
   components/instructor/  InstructorSetup (teach), InstructorCard (profile:
@@ -369,12 +370,20 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   handicap (scramble 35% low + 15% high; foursomes half the total) off the
   low team; the team score is saved on every partner's card and score entry
   shows one row per team.
-- Tapping a match card opens `MatchScorecard` (bottom sheet): the match
-  status on top, then one plain scorecard you swipe sideways (Hole, Par,
-  each player's gross with birdies circled, bogeys boxed and stroke dots,
-  Out/In/Tot; a team row instead for one-ball formats; a side-color bar on
-  each name). No team or match rows. Matches still expose `sideScores`
-  and `running` (league/event.js and games/match.js).
+- One scorecard look everywhere (`ScoreTable.jsx`, Golf Genius style):
+  Hole / Par header (current hole yellow, problem holes outlined red),
+  names pinned left, swipe sideways, Out/In/Tot. Used by league round
+  review, leaderboard player cards (+ Stroke index, Stableford pts),
+  the casual Card tab (tap a score to go to that hole) and `MatchDetail`
+  (same file): a match's card opened under its match card or row (league
+  match play, Ryder Cup board, tournament page, casual Money tab), with a
+  dark Match row per side (T / "2 up"), players, team row (Best ball /
+  Combined / Team ball) with holes won in team color. Matches expose
+  `results`, `sideScores` and `running` (league/event.js and
+  games/match.js) for it.
+- One score entry everywhere (league, tournament and casual `Play`):
+  `ScoreKeypad.jsx` (HoleBar, HoleDots, ScoreBox, Keypad) + `useKeypad.js`
+  (typing logic).
 
 ## Social feed
 

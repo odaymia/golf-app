@@ -2,7 +2,7 @@ import { formatMoney } from '../lib/games/money.js';
 import { gameLines, gameTitle, nameMap } from './gameSummary.js';
 import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
-import MatchScorecard from './MatchScorecard.jsx';
+import { MatchDetail } from './ScoreTable.jsx';
 
 export function Totals({ players, totals }) {
   return (
@@ -45,15 +45,28 @@ export default function MoneyView({ round, computed }) {
             <span className="muted">{g.game.net ? 'Net' : 'Gross'}</span>
           </div>
           {g.game.type === 'match' &&
-            g.matchups.map((m, i) => (
-              <MatchCard
-                key={i}
-                names={m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & '))}
-                status={m.status}
-                results={m.results}
-                onOpen={() => setOpen({ ...m, names: m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & ')), net: g.game.net })}
-              />
-            ))}
+            g.matchups.map((m, i) => {
+              const key = `${g.game.id}:${i}`;
+              return (
+                <div key={i} className="match-open">
+                  <MatchCard
+                    names={m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & '))}
+                    status={m.status}
+                    results={m.results}
+                    onOpen={() => setOpen(open === key ? null : key)}
+                  />
+                  {open === key && (
+                    <MatchDetail
+                      match={{ ...m, strokes: computed.strokes }}
+                      holes={round.course.holes}
+                      grossOf={(id) => round.scores[id]}
+                      nameOf={(id) => nameMap(players)[id]}
+                      net={g.game.net}
+                    />
+                  )}
+                </div>
+              );
+            })}
           <ul className="lines">
             {(g.game.type === 'match' ? [] : gameLines(g, players)).map((l, i) => (
               <li key={i} className={`${l.sub ? 'sub' : ''} ${l.head ? 'head' : ''}`}>
@@ -74,16 +87,6 @@ export default function MoneyView({ round, computed }) {
         <h3>If we stopped now</h3>
         <Payments players={players} payments={computed.payments} />
       </section>
-      {open && (
-        <MatchScorecard
-          match={{ ...open, strokes: computed.strokes }}
-          holes={round.course.holes}
-          grossOf={(id) => round.scores[id]}
-          nameOf={(id) => nameMap(players)[id]}
-          net={open.net}
-          onClose={() => setOpen(null)}
-        />
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { matchSummary } from '../lib/games/match.js';
 import { MATCH_FORMATS } from '../lib/league/event.js';
 import { homeCourses } from '../lib/social.js';
+import { MatchDetail } from './ScoreTable.jsx';
 
 const pts = (x) => {
   const whole = Math.floor(x);
@@ -201,7 +202,7 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
             {cell(r, 1)}
             <span className={`mb-pts ${r.final && r.lead === 1 ? 'won side-1' : ''}`}>{r.p ? pts(r.p[1]) : ''}</span>
           </button>
-          {open.has(i) && <MatchDetail match={r.m} sides={sides} holes={holes} net={net} nameOf={nameOf} grossOf={(id) => result.players?.[id]?.gross ?? holes.map(() => null)} />}
+          {open.has(i) && <MatchDetail match={r.m} sideNames={sides} holes={holes} net={net} nameOf={nameOf} grossOf={(id) => result.players?.[id]?.gross ?? holes.map(() => null)} />}
           </div>
         );
       })}
@@ -213,111 +214,5 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
         <span>{pts(total[1])}</span>
       </div>
     </section>
-  );
-}
-
-// A match's scorecard opened under its row: each side's players, the team
-// score (holes it won filled in team color) and a Match row per side
-// (T = tied, "2 up" while that side leads), current hole marked.
-function MatchDetail({ match, sides, holes, net, nameOf, grossOf }) {
-  const n = holes.length;
-  const front = Math.min(9, n);
-  const played = match.status.played;
-  const done = match.result != null;
-  const sum = (arr, a, b) => {
-    let t = 0;
-    let any = false;
-    for (let i = a; i < b; i++) if (arr[i] != null) (t += arr[i]), (any = true);
-    return any ? t : '';
-  };
-  // Holes, with Out after the front nine and In + Tot at the end.
-  const cols = [
-    ...holes.slice(0, front).map((_, h) => ({ h })),
-    ...(n > 9 ? [{ seg: [0, front], label: 'Out' }] : []),
-    ...holes.slice(front).map((_, i) => ({ h: front + i })),
-    { seg: [n > 9 ? front : 0, n], label: n > 9 ? 'In' : 'Tot' },
-    ...(n > 9 ? [{ seg: [0, n], label: 'Tot' }] : []),
-  ];
-  const teamLabel = match.teamBall ? 'Team ball' : match.format === 'shamble' ? 'Combined' : 'Best ball';
-  const row = (key, label, values, cls = '', won = null) => (
-    <tr key={key} className={cls}>
-      <th className="md-name">{label}</th>
-      {cols.map((c, k) =>
-        c.seg ? (
-          <td key={k} className="md-tot">
-            {sum(values, ...c.seg)}
-          </td>
-        ) : (
-          <td key={k} className={won && won(c.h) ? cls.includes('side-0') ? 'won side-0' : 'won side-1' : ''}>
-            {values[c.h] ?? ''}
-          </td>
-        ),
-      )}
-    </tr>
-  );
-  const matchRow = (s) => (
-    <tr key={`m${s}`} className="md-match">
-      <th className="md-name">Match</th>
-      {cols.map((c, k) => {
-        if (c.seg) return <td key={k} />;
-        const u = match.running[c.h];
-        const mine = s === 0 ? u > 0 : u < 0;
-        return (
-          <td key={k}>
-            {u == null ? '' : u === 0 ? 'T' : mine ? (
-              <>
-                {Math.abs(u)}
-                <small>up</small>
-              </>
-            ) : (
-              ''
-            )}
-          </td>
-        );
-      })}
-    </tr>
-  );
-  const side = (s) => {
-    const ids = match.sides[s];
-    const wonHole = (h) => match.results[h] === (s === 0 ? 1 : -1);
-    const rows = [];
-    if (!match.teamBall) ids.forEach((id) => rows.push(row(id, nameOf(id), grossOf(id), `md-player side-${s}`, ids.length === 1 ? wonHole : null)));
-    if (ids.length > 1 || match.teamBall) rows.push(row(`t${s}`, teamLabel + (net ? ' (net)' : ''), match.sideScores[s], `md-team side-${s}`, wonHole));
-    return rows;
-  };
-  return (
-    <div className="md">
-      <p className="md-title">
-        <b className="side-0">{sides[0]}</b> ({match.names[0].replace(' & ', ' + ')}) vs <b className="side-1">{sides[1]}</b> ({match.names[1].replace(' & ', ' + ')})
-      </p>
-      <div className="md-scroll">
-        <table className="md-table">
-          <thead>
-            <tr>
-              <th className="md-name">Hole</th>
-              {cols.map((c, k) => (
-                <th key={k} className={c.seg ? 'md-tot' : !done && c.h === played ? 'md-now' : ''}>
-                  {c.seg ? c.label : c.h + 1}
-                </th>
-              ))}
-            </tr>
-            <tr className="md-par">
-              <th className="md-name">Par</th>
-              {cols.map((c, k) => (
-                <td key={k} className={c.seg ? 'md-tot' : ''}>
-                  {c.seg ? sum(holes.map((x) => x.par), ...c.seg) : holes[c.h].par}
-                </td>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matchRow(0)}
-            {side(0)}
-            {side(1)}
-            {matchRow(1)}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }

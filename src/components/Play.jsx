@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { computeRound } from '../lib/games/round.js';
 import { segmentForHole } from '../lib/games/nassau.js';
 import { wolfForHole } from '../lib/games/wolf.js';
@@ -6,6 +6,8 @@ import MoneyView, { Totals } from './MoneyView.jsx';
 import Scorecard from './Scorecard.jsx';
 import { nameMap } from './gameSummary.js';
 import MatchCard from './MatchCard.jsx';
+import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
+import { useKeypad } from './useKeypad.js';
 
 export default function Play({ round, setRound, onSettle, onHome }) {
   const [tab, setTab] = useState('score');
@@ -17,11 +19,18 @@ export default function Play({ round, setRound, onSettle, onHome }) {
   const last = round.course.holes.length;
 
   const update = (fn) => setRound((r) => fn(structuredClone(r)));
+  const keypad = useKeypad(hole);
   const goTo = (n) =>
     update((r) => {
       r.currentHole = Math.min(last, Math.max(1, n));
       return r;
     });
+  // This hole's scores as they were when it opened, for Undo changes.
+  const snap = useRef({ hole: null, values: {} });
+  useEffect(() => {
+    snap.current = { hole, values: Object.fromEntries(round.players.map((p) => [p.id, round.scores[p.id][hole - 1]])) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the hole changes
+  }, [hole]);
 
   function setScore(id, value) {
     update((r) => {
@@ -41,6 +50,38 @@ export default function Play({ round, setRound, onSettle, onHome }) {
   const nassau = round.games.find((g) => g.type === 'nassau');
   const holeScored = round.players.every((p) => round.scores[p.id][h] != null);
   const wolfMissing = wolf && !wolf.decisions[hole];
+  const kp = keypad(
+    round.players.map((p) => p.id),
+    (id, v) => setScore(id, v),
+  );
+  const go = (n) => {
+    kp.close();
+    goTo(n);
+  };
+  const undo = () => {
+    if (snap.current.hole !== hole) return;
+    const vals = snap.current.values;
+    update((r) => {
+      for (const id of Object.keys(vals)) r.scores[id][h] = vals[id] ?? null;
+      return r;
+    });
+    kp.close();
+  };
+  const save = () => {
+    if (holeScored && hole < last) return go(hole + 1);
+    kp.close();
+  };
+  // Gross to par so far, for the Total column.
+  const toPar = (id) => {
+    let t = 0;
+    let any = false;
+    round.scores[id].forEach((g, i) => {
+      if (g == null) return;
+      any = true;
+      t += g - round.course.holes[i].par;
+    });
+    return any ? (t === 0 ? 'E' : t > 0 ? `+${t}` : String(t)) : '–';
+  };
 
   return (
     <div className="screen play">
@@ -78,35 +119,13 @@ export default function Play({ round, setRound, onSettle, onHome }) {
 
       {tab === 'score' && (
         <>
-          <div className="hole-head">
-            <button className="nav-btn" onClick={() => goTo(hole - 1)} disabled={hole === 1} aria-label="Previous hole">
-              ‹
-            </button>
-            <div className="hole-title">
-              <div className="hole-num">Hole {hole}</div>
-              <div className="muted">
-                Par {info.par} · Hcp {info.hcp}
-              </div>
-            </div>
-            <button className="nav-btn" onClick={() => goTo(hole + 1)} disabled={hole === last} aria-label="Next hole">
-              ›
-            </button>
-          </div>
-          <div className="hole-dots">
-            {round.course.holes.map((_, i) => {
-              const done = round.players.every((p) => round.scores[p.id][i] != null);
-              return (
-                <button
-                  key={i}
-                  className={`dot ${done ? 'done' : ''} ${i === h ? 'here' : ''}`}
-                  onClick={() => goTo(i + 1)}
-                  aria-label={`Hole ${i + 1}`}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
-          </div>
+          <HoleBar hole={hole} count={last} info={info} tee={round.tee?.name} onGo={go} />
+          <HoleDots
+            count={last}
+            hole={hole}
+            done={(i) => round.players.every((p) => round.scores[p.id][i] != null)}
+            onGo={go}
+          />
 
           {wolf && (
             <section className="card wolf-card">
@@ -142,43 +161,35 @@ export default function Play({ round, setRound, onSettle, onHome }) {
                 compact
               />
             ))}
-          <div className="score-rows">
+          <div className="gg-table">
+            <div className="gg-head">
+              <span>Player</span>
+              <span>Score</span>
+              <span>Net</span>
+              <span>Total</span>
+            </div>
             {round.players.map((p) => {
-              const s = round.scores[p.id][h];
+              const sc = round.scores[p.id][h];
               const strokes = computed.strokes[p.id][h];
-              const diff = s == null ? null : s - info.par;
+              const t = toPar(p.id);
               return (
-                <div key={p.id} className="score-row card">
-                  <div className="score-name">
-                    <strong>{p.name}</strong>
-                    <span className="muted">
-                      {strokes > 0 ? `${'•'.repeat(strokes)} gets ${strokes}` : strokes < 0 ? `gives ${-strokes}` : ''}
-                      {s != null && strokes !== 0 ? ` · net ${s - strokes}` : ''}
-                    </span>
+                <div key={p.id} className="gg-row">
+                  <div className="gg-name">
+                    <strong>
+                      {p.name}
+                      <span className="gg-hcp"> ({computed.playing[p.id]})</span>
+                    </strong>
                   </div>
-                  <div className="stepper">
-                    <button
-                      className="step"
-                      onClick={() => setScore(p.id, s == null ? info.par - 1 : s - 1)}
-                      aria-label={`${p.name} minus one`}
-                    >
-                      −
-                    </button>
-                    <button
-                      className={`score-val ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'}`}
-                      onClick={() => s == null && setScore(p.id, info.par)}
-                      aria-label={`${p.name} score`}
-                    >
-                      {s ?? 'Par?'}
-                    </button>
-                    <button
-                      className="step"
-                      onClick={() => setScore(p.id, s == null ? info.par + 1 : s + 1)}
-                      aria-label={`${p.name} plus one`}
-                    >
-                      +
-                    </button>
-                  </div>
+                  <ScoreBox
+                    value={sc}
+                    par={info.par}
+                    strokes={strokes}
+                    active={p.id === kp.activeKey}
+                    label={`${p.name} score`}
+                    onClick={() => kp.focus(p.id)}
+                  />
+                  <span className="gg-pts">{sc != null && strokes !== 0 ? sc - strokes : ''}</span>
+                  <span className={`gg-total ${t.startsWith('-') ? 'under' : ''}`}>{t}</span>
                 </div>
               );
             })}
@@ -188,18 +199,21 @@ export default function Play({ round, setRound, onSettle, onHome }) {
             <PressPanel nassau={nassau} hole={hole} names={names} updateGame={updateGame} computed={computed} />
           )}
 
-          <div className="sticky-bottom bottom-bar">
-            <Totals players={round.players} totals={computed.totals} />
-            {hole < last ? (
-              <button className="btn btn-primary btn-xl" onClick={() => goTo(hole + 1)} disabled={!holeScored}>
-                {holeScored ? (wolfMissing ? 'Next hole (no wolf pick)' : `Next: hole ${hole + 1}`) : 'Enter every score'}
-              </button>
-            ) : (
-              <button className="btn btn-primary btn-xl" onClick={onSettle}>
-                {computed.finished ? 'Finish & settle up' : `Settle up (thru ${computed.holesComplete})`}
-              </button>
-            )}
-          </div>
+          {!kp.open && (
+            <div className="sticky-bottom bottom-bar">
+              <Totals players={round.players} totals={computed.totals} />
+              {hole < last ? (
+                <button className="btn btn-primary btn-xl" onClick={() => go(hole + 1)} disabled={!holeScored}>
+                  {holeScored ? (wolfMissing ? 'Next hole (no wolf pick)' : `Next: hole ${hole + 1}`) : 'Enter every score'}
+                </button>
+              ) : (
+                <button className="btn btn-primary btn-xl" onClick={onSettle}>
+                  {computed.finished ? 'Finish & settle up' : `Settle up (thru ${computed.holesComplete})`}
+                </button>
+              )}
+            </div>
+          )}
+          <Keypad kp={kp} onUndo={undo} onSave={save} saveLabel={holeScored && hole < last ? 'Save scores' : 'Done'} />
         </>
       )}
     </div>

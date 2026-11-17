@@ -3724,11 +3724,11 @@ button.lm-row:active { background: var(--fill); }
 .lb2-top strong { font-family: var(--serif); font-size: 18px; }
 .lb2-scroll { overflow-x: auto; }
 .lb2-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.lb2-table th {
+.lb2-table > thead > tr > th {
   padding: 8px 6px; background: var(--green-deep); color: #fff; font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em; text-align: center; white-space: nowrap;
 }
-.lb2-table th.left { text-align: left; }
+.lb2-table > thead > tr > th.left { text-align: left; }
 .lb2-row { cursor: pointer; }
 .lb2-row td { padding: 9px 6px; border-bottom: 1px solid var(--hairline); text-align: center; vertical-align: middle; }
 .lb2-row:hover td { background: rgb(28 42 32 / 3%); }
@@ -3742,24 +3742,10 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .lb2-val.under { color: var(--birdie); }
 .lb2-thru { color: var(--muted); width: 44px; }
 .lb2-section td { padding: 6px 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--fill); }
-.lb2-card td { padding: 0 0 10px; background: #f7f3e8; border-bottom: 1px solid var(--hairline); }
+.lb2-card > td { padding: 0 0 10px; background: #f7f3e8; border-bottom: 1px solid var(--hairline); }
 .pc { padding: 8px 10px 0; width: 100cqw; box-sizing: border-box; }
 .pc-tee { margin: 0 0 6px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .pc-tee strong { color: var(--text); }
-.pc-scroll { overflow-x: auto; }
-.pc-table { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; background: #fff; }
-.pc-table th, .pc-table td { border: 1px solid #e3dccb; padding: 4px 5px; text-align: center; min-width: 26px; }
-.pc-table th, .lb2-table .pc-table th { background: #f1ece0; color: var(--text); font-weight: 700; font-size: 12.5px; letter-spacing: 0; text-transform: none; padding: 4px 5px; }
-.pc-label { text-align: left !important; white-space: nowrap; font-weight: 700; background: #f1ece0; position: sticky; left: 0; }
-.pc-tot { font-weight: 800; background: #f1ece0; }
-.pc-par td, .pc-idx td { color: var(--muted); }
-.pc-s { position: relative; display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid transparent; font-weight: 700; }
-.pc-s.birdie { border-color: var(--birdie); border-radius: 50%; color: var(--birdie); }
-.pc-s.eagle { border-color: var(--birdie); border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--birdie); color: var(--birdie); }
-.pc-s.bogey { border-color: var(--bogey); color: var(--bogey); }
-.pc-s.double { border-color: var(--bogey); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--bogey); color: var(--bogey); }
-.pc-s i { position: absolute; top: -5px; right: -5px; font-style: normal; font-size: 9px; letter-spacing: -1px; color: var(--text); }
-.pc-pts td { font-weight: 700; color: var(--green-deep); }
 
 /* Ryder Cup results: team points + match board (Golf Genius style) */
 .tp { padding: 12px 0 6px; }
@@ -3862,20 +3848,6 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .keypad-space { height: calc(4 * 50px + 52px + env(safe-area-inset-bottom) + 12px); }
 .keypad-hint { margin: 0; padding: 8px 12px; background: #fff7e0; border-bottom: 1px solid #ecdcae; font-size: 13px; font-weight: 600; text-align: center; color: #6b5310; }
 
-/* Match scorecard: one plain card, swipe sideways */
-.msc-scroll { overflow-x: auto; margin: 12px -4px 0; -webkit-overflow-scrolling: touch; border: 1px solid #e3dccb; border-radius: 10px; background: #fff; }
-.msc { border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
-.msc th, .msc td { border-right: 1px solid #ece6d8; border-bottom: 1px solid #ece6d8; padding: 6px 4px; min-width: 32px; text-align: center; }
-.msc th { background: #f1ece0; font-weight: 700; }
-.msc .msc-name { position: sticky; left: 0; z-index: 1; min-width: 92px; max-width: 110px; text-align: left; padding-left: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; box-shadow: 1px 0 0 #e3dccb; }
-.msc th.msc-name { background: #f1ece0; }
-.msc-par td { color: var(--muted); }
-.msc-tot { font-weight: 800; background: #f8f5ec; min-width: 38px !important; }
-.msc th.msc-tot { background: #e9e2d2; }
-.msc-player.side-0 .msc-name { border-left: 4px solid #1d4ed8; }
-.msc-player.side-1 .msc-name { border-left: 4px solid #dc2626; }
-.msc-player.side-1:first-of-type .msc-name, .msc tr.side-0 + tr.side-1 td { border-top: 2px solid #d6cfbd; }
-.msc .pc-s i { font-size: 10px; }
 
 /* Ryder Cup: a match's scorecard opened under its row */
 .mb-title { align-items: center; }
@@ -3905,3 +3877,39 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .md-match td small { display: block; font-size: 9.5px; font-weight: 600; line-height: 1; }
 .md-match .md-name { background: #33373d; }
 .mb-title .link { white-space: nowrap; flex: none; }
+
+/* Shared scorecard (ScoreTable): the one card look everywhere */
+.st-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.st { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; background: #fff; }
+.st th, .st td { position: relative; border: 1px solid #e2e4e8; padding: 5px 3px; min-width: 27px; text-align: center; }
+.st thead th { background: #eceef1; font-weight: 800; }
+.st thead th.st-now { background: #fde047; }
+.st thead th.st-bad, .st td.st-bad { box-shadow: inset 0 0 0 2px #dc2626; }
+.st-info td { color: var(--muted); background: #fafafa; }
+.st-info th.st-name { color: var(--muted); font-weight: 600; }
+.st .st-tot { font-weight: 800; min-width: 33px; background: #f3f4f6; }
+.st .st-name { position: sticky; left: 0; z-index: 2; min-width: 86px; max-width: 104px; text-align: left; padding-left: 8px; font-weight: 700; background: #fff; white-space: normal; line-height: 1.15; box-shadow: 1px 0 0 #d4d7dc; }
+.st thead .st-name { background: #eceef1; }
+.st-info .st-name { background: #fafafa; }
+.st-player.side-0 .st-name { color: #1d4ed8; }
+.st-player.side-1 .st-name { color: #dc2626; }
+.st-team th, .st-team td { font-weight: 800; }
+.st-team .st-name { background: #f3f4f6; }
+.st td.won.side-0 { background: #1d4ed8; color: #fff; }
+.st td.won.side-1 { background: #dc2626; color: #fff; }
+.st-match th, .st-match td { background: #33373d; color: #fff; font-size: 12px; font-weight: 700; border-color: #4a4f57; }
+.st-match td small { display: block; font-size: 9.5px; font-weight: 600; line-height: 1; }
+.st-match .st-name { background: #33373d; }
+.st-dots { position: absolute; top: 1px; right: 2px; font-style: normal; font-size: 9px; line-height: 1; letter-spacing: -1px; }
+.st-s { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid transparent; font-weight: 600; }
+.st-s.birdie { border-color: #dc2626; border-radius: 50%; color: #dc2626; }
+.st-s.eagle { border-color: #dc2626; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #dc2626; color: #dc2626; }
+.st-s.bogey { border-color: #1d4ed8; color: #1d4ed8; }
+.st-s.double { border-color: #1d4ed8; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #1d4ed8; color: #1d4ed8; }
+.st-tap { width: 100%; min-height: 30px; padding: 0; border: none; background: none; font: inherit; color: inherit; }
+.st-tap:active { background: #eef3ea; }
+.st-pts td { color: var(--green-deep); font-weight: 700; }
+.match-open .md { margin: -8px 0 14px; border: 1px solid #e2e4e8; border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; }
+.sc-card { padding: 10px 0 6px; overflow: hidden; }
+.sc-card .hint { padding: 0 12px; }
+.round-review .st-scroll { margin: 8px -4px; }
