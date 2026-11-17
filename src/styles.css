@@ -3876,3 +3876,32 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .msc-player.side-1 .msc-name { border-left: 4px solid #dc2626; }
 .msc-player.side-1:first-of-type .msc-name, .msc tr.side-0 + tr.side-1 td { border-top: 2px solid #d6cfbd; }
 .msc .pc-s i { font-size: 10px; }
+
+/* Ryder Cup: a match's scorecard opened under its row */
+.mb-title { align-items: center; }
+.mb-title > div { display: flex; flex-direction: column; }
+.mb-title > div span { text-align: left; }
+.mb-row.open { box-shadow: inset 0 -2px 0 #33373d; }
+.md { background: #f6f7f8; border-bottom: 2px solid #33373d; padding: 8px 0 10px; }
+.md-title { margin: 0 10px 8px; font-size: 13px; font-weight: 600; text-align: center; line-height: 1.35; }
+.md-title b.side-0 { color: #1d4ed8; }
+.md-title b.side-1 { color: #dc2626; }
+.md-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.md-table { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; background: #fff; }
+.md-table th, .md-table td { border: 1px solid #e2e4e8; padding: 5px 3px; min-width: 26px; text-align: center; }
+.md-table thead th { background: #eceef1; font-weight: 800; }
+.md-table thead th.md-now { background: #fde047; }
+.md-par td { color: var(--muted); background: #fafafa; }
+.md-tot { font-weight: 800; min-width: 32px !important; background: #f3f4f6; }
+.md-name { position: sticky; left: 0; z-index: 1; min-width: 86px; max-width: 96px; text-align: left !important; padding-left: 8px !important; font-weight: 700; background: #fff; white-space: normal; line-height: 1.15; box-shadow: 1px 0 0 #d4d7dc; }
+.md-table thead .md-name { background: #eceef1; }
+.md-player.side-0 .md-name { color: #1d4ed8; }
+.md-player.side-1 .md-name { color: #dc2626; }
+.md-team th, .md-team td { font-weight: 800; }
+.md-team .md-name { background: #f3f4f6; }
+.md-table td.won.side-0 { background: #1d4ed8; color: #fff; }
+.md-table td.won.side-1 { background: #dc2626; color: #fff; }
+.md-match th, .md-match td { background: #33373d; color: #fff; font-size: 12px; font-weight: 700; border-color: #4a4f57; }
+.md-match td small { display: block; font-size: 9.5px; font-weight: 600; line-height: 1; }
+.md-match .md-name { background: #33373d; }
+.mb-title .link { white-space: nowrap; flex: none; }

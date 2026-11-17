@@ -327,7 +327,12 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   then `MatchBoard`: Pts | side A (names, home clubs) | status | side B |
   Pts per match, the winner's side filled in team color (blue/red) with an
   arrow on the status pointing at the side that's up, halved grey, a
-  totals footer for the round; tap a match for its scorecard.
+  totals footer for the round. Tapping a match (or Expand all) opens its
+  scorecard under the row (`MatchDetail`): "Side (names) vs Side (names)",
+  Hole (current hole yellow) / Par, a dark Match row per side (T = tied,
+  "2 up" while that side leads) above side A and below side B, each
+  player's scores, the team row (Best ball / Combined / Team ball) with
+  holes won filled in team color, Out/In/Tot; swipe sideways.
 - Multiple scorekeepers: each keeps their own card in `score_entries`
   (`saveScore(…, official, mine)`); the official `event_scores` card is my
   numbers merged over what's there (never wipes others' holes; latest wins).

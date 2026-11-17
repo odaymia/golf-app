@@ -123,19 +123,8 @@ function Results({ settings, result, members, holes, live, reload, standings = [
     if (settings.unit === 'ryder')
       return (
         <>
-          <RyderLive sides={settings.sides} standings={standings} result={result} onOpenMatch={setOpen} members={members} title={event?.name} />
-          {open != null && result.matches[open] && (
-            <MatchScorecard
-              match={result.matches[open]}
-              holes={holes}
-              grossOf={(id) => result.players[id]?.gross ?? holes.map(() => null)}
-              nameOf={(id) => members.find((m) => m.id === id)?.name ?? '?'}
-              net={settings.net}
-              label={MATCH_FORMATS[result.matches[open].format].label}
-              onClose={() => setOpen(null)}
-            />
-          )}
-          <p className="hint center">Tap a match for its scorecard.{live ? ' Live: updates every 20 seconds as groups enter scores.' : ''}</p>
+          <RyderLive board sides={settings.sides} standings={standings} result={result} members={members} title={event?.name} holes={holes} net={settings.net} />
+          <p className="hint center">Tap a match to open its scorecard.{live ? ' Live: updates every 20 seconds as groups enter scores.' : ''}</p>
         </>
       );
     return (

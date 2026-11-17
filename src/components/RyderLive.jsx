@@ -14,12 +14,12 @@ const pts = (x) => {
 // standings: computed.standings (ryder rows); result: this round's result.
 // onOpenMatch(i): tap a match (results board); roundPoints: show this
 // round's points under the totals.
-export default function RyderLive({ sides, standings, result, myIds = [], onOpenMatch, roundPoints = false, members = [], title }) {
-  if (onOpenMatch)
+export default function RyderLive({ sides, standings, result, myIds = [], onOpenMatch, roundPoints = false, members = [], title, board = false, holes = [], net = false }) {
+  if (board)
     return (
       <>
         <TeamPoints sides={sides} standings={standings} />
-        <MatchBoard sides={sides} result={result} members={members} title={title} myIds={myIds} onOpenMatch={onOpenMatch} />
+        <MatchBoard sides={sides} result={result} members={members} title={title} myIds={myIds} holes={holes} net={net} />
       </>
     );
   const row = (side) => standings.find((r) => r.key === side) ?? { total: 0, projected: 0 };
@@ -118,8 +118,16 @@ function TeamPoints({ sides, standings }) {
 
 // This round's matches: points | side A | status | side B | points, the
 // winner's side filled in its team color, totals at the bottom.
-function MatchBoard({ sides, result, members, title, myIds, onOpenMatch }) {
+function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
   const [clubs, setClubs] = useState(new Map());
+  const [open, setOpen] = useState(() => new Set());
+  const toggle = (i) =>
+    setOpen((o) => {
+      const next = new Set(o);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   useEffect(() => {
     homeCourses(members.map((m) => m.userId).filter(Boolean))
       .then(setClubs)
@@ -153,8 +161,15 @@ function MatchBoard({ sides, result, members, title, myIds, onOpenMatch }) {
   return (
     <section className="card mb">
       <div className="mb-title">
-        <strong>{title}</strong>
-        {formats && <span>{formats}</span>}
+        <div>
+          <strong>{title}</strong>
+          {formats && <span>{formats}</span>}
+        </div>
+        {matches.length > 0 && (
+          <button className="link" onClick={() => setOpen(open.size === matches.length ? new Set() : new Set(matches.map((_, i) => i)))}>
+            {open.size === matches.length ? 'Collapse all' : 'Expand all'}
+          </button>
+        )}
       </div>
       <div className="mb-grid mb-head">
         <span>Pts</span>
@@ -168,11 +183,12 @@ function MatchBoard({ sides, result, members, title, myIds, onOpenMatch }) {
         const status = r.m.status.played === 0 ? '–' : r.final && r.lead === null ? 'tied' : r.sum.big;
         const sub = r.m.status.played === 0 ? 'not started' : r.final ? 'F' : r.sum.small;
         return (
+          <div key={i}>
           <button
-            key={i}
-            className={`mb-grid mb-row ${mine ? 'mine' : ''}`}
-            onClick={() => onOpenMatch(i)}
-            aria-label={`${r.m.names[0]} vs ${r.m.names[1]}, ${status}, open scorecard`}
+            className={`mb-grid mb-row ${mine ? 'mine' : ''} ${open.has(i) ? 'open' : ''}`}
+            onClick={() => toggle(i)}
+            aria-expanded={open.has(i)}
+            aria-label={`${r.m.names[0]} vs ${r.m.names[1]}, ${status}, ${open.has(i) ? 'hide' : 'show'} scorecard`}
           >
             <span className={`mb-pts ${r.final && r.lead === 0 ? 'won side-0' : ''}`}>{r.p ? pts(r.p[0]) : ''}</span>
             {cell(r, 0)}
@@ -185,6 +201,8 @@ function MatchBoard({ sides, result, members, title, myIds, onOpenMatch }) {
             {cell(r, 1)}
             <span className={`mb-pts ${r.final && r.lead === 1 ? 'won side-1' : ''}`}>{r.p ? pts(r.p[1]) : ''}</span>
           </button>
+          {open.has(i) && <MatchDetail match={r.m} sides={sides} holes={holes} net={net} nameOf={nameOf} grossOf={(id) => result.players?.[id]?.gross ?? holes.map(() => null)} />}
+          </div>
         );
       })}
       <div className="mb-grid mb-foot">
@@ -195,5 +213,111 @@ function MatchBoard({ sides, result, members, title, myIds, onOpenMatch }) {
         <span>{pts(total[1])}</span>
       </div>
     </section>
+  );
+}
+
+// A match's scorecard opened under its row: each side's players, the team
+// score (holes it won filled in team color) and a Match row per side
+// (T = tied, "2 up" while that side leads), current hole marked.
+function MatchDetail({ match, sides, holes, net, nameOf, grossOf }) {
+  const n = holes.length;
+  const front = Math.min(9, n);
+  const played = match.status.played;
+  const done = match.result != null;
+  const sum = (arr, a, b) => {
+    let t = 0;
+    let any = false;
+    for (let i = a; i < b; i++) if (arr[i] != null) (t += arr[i]), (any = true);
+    return any ? t : '';
+  };
+  // Holes, with Out after the front nine and In + Tot at the end.
+  const cols = [
+    ...holes.slice(0, front).map((_, h) => ({ h })),
+    ...(n > 9 ? [{ seg: [0, front], label: 'Out' }] : []),
+    ...holes.slice(front).map((_, i) => ({ h: front + i })),
+    { seg: [n > 9 ? front : 0, n], label: n > 9 ? 'In' : 'Tot' },
+    ...(n > 9 ? [{ seg: [0, n], label: 'Tot' }] : []),
+  ];
+  const teamLabel = match.teamBall ? 'Team ball' : match.format === 'shamble' ? 'Combined' : 'Best ball';
+  const row = (key, label, values, cls = '', won = null) => (
+    <tr key={key} className={cls}>
+      <th className="md-name">{label}</th>
+      {cols.map((c, k) =>
+        c.seg ? (
+          <td key={k} className="md-tot">
+            {sum(values, ...c.seg)}
+          </td>
+        ) : (
+          <td key={k} className={won && won(c.h) ? cls.includes('side-0') ? 'won side-0' : 'won side-1' : ''}>
+            {values[c.h] ?? ''}
+          </td>
+        ),
+      )}
+    </tr>
+  );
+  const matchRow = (s) => (
+    <tr key={`m${s}`} className="md-match">
+      <th className="md-name">Match</th>
+      {cols.map((c, k) => {
+        if (c.seg) return <td key={k} />;
+        const u = match.running[c.h];
+        const mine = s === 0 ? u > 0 : u < 0;
+        return (
+          <td key={k}>
+            {u == null ? '' : u === 0 ? 'T' : mine ? (
+              <>
+                {Math.abs(u)}
+                <small>up</small>
+              </>
+            ) : (
+              ''
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+  const side = (s) => {
+    const ids = match.sides[s];
+    const wonHole = (h) => match.results[h] === (s === 0 ? 1 : -1);
+    const rows = [];
+    if (!match.teamBall) ids.forEach((id) => rows.push(row(id, nameOf(id), grossOf(id), `md-player side-${s}`, ids.length === 1 ? wonHole : null)));
+    if (ids.length > 1 || match.teamBall) rows.push(row(`t${s}`, teamLabel + (net ? ' (net)' : ''), match.sideScores[s], `md-team side-${s}`, wonHole));
+    return rows;
+  };
+  return (
+    <div className="md">
+      <p className="md-title">
+        <b className="side-0">{sides[0]}</b> ({match.names[0].replace(' & ', ' + ')}) vs <b className="side-1">{sides[1]}</b> ({match.names[1].replace(' & ', ' + ')})
+      </p>
+      <div className="md-scroll">
+        <table className="md-table">
+          <thead>
+            <tr>
+              <th className="md-name">Hole</th>
+              {cols.map((c, k) => (
+                <th key={k} className={c.seg ? 'md-tot' : !done && c.h === played ? 'md-now' : ''}>
+                  {c.seg ? c.label : c.h + 1}
+                </th>
+              ))}
+            </tr>
+            <tr className="md-par">
+              <th className="md-name">Par</th>
+              {cols.map((c, k) => (
+                <td key={k} className={c.seg ? 'md-tot' : ''}>
+                  {c.seg ? sum(holes.map((x) => x.par), ...c.seg) : holes[c.h].par}
+                </td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {matchRow(0)}
+            {side(0)}
+            {side(1)}
+            {matchRow(1)}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
