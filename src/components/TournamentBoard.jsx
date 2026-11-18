@@ -4,6 +4,7 @@ import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { MatchDetail } from './ScoreTable.jsx';
+import { matchLabel } from '../lib/league/ryder.js';
 import { useLiveRefresh } from './useLiveRefresh.js';
 
 const toParText = (n) => (n == null ? '–' : n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`);
@@ -161,7 +162,7 @@ function RyderBoard({ settings, standings, events, results, members, open, onOpe
                 names={m.names}
                 status={m.status}
                 results={m.results}
-                label={MATCH_FORMATS[m.format].label}
+                label={matchLabel(m, true)}
                 onOpen={() => setCard(card === i ? null : i)}
               />
               {card === i && (

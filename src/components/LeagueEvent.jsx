@@ -15,7 +15,7 @@ import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
-import { discrepancies, discrepancyHoles } from '../lib/league/ryder.js';
+import { discrepancies, discrepancyHoles, isSplit, matchLabel, roundFormatText } from '../lib/league/ryder.js';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -155,7 +155,7 @@ function Results({ settings, result, members, holes, live, reload, standings = [
               names={m.names}
               status={m.status}
               results={m.results}
-              label={settings.unit === 'individual' ? null : MATCH_FORMATS[m.format].label}
+              label={settings.unit === 'individual' ? null : matchLabel(m, true)}
               onOpen={() => setOpen(open === i ? null : i)}
             />
             {open === i && (
@@ -330,9 +330,14 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     [entries, cards, myUserId],
   );
   const scorerName = (uid) => (uid === myUserId ? 'You' : data.members.find((m) => m.userId === uid)?.name ?? 'Someone');
-  const myMatches = live.matches.filter((m) => m.sides.flat().some((id) => picked.includes(id)));
-  const matchFor = (id) => result.matches.find((m) => m.sides.flat().includes(id));
-  const strokesFor = (id) => (matchFor(id)?.strokes?.[id] ?? result.players[id]?.strokes ?? [])[hole - 1] ?? 0;
+  // A split round has several matches per player, each over some holes: use
+  // the one being played on hole index h.
+  const covers = (m, h) => !m.range || (h >= m.range[0] && h <= m.range[1]);
+  const myMatches = live.matches.filter((m) => m.sides.flat().some((id) => picked.includes(id)) && covers(m, hole - 1));
+  const matchFor = (id, h = hole - 1) => result.matches.find((m) => m.sides.flat().includes(id) && covers(m, h));
+  // Handicap strokes on each hole, from the match played on that hole.
+  const strokeCard = (id) => holes.map((_, i) => matchFor(id, i)?.strokes?.[id]?.[i] ?? result.players[id]?.strokes?.[i] ?? 0);
+  const strokesFor = (id) => strokeCard(id)[hole - 1] ?? 0;
 
   const isAdmin = me?.role === 'commissioner';
   if (!picked.length) {
@@ -402,6 +407,10 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     });
   }
   const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
+  // Split rounds change between team and individual rows by hole, so the
+  // card and "hole done" use each player's own card.
+  const split = isSplit(event.matchFormat);
+  const cardRows = split ? people.map((p) => ({ key: p.id, ids: [p.id], name: p.name })) : rows;
   const myScore = (row, i) => cards[row.ids[0]][i];
   const badHoles = discrepancyHoles(disc, people.map((p) => p.id));
   const stablefordGame = settings.scoring === 'stableford';
@@ -409,7 +418,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   const rowTotals = (row) => {
     const id = row.ids[0];
     const card = holes.map((_, i) => rowScore(row, i));
-    const st = matchFor(id)?.strokes?.[id] ?? result.players[id]?.strokes ?? holes.map(() => 0);
+    const st = strokeCard(id);
     const here = card[hole - 1];
     if (stablefordGame) {
       const ptsOf = (i) => holeStableford(settings, card[i], settings.net ? st[i] ?? 0 : 0, holes[i].par);
@@ -463,12 +472,12 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     return (
       <RoundReview
         holes={holes}
-        rows={rows}
+        rows={cardRows}
         cardOf={(row) => holes.map((_, i) => rowScore(row, i))}
-        strokesOf={(row) => (matchFor(row.ids[0])?.strokes?.[row.ids[0]] ?? result.players[row.ids[0]]?.strokes ?? [])}
+        strokesOf={(row) => strokeCard(row.ids[0])}
         net={settings.net}
         badHoles={badHoles}
-        matches={myMatches}
+        matches={live.matches.filter((m) => m.sides.flat().some((id) => picked.includes(id)))}
         submitted={submitted}
         onHole={(h) => {
           setReview(false);
@@ -494,12 +503,12 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       <HoleDots
         count={holes.length}
         hole={hole}
-        done={(i) => rows.every((r) => rowScore(r, i) != null)}
+        done={(i) => cardRows.every((r) => rowScore(r, i) != null)}
         bad={(i) => badHoles.includes(i)}
         onGo={goHole}
       />
       {myMatches.map((m, i) => (
-        <MatchCard key={i} names={m.names} status={m.status} label={MATCH_FORMATS[m.format].short} compact />
+        <MatchCard key={i} names={m.names} status={m.status} label={matchLabel(m)} compact />
       ))}
       <div className="gg-table">
         <div className="gg-head">
@@ -708,7 +717,14 @@ function Manage({ data, event, computed, reload, onDeleted }) {
 
   return (
     <>
-      {settings.scoring === 'match' && (
+      {settings.scoring === 'match' && isSplit(event.matchFormat) && (
+        <section className="card">
+          <h3>Split round</h3>
+          <p className="split-plan">{roundFormatText(event.matchFormat, event.course.holes.length)}</p>
+          <p className="hint">Each stretch of holes is its own match and point. Set this round&apos;s foursomes under Ryder Cup setup → Matches.</p>
+        </section>
+      )}
+      {settings.scoring === 'match' && !isSplit(event.matchFormat) && (
         <section className="card">
           {usesFormats && (
             <>
@@ -944,7 +960,7 @@ function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, s
         })}
       </ul>
       {matches.map((m, i) => (
-        <MatchCard key={i} names={m.names} status={m.status} label={MATCH_FORMATS[m.format].short} compact />
+        <MatchCard key={i} names={m.names} status={m.status} label={matchLabel(m)} compact />
       ))}
       {badHoles.length > 0 && <p className="search-error">Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Fix them before submitting.</p>}
       {missing && <p className="hint">Some holes are still blank.</p>}

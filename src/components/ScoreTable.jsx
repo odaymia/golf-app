@@ -8,8 +8,9 @@
 //   side: 0 / 1 colors names (blue / red) and holes won
 //   strokes: handicap dots per hole; marks: circle birdies, box bogeys
 // now: hole index to mark yellow; bad: hole indexes with a problem (red);
-// onHole(h): makes score cells tappable.
-export default function ScoreTable({ holes, rows, now = null, bad = [], onHole, marks = false, info = [] }) {
+// onHole(h): makes score cells tappable. range: [from, to] hole indexes to
+// show only those holes (a match over part of the round) with one total.
+export default function ScoreTable({ holes, rows, now = null, bad = [], onHole, marks = false, info = [], range = null }) {
   const n = holes.length;
   const front = Math.min(9, n);
   const sum = (arr, a, b) => {
@@ -18,13 +19,15 @@ export default function ScoreTable({ holes, rows, now = null, bad = [], onHole, 
     for (let i = a; i < b; i++) if (arr?.[i] != null) (t += arr[i]), (any = true);
     return any ? t : '';
   };
-  const cols = [
-    ...holes.slice(0, front).map((_, h) => ({ h })),
-    ...(n > 9 ? [{ seg: [0, front], label: 'Out' }] : []),
-    ...holes.slice(front).map((_, i) => ({ h: front + i })),
-    { seg: [n > 9 ? front : 0, n], label: n > 9 ? 'In' : 'Tot' },
-    ...(n > 9 ? [{ seg: [0, n], label: 'Tot' }] : []),
-  ];
+  const cols = range
+    ? [...holes.slice(range[0], range[1] + 1).map((_, i) => ({ h: range[0] + i })), { seg: [range[0], range[1] + 1], label: 'Tot' }]
+    : [
+        ...holes.slice(0, front).map((_, h) => ({ h })),
+        ...(n > 9 ? [{ seg: [0, front], label: 'Out' }] : []),
+        ...holes.slice(front).map((_, i) => ({ h: front + i })),
+        { seg: [n > 9 ? front : 0, n], label: n > 9 ? 'In' : 'Tot' },
+        ...(n > 9 ? [{ seg: [0, n], label: 'Tot' }] : []),
+      ];
   const par = holes.map((x) => x.par);
   const shape = (g, p) => (g == null ? '' : g <= p - 2 ? 'eagle' : g === p - 1 ? 'birdie' : g === p + 1 ? 'bogey' : g >= p + 2 ? 'double' : '');
 
@@ -148,7 +151,12 @@ export function MatchDetail({ match, holes, net, nameOf, grossOf, sideNames }) {
         {sideNames ? <b className="side-1">{sideNames[1]}</b> : null}
         {sideNames ? ` (${names[1].replace(' & ', ' + ')})` : <b className="side-1">{names[1].replace(' & ', ' + ')}</b>}
       </p>
-      <ScoreTable holes={holes} now={done ? null : match.status.played} rows={[matchRow(0), ...side(0), ...side(1), matchRow(1)]} />
+      <ScoreTable
+        holes={holes}
+        range={match.range ?? null}
+        now={done ? null : (match.range?.[0] ?? 0) + match.status.played}
+        rows={[matchRow(0), ...side(0), ...side(1), matchRow(1)]}
+      />
     </div>
   );
 }

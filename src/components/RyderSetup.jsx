@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createEvent, setTeam, updateEvent } from '../lib/leagueApi.js';
 import { orderEvents } from '../lib/league/season.js';
 import { MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
-import { foursomesForMatches, matchProblem, sideSize } from '../lib/league/ryder.js';
+import { defaultSplit, foursomesForMatches, isSplit, matchProblem, parseSplit, roundFormatText, sideSize, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import { courseProblems } from '../lib/roundSetup.js';
 import { saveCourse } from '../lib/storage.js';
 import AddMembers from './AddMembers.jsx';
@@ -159,7 +159,8 @@ function RoundsStep({ data, computed, events, reload, next }) {
         ? {
             id: e.id,
             date: e.date ?? today,
-            format: e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball'),
+            format: isSplit(e.matchFormat) ? 'split' : (e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball')),
+            split: isSplit(e.matchFormat) ? parseSplit(e.matchFormat, e.course?.holes?.length ?? 18) : null,
             matches: e.matchups.length,
             scored: Object.keys(data.scores[e.id] ?? {}).length > 0,
             saved: e.course,
@@ -170,6 +171,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
             id: null,
             date: addDays(events.at(-1)?.date ?? today, events.length ? i - events.length + 1 : i),
             format: lastFormat,
+            split: null,
             matches: 0,
             scored: false,
             saved: null,
@@ -181,6 +183,8 @@ function RoundsStep({ data, computed, events, reload, next }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  // Holes in a round's course (18 until a course is picked).
+  const holeCount = (r) => r.pick?.course?.holes?.length ?? r.saved?.holes?.length ?? 18;
 
   // Picking a course for a round also fills the same course into later new
   // rounds that don't have one yet (most events stay at one course).
@@ -205,7 +209,16 @@ function RoundsStep({ data, computed, events, reload, next }) {
         if (problems.length) return setError(`Round ${i + 1}: ${problems[0]}`);
       }
       const e = events.find((x) => x.id === r.id);
-      if (e?.matchups.length && sideSize(matchFormat(e.matchups[0])) !== sideSize(r.format))
+      const holesIn = holeCount(r);
+      if (r.format === 'split') {
+        const problem = splitProblem(r.split ?? defaultSplit(holesIn), holesIn);
+        if (problem) return setError(`Round ${i + 1}: ${problem}`);
+      }
+      const was = e?.matchFormat ?? null;
+      const now = r.format === 'split' ? splitText(r.split ?? defaultSplit(holesIn)) : r.format;
+      if (e?.matchups.length && (isSplit(was) || r.format === 'split') && was !== now)
+        return setError(`Round ${i + 1} already has matches. Remove them under Matches to change its split.`);
+      if (e?.matchups.length && !isSplit(was) && r.format !== 'split' && sideSize(matchFormat(e.matchups[0])) !== sideSize(r.format))
         return setError(`Round ${i + 1} already has ${sideSize(matchFormat(e.matchups[0])) === 1 ? 'singles' : '2 vs 2'} matches. Remove them under Matches to change it.`);
     }
     setBusy(true);
@@ -216,16 +229,17 @@ function RoundsStep({ data, computed, events, reload, next }) {
           await saveCourse({ ...c, tees: c.tees.map((t) => ({ ...t, rating: Number(t.rating), slope: Number(t.slope) })) }).catch(() => {});
         }
         const e = events.find((x) => x.id === r.id);
+        const format = r.format === 'split' ? splitText(r.split ?? defaultSplit(holeCount(r))) : r.format;
         if (e) {
           const patch = {};
           if ((e.date ?? '') !== r.date) patch.date = r.date;
-          if ((e.matchFormat ?? '') !== r.format) patch.matchFormat = r.format;
-          if (e.matchups.length && matchFormat(e.matchups[0]) !== r.format) patch.matchups = e.matchups.map((mu) => ({ ...mu, format: r.format }));
+          if ((e.matchFormat ?? '') !== format) patch.matchFormat = format;
+          if (r.format !== 'split' && e.matchups.length && matchFormat(e.matchups[0]) !== r.format) patch.matchups = e.matchups.map((mu) => ({ ...mu, format: r.format }));
           if (r.pick?.course && !r.scored) patch.course = snapshot(r.pick.course, r.pick.teeIdx);
           if (Object.keys(patch).length) await updateEvent(e.id, patch);
         } else {
           const ev = await createEvent(data.league.id, { name: `Round ${i + 1}`, date: r.date, course: snapshot(r.pick.course, r.pick.teeIdx) });
-          await updateEvent(ev.id, { matchFormat: r.format });
+          await updateEvent(ev.id, { matchFormat: format });
         }
       }
       await reload();
@@ -270,15 +284,20 @@ function RoundsStep({ data, computed, events, reload, next }) {
             </label>
             <label className="field">
               <span>Format</span>
-              <select value={r.format} onChange={(e) => setRow(i, { format: e.target.value })}>
+              <select
+                value={r.format}
+                onChange={(e) => setRow(i, { format: e.target.value, split: e.target.value === 'split' ? (r.split ?? defaultSplit(holeCount(r))) : r.split })}
+              >
                 {Object.entries(MATCH_FORMATS).map(([k, f]) => (
                   <option key={k} value={k}>
                     {f.size === 1 ? 'Singles · 1 vs 1' : `${f.short} · 2 vs 2`}
                   </option>
                 ))}
+                <option value="split">Split round · formats change by holes</option>
               </select>
             </label>
           </div>
+          {r.format === 'split' && <SplitEditor segs={r.split ?? defaultSplit(holeCount(r))} n={holeCount(r)} onChange={(split) => setRow(i, { split })} />}
           <p className="muted small">{fmtDate(r.date)}</p>
           <div className="field">
             <span>Course</span>
@@ -332,7 +351,8 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
   if (!event) return <p className="muted center">Add rounds first.</p>;
 
   const format = event.matchFormat ?? (event.matchups[0] ? matchFormat(event.matchups[0]) : 'fourball');
-  const n = sideSize(format);
+  const split = isSplit(format) ? parseSplit(format, event.course?.holes?.length ?? 18) : null;
+  const n = split ? 2 : sideSize(format);
   const name = (id) => data.members.find((m) => m.id === id)?.name ?? '?';
   const teamOf = (id) => data.members.find((m) => m.id === id)?.team;
   const used = new Set(event.matchups.flatMap((mu) => mu.sides.flat()));
@@ -354,9 +374,12 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
   }
 
   async function addMatch() {
-    const problem = matchProblem({ a, b, format, sides, teamOf, used });
+    const problem = matchProblem({ a, b, format: split ? 'fourball' : format, sides, teamOf, used });
     if (problem) return setError(problem);
-    await saveMatches([...event.matchups, { sides: [a, b], format }]);
+    if (split) {
+      const set = Math.max(0, ...event.matchups.map((mu) => mu.set ?? 0)) + 1;
+      await saveMatches([...event.matchups, ...splitMatchups(a, b, split, set)]);
+    } else await saveMatches([...event.matchups, { sides: [a, b], format }]);
     setA([]);
     setB([]);
   }
@@ -398,10 +421,13 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
       </div>
       <section className="card">
         <h3>
-          {event.name} · {MATCH_FORMATS[format].short}
+          {event.name} · {split ? 'Split round' : MATCH_FORMATS[format].short}
         </h3>
+        {split && <p className="split-plan">{roundFormatText(format, event.course?.holes?.length ?? 18)}</p>}
         <p className="hint">
-          {n === 2
+          {split
+            ? 'Pick 2 players from each team. They play the whole round as one foursome; each stretch of holes is its own match and point (singles: first vs first, second vs second).'
+            : n === 2
             ? `Pick 2 players from each team for each match. Each match plays as its own foursome.`
             : `Set the singles matches one at a time. Matches 1 and 2 play together as a foursome, then 3 and 4, and so on.`}
         </p>
@@ -409,13 +435,16 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
         <p className="vs-label">vs</p>
         {pickList(sides[1], b, setB)}
         <button className="btn btn-primary full" disabled={busy || a.length !== n || b.length !== n} onClick={addMatch}>
-          Add match {event.matchups.length + 1}
+          {split ? `Add foursome ${new Set(event.matchups.map((mu) => mu.set)).size + 1}` : `Add match ${event.matchups.length + 1}`}
         </button>
         {error && <p className="search-error">{error}</p>}
       </section>
       <section className="card">
         <h3>Matches</h3>
         {event.matchups.length === 0 && <p className="muted">No matches yet.</p>}
+        {split ? (
+          <SplitMatchList matchups={event.matchups} name={name} busy={busy} onSave={saveMatches} />
+        ) : (
         <ol className="ryder-matches">
           {event.matchups.map((mu, i) => (
             <li key={i}>
@@ -437,6 +466,7 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
             </li>
           ))}
         </ol>
+        )}
         {event.matchups.length > 0 && (
           <button className="btn btn-ghost outline full" onClick={() => onOpenEvent(event.id)}>
             Tee times, side games and more ›
@@ -447,3 +477,125 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
   );
 }
 
+
+// Stretches of holes for a split round: each one's last hole and format
+// (the next stretch starts on the following hole; the last ends on hole n).
+function SplitEditor({ segs, n, onChange }) {
+  const set = (i, patch) => {
+    const next = segs.map((x, j) => (j === i ? { ...x, ...patch } : { ...x }));
+    // Keep the stretches joined up: each starts after the one before.
+    for (let j = 1; j < next.length; j++) next[j].from = next[j - 1].to + 1;
+    next[next.length - 1].to = n;
+    onChange(next);
+  };
+  const add = () => {
+    const last = segs[segs.length - 1];
+    if (last.to - last.from < 1) return;
+    const mid = Math.floor((last.from + last.to) / 2);
+    onChange([...segs.slice(0, -1), { ...last, to: mid }, { from: mid + 1, to: n, format: 'singles' }]);
+  };
+  const remove = (i) => {
+    const next = segs.filter((_, j) => j !== i).map((x) => ({ ...x }));
+    next[0].from = 1;
+    for (let j = 1; j < next.length; j++) next[j].from = next[j - 1].to + 1;
+    next[next.length - 1].to = n;
+    onChange(next);
+  };
+  return (
+    <div className="split-editor">
+      <p className="hint">Each stretch is its own match and point. A singles stretch is two matches (first vs first, second vs second).</p>
+      {segs.map((x, i) => (
+        <div key={i} className="split-row">
+          <span className="split-holes">
+            Holes {x.from}–
+            {i === segs.length - 1 ? (
+              x.to
+            ) : (
+              <select value={x.to} onChange={(e) => set(i, { to: Number(e.target.value) })} aria-label={`Stretch ${i + 1} last hole`}>
+                {Array.from({ length: n - x.from - (segs.length - 1 - i) + 1 }, (_, k) => x.from + k).map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+            )}
+          </span>
+          <select value={x.format} onChange={(e) => set(i, { format: e.target.value })} aria-label={`Stretch ${i + 1} format`}>
+            {Object.entries(MATCH_FORMATS).map(([k, f]) => (
+              <option key={k} value={k}>
+                {f.size === 1 ? 'Singles · 1 vs 1' : `${f.short} · 2 vs 2`}
+              </option>
+            ))}
+          </select>
+          {segs.length > 2 && (
+            <button className="btn btn-ghost btn-small" onClick={() => remove(i)} aria-label={`Remove stretch ${i + 1}`}>
+              ✕
+            </button>
+          )}
+        </div>
+      ))}
+      {segs.length < 6 && segs[segs.length - 1].to - segs[segs.length - 1].from >= 1 && (
+        <button className="link small-link" onClick={add}>
+          + Add a stretch
+        </button>
+      )}
+    </div>
+  );
+}
+
+// A split round's foursomes: each pair vs pair with its stretches; swap who
+// plays whom in singles, or remove the foursome.
+function SplitMatchList({ matchups, name, busy, onSave }) {
+  const sets = [...new Set(matchups.map((mu) => mu.set))];
+  const swap = (set) => {
+    const singles = matchups.filter((mu) => mu.set === set && mu.format === 'singles');
+    const byHoles = new Map();
+    for (const mu of singles) {
+      const k = mu.holes.join('-');
+      if (!byHoles.has(k)) byHoles.set(k, []);
+      byHoles.get(k).push(mu);
+    }
+    const swapped = new Map();
+    for (const pair of byHoles.values()) {
+      if (pair.length !== 2) continue;
+      swapped.set(pair[0], { ...pair[0], sides: [pair[0].sides[0], pair[1].sides[1]] });
+      swapped.set(pair[1], { ...pair[1], sides: [pair[1].sides[0], pair[0].sides[1]] });
+    }
+    onSave(matchups.map((mu) => swapped.get(mu) ?? mu));
+  };
+  return (
+    <ol className="ryder-matches split-list">
+      {sets.map((set, k) => {
+        const mine = matchups.filter((mu) => mu.set === set);
+        const team = mine.find((mu) => mu.sides[0].length === 2) ?? mine[0];
+        const hasSingles = mine.some((mu) => mu.format === 'singles');
+        return (
+          <li key={set}>
+            <span className="ryder-match-names">
+              <strong>{team.sides[0].map(name).join(' & ')}</strong> <em>vs</em> <strong>{team.sides[1].map(name).join(' & ')}</strong>
+              <span className="muted small"> · Foursome {k + 1}</span>
+              <span className="split-sub">
+                {mine.map((mu, j) => (
+                  <span key={j}>
+                    Holes {mu.holes[0]}–{mu.holes[1]} {MATCH_FORMATS[mu.format].short}
+                    {mu.format === 'singles' ? `: ${name(mu.sides[0][0])} vs ${name(mu.sides[1][0])}` : ''}
+                  </span>
+                ))}
+              </span>
+            </span>
+            <span className="ryder-match-actions">
+              {hasSingles && (
+                <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => swap(set)} aria-label="Swap singles pairings">
+                  ⇄
+                </button>
+              )}
+              <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => onSave(matchups.filter((mu) => mu.set !== set))} aria-label="Remove foursome">
+                ✕
+              </button>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}

@@ -3875,3 +3875,13 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .sc-card { padding: 10px 0 6px; overflow: hidden; }
 .sc-card .hint { padding: 0 12px; }
 .round-review .st-scroll { margin: 8px -4px; }
+.mb-seg { padding: 4px 10px; background: #eceef1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
+.split-plan { margin: 0 0 6px; font-weight: 700; color: var(--green-deep); }
+.split-editor { margin: 8px 0 4px; padding: 10px; border-radius: 10px; background: var(--fill); }
+.split-editor .hint { margin-top: 0; }
+.split-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.split-holes { flex: none; min-width: 108px; font-weight: 700; }
+.split-holes select { width: auto; padding: 4px 6px; margin-left: 2px; }
+.split-row > select { flex: 1; min-width: 0; }
+.split-sub { display: flex; flex-direction: column; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.split-list li { align-items: flex-start; }

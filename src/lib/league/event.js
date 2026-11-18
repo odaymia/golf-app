@@ -213,6 +213,10 @@ export function teamHandicap(format, handicaps) {
   return Math.round(((lo ?? 0) + (hi ?? 0)) / 2);
 }
 
+// A match can cover only some holes (`mu.holes = [from, to]`, 1-based,
+// inclusive), e.g. a split round: holes 1–6 scramble, 7–12 four-ball, 13–18
+// singles, each its own match worth its own point. Strokes fall where the
+// full-round allocation puts them; only holes in the range count.
 function scoreMatch(settings, members, players, holes, mu) {
   const [a, b] = mu.sides;
   const ids = [...a, ...b];
@@ -220,6 +224,8 @@ function scoreMatch(settings, members, players, holes, mu) {
   const teamBall = MATCH_FORMATS[format].teamBall;
   const n = holes.length;
   const net = settings.net;
+  const range = mu.holes ? [Math.max(1, mu.holes[0]) - 1, Math.min(n, mu.holes[1]) - 1] : [0, n - 1];
+  const inRange = (h) => h >= range[0] && h <= range[1];
 
   // Handicaps: each player's own, or one team handicap for one-ball formats.
   // Off the low: strokes relative to the best player (or team) in the match.
@@ -251,11 +257,12 @@ function scoreMatch(settings, members, players, holes, mu) {
   };
   const sideScores = [a, b].map((side) => holes.map((_, h) => sideScore(side, h)));
   const holeByHole = holes.map((_, h) => {
+    if (!inRange(h)) return null;
     const [sa, sb] = [sideScores[0][h], sideScores[1][h]];
     if (sa == null || sb == null) return null;
     return sa < sb ? 1 : sa > sb ? -1 : 0;
   });
-  const status = matchStatus(holeByHole, 0, n - 1, { stopAtCloseout: true });
+  const status = matchStatus(holeByHole, range[0], range[1], { stopAtCloseout: true });
   const keys = [entityKey(settings, members, a), entityKey(settings, members, b)];
   const result = status.complete ? (status.winner === 0 ? 'A' : status.winner === 1 ? 'B' : 'halved') : null;
   return {
@@ -266,19 +273,21 @@ function scoreMatch(settings, members, players, holes, mu) {
     names: [a, b].map((side) => side.map((id) => members.find((m) => m.id === id)?.name ?? '?').join(' & ')),
     status,
     results: holeByHole,
-    running: runningStatus(holeByHole, status.played),
+    running: runningStatus(holeByHole, status.played, range[0]),
     sideScores,
     strokes,
     result,
+    range, // 0-based hole indexes this match covers
+    set: mu.set ?? null, // matches from one split-round foursome share a set
   };
 }
 
 // Margin after each hole from side A's view (2 = 2 up, -1 = 1 down), up to
-// the holes that counted; null after that.
-export function runningStatus(results, played) {
+// the holes that counted; null before `from` and after that.
+export function runningStatus(results, played, from = 0) {
   let up = 0;
   return results.map((r, h) => {
-    if (h >= played || r == null) return null;
+    if (h < from || h >= from + played || r == null) return null;
     up += r;
     return up;
   });

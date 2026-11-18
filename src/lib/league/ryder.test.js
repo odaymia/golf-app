@@ -64,3 +64,43 @@ describe('scorekeeper discrepancies', () => {
     expect(othersValue(entries, 'p2', 0, 'mike')).toBe(null); // only my own
   });
 });
+
+import { defaultSplit, isSplit, parseSplit, splitMatchups, splitProblem, splitText } from './ryder.js';
+
+describe('split rounds', () => {
+  it('saves and reads the plan', () => {
+    const segs = defaultSplit(18);
+    expect(segs).toEqual([
+      { from: 1, to: 6, format: 'scramble' },
+      { from: 7, to: 12, format: 'fourball' },
+      { from: 13, to: 18, format: 'singles' },
+    ]);
+    const text = splitText(segs);
+    expect(text).toBe('split:1-6:scramble|7-12:fourball|13-18:singles');
+    expect(isSplit(text)).toBe(true);
+    expect(isSplit('fourball')).toBe(false);
+    expect(parseSplit(text)).toEqual(segs);
+    expect(parseSplit('split:', 9)).toEqual(defaultSplit(9));
+  });
+
+  it('checks the stretches cover every hole in order', () => {
+    expect(splitProblem(defaultSplit(18), 18)).toBe(null);
+    expect(splitProblem([{ from: 1, to: 9, format: 'fourball' }], 18)).toMatch(/at least two/);
+    expect(splitProblem([{ from: 1, to: 6, format: 'scramble' }, { from: 8, to: 18, format: 'singles' }], 18)).toMatch(/start on hole 7/);
+    expect(splitProblem([{ from: 1, to: 6, format: 'scramble' }, { from: 7, to: 15, format: 'singles' }], 18)).toMatch(/end on hole 18/);
+  });
+
+  it('makes one match per stretch, two for singles, all in one foursome', () => {
+    const mus = splitMatchups(['a1', 'a2'], ['b1', 'b2'], defaultSplit(18), 7);
+    expect(mus).toEqual([
+      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'scramble', holes: [1, 6], set: 7 },
+      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'fourball', holes: [7, 12], set: 7 },
+      { sides: [['a1'], ['b1']], format: 'singles', holes: [13, 18], set: 7 },
+      { sides: [['a2'], ['b2']], format: 'singles', holes: [13, 18], set: 7 },
+    ]);
+    expect(foursomesForMatches(mus)).toEqual([['a1', 'a2', 'b1', 'b2']]);
+    // a split foursome next to ordinary singles matches
+    const more = [...mus, { sides: [['a3'], ['b3']] }, { sides: [['a4'], ['b4']] }];
+    expect(foursomesForMatches(more)).toEqual([['a1', 'a2', 'b1', 'b2'], ['a3', 'b3', 'a4', 'b4']]);
+  });
+});

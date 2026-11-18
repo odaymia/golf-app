@@ -298,6 +298,19 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   remove). Foursomes are automatic (`foursomesForMatches`): each 2 vs 2
   match is a foursome; singles pair up 1+2, 3+4, … and are saved as the
   round's groups, so anyone in the foursome can score it.
+- Split rounds (Ryder Cup): a round's format can be "Split round" (Rounds
+  step): stretches of holes, each with its own format, e.g. 1–6 scramble,
+  7–12 four-ball, 13–18 singles (`SplitEditor`; saved as the round's
+  `match_format` text `split:1-6:scramble|7-12:fourball|13-18:singles`;
+  helpers + tests in league/ryder.js). Matches step: pick a pair vs a pair;
+  `splitMatchups` makes one match per stretch (a singles stretch makes two:
+  first vs first, second vs second; ⇄ swaps), all sharing a `set` so they
+  are one foursome. Each match has `holes: [from, to]`; `scoreMatch` counts
+  only those holes (strokes from the full-round allocation) and returns
+  `range`. Every stretch is its own point. Score entry uses the match
+  covering the current hole (team rows on one-ball stretches), and boards
+  label each match "Holes 1–6 · Scramble"; its scorecard shows only those
+  holes. Manage shows the plan and sends you to Ryder Cup setup for matches.
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker
   (commissioners can score any group).

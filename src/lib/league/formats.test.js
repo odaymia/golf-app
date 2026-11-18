@@ -129,3 +129,52 @@ describe('scorecard data', () => {
     expect(m.running[10]).toBe(null);
   });
 });
+
+describe('split rounds: different formats over different holes', () => {
+  const split = (matchups, scores, settings = ryder()) =>
+    computeEvent({ settings, event: { course, matchups }, members, scores });
+
+  it('a match over holes 13–18 only counts those holes', () => {
+    // USA birdies hole 1 (outside the match) and hole 13 (inside it)
+    const m = split([{ sides: [['a'], ['c']], format: 'singles', holes: [13, 18] }], { a: card({ 1: PARS[0] - 1, 13: PARS[12] - 1 }), c: card() }).matches[0];
+    expect(m.range).toEqual([12, 17]);
+    expect(m.results[0]).toBe(null);
+    expect(m.results[12]).toBe(1);
+    expect(m.status.played).toBe(6);
+    expect(m.status.remaining).toBe(0);
+    expect(m.result).toBe('A');
+    expect(m.running[11]).toBe(null);
+    expect(m.running[12]).toBe(1);
+    expect(m.running[17]).toBe(1);
+  });
+
+  it('closes out inside its stretch: 3 up with 2 to play on a 6-hole match', () => {
+    const won = { 1: PARS[0] - 1, 2: PARS[1] - 1, 3: PARS[2] - 1 };
+    const m = split([{ sides: [['a', 'b'], ['c', 'd']], format: 'fourball', holes: [1, 6] }], { a: card(won, 4), b: card({}, 4), c: card({}, 4), d: card({}, 4) }).matches[0];
+    expect(m.status.played).toBe(4);
+    expect(m.status.closedOut).toBe(true);
+    expect(m.result).toBe('A');
+  });
+
+  it('each stretch is its own point: scramble 1–6, four-ball 7–12, two singles 13–18', () => {
+    const matchups = [
+      { sides: [['a', 'b'], ['c', 'd']], format: 'scramble', holes: [1, 6], set: 1 },
+      { sides: [['a', 'b'], ['c', 'd']], format: 'fourball', holes: [7, 12], set: 1 },
+      { sides: [['a'], ['c']], format: 'singles', holes: [13, 18], set: 1 },
+      { sides: [['b'], ['d']], format: 'singles', holes: [13, 18], set: 1 },
+    ];
+    // USA wins the scramble (birdie on 1, team score on a's card), Europe the
+    // four-ball (birdie on 7), a beats c (birdie on 13), b and d halve.
+    const scores = {
+      a: card({ 1: PARS[0] - 1, 13: PARS[12] - 1 }),
+      b: card(),
+      c: card({ 7: PARS[6] - 1 }),
+      d: card(),
+    };
+    const r = split(matchups, scores);
+    expect(r.matches.map((m) => m.result)).toEqual(['A', 'B', 'A', 'halved']);
+    expect(r.cup).toEqual({ USA: 2.5, Europe: 1.5 });
+    expect(r.matches[0].teamBall).toBe(true);
+    expect(r.matches[2].set).toBe(1);
+  });
+});

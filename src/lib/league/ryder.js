@@ -1,3 +1,5 @@
+import { MATCH_FORMATS } from './event.js';
+
 // Ryder Cup helpers: foursomes from matches, and checking scorekeepers'
 // cards against each other. Pure, no network.
 
@@ -5,11 +7,22 @@
 //   2 vs 2 match: the four players are one foursome.
 //   1 vs 1 matches: matches 1 and 2 share a foursome, then 3 and 4, and so
 //   on (an odd last singles match plays as a twosome).
+//   Split-round matches (same `set`) are one foursome.
 export function foursomesForMatches(matchups) {
   const groups = [];
   let pendingSingles = null;
+  const sets = new Map();
   for (const mu of matchups) {
     const players = mu.sides.flat();
+    if (mu.set != null) {
+      if (!sets.has(mu.set)) {
+        sets.set(mu.set, []);
+        groups.push(sets.get(mu.set));
+      }
+      const g = sets.get(mu.set);
+      for (const id of players) if (!g.includes(id)) g.push(id);
+      continue;
+    }
     if (mu.sides[0].length === 1 && mu.sides[1].length === 1) {
       if (pendingSingles) {
         groups.push([...pendingSingles, ...players]);
@@ -23,8 +36,80 @@ export function foursomesForMatches(matchups) {
   return groups;
 }
 
-// Players per side for a format: one-ball and best-ball formats are 2 vs 2.
+// Players per side for a format: one-ball and best-ball formats are 2 vs 2
+// (a split round is set up pair vs pair).
 export const sideSize = (format) => (format === 'singles' ? 1 : 2);
+
+// Split round: one foursome plays different formats over different holes,
+// each stretch its own match and point. Saved as the round's format text:
+//   "split:1-6:scramble|7-12:fourball|13-18:singles"
+export const isSplit = (format) => typeof format === 'string' && format.startsWith('split');
+
+export function defaultSplit(n = 18) {
+  if (n < 3) return [{ from: 1, to: n, format: 'fourball' }];
+  const a = Math.round(n / 3);
+  const b = Math.round((2 * n) / 3);
+  return [
+    { from: 1, to: a, format: 'scramble' },
+    { from: a + 1, to: b, format: 'fourball' },
+    { from: b + 1, to: n, format: 'singles' },
+  ];
+}
+
+export function parseSplit(text, n = 18) {
+  if (!isSplit(text)) return null;
+  const segs = text
+    .slice('split:'.length)
+    .split('|')
+    .map((part) => {
+      const [range, format] = part.split(':');
+      const [from, to] = range.split('-').map(Number);
+      return { from, to, format };
+    })
+    .filter((x) => Number.isInteger(x.from) && Number.isInteger(x.to) && x.format);
+  return segs.length ? segs : defaultSplit(n);
+}
+
+// A round's format in words; split rounds list their stretches.
+export const roundFormatText = (format, n = 18) =>
+  isSplit(format)
+    ? parseSplit(format, n)
+        .map((x) => `${x.from}–${x.to} ${MATCH_FORMATS[x.format]?.short ?? x.format}`)
+        .join(' · ')
+    : (MATCH_FORMATS[format]?.short ?? '');
+
+// A match's format label, with its holes when it covers only some.
+export const matchLabel = (m, long = false) => {
+  const f = MATCH_FORMATS[m.format];
+  const word = long ? f?.label : f?.short;
+  return m.range ? `Holes ${m.range[0] + 1}–${m.range[1] + 1} · ${f?.short}` : word;
+};
+
+export const splitText = (segs) => `split:${segs.map((x) => `${x.from}-${x.to}:${x.format}`).join('|')}`;
+
+// Problems with a plan, or null: stretches in order, no gaps or overlaps,
+// covering holes 1..n.
+export function splitProblem(segs, n = 18) {
+  if (segs.length < 2) return 'Add at least two stretches of holes.';
+  let next = 1;
+  for (const x of segs) {
+    if (x.from !== next) return `Holes must follow on: the next stretch should start on hole ${next}.`;
+    if (x.to < x.from) return `Holes ${x.from}–${x.to} run backwards.`;
+    next = x.to + 1;
+  }
+  if (next !== n + 1) return `The stretches must end on hole ${n}.`;
+  return null;
+}
+
+// One foursome's matches for a split round. a, b: the two pairs ([p1, p2]).
+// Singles stretches pair first vs first and second vs second.
+export function splitMatchups(a, b, segs, set) {
+  return segs.flatMap((x) =>
+    x.format === 'singles'
+      ? [0, 1].map((k) => ({ sides: [[a[k]], [b[k]]], format: 'singles', holes: [x.from, x.to], set }))
+      : [{ sides: [a, b], format: x.format, holes: [x.from, x.to], set }],
+  );
+}
 
 // Can these two sides make a match? Returns an error message or null.
 // teamOf(memberId) -> side name; sides: [sideA, sideB]

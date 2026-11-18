@@ -3,6 +3,7 @@ import { matchSummary } from '../lib/games/match.js';
 import { MATCH_FORMATS } from '../lib/league/event.js';
 import { homeCourses } from '../lib/social.js';
 import { MatchDetail } from './ScoreTable.jsx';
+import { matchLabel } from '../lib/league/ryder.js';
 
 const pts = (x) => {
   const whole = Math.floor(x);
@@ -185,6 +186,7 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
         const sub = r.m.status.played === 0 ? 'not started' : r.final ? 'F' : r.sum.small;
         return (
           <div key={i}>
+          {r.m.range && <div className="mb-seg">{matchLabel(r.m)}</div>}
           <button
             className={`mb-grid mb-row ${mine ? 'mine' : ''} ${open.has(i) ? 'open' : ''}`}
             onClick={() => toggle(i)}
