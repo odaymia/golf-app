@@ -24,9 +24,32 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
     next[next.length - 1].to = n;
     onChange(next);
   };
+  // One-tap shapes: front 9 / back 9, or three 6-hole stretches. Keeps the
+  // formats already picked, in order.
+  const preset = (parts) => {
+    const size = Math.floor(n / parts);
+    onChange(
+      Array.from({ length: parts }, (_, i) => ({
+        from: i * size + 1,
+        to: i === parts - 1 ? n : (i + 1) * size,
+        format: segs[i]?.format ?? segs[segs.length - 1].format,
+      })),
+    );
+  };
+  const shape = (parts) => segs.length === parts && segs.every((x, i) => x.from === i * Math.floor(n / parts) + 1);
   return (
     <div className="split-editor">
       <p className="hint">{hint ?? 'Each stretch is its own match and point. A singles stretch is two matches (first vs first, second vs second).'}</p>
+      {n >= 6 && (
+        <div className="chips split-presets">
+          <button className={`chip ${shape(2) ? 'on' : ''}`} onClick={() => preset(2)}>
+            Front {Math.floor(n / 2)} / back {n - Math.floor(n / 2)}
+          </button>
+          <button className={`chip ${shape(3) ? 'on' : ''}`} onClick={() => preset(3)}>
+            Three {Math.floor(n / 3)}s
+          </button>
+        </div>
+      )}
       {segs.map((x, i) => (
         <div key={i} className="split-row">
           <span className="split-holes">

@@ -320,7 +320,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   for matches. Team leagues: Manage's format list has "Split round" with the
   same `SplitEditor` (shared component); Add match / Auto-pair make the
   stretches' matches, ✕ removes a foursome's whole set, and `teeGroups`
-  keeps a set as one group. Match cards show only a stretch's holes
+  keeps a set as one group. The editor has one-tap presets: Front 9 / back 9
+  and Three 6s (keeping the chosen formats). Match cards show only a stretch's holes
   (`MatchCard` `range`).
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker

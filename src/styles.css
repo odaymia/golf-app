@@ -3885,3 +3885,5 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .split-row > select { flex: 1; min-width: 0; }
 .split-sub { display: flex; flex-direction: column; margin-top: 4px; font-size: 12px; color: var(--muted); }
 .split-list li { align-items: flex-start; }
+.split-presets { margin: 0 0 6px; }
+.split-presets { flex-wrap: nowrap; gap: 6px; } .split-presets .chip { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
