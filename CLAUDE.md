@@ -204,6 +204,12 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   - Wolf: lone/blind wolf wins or loses stake x multiplier with each of the 3.
   - Vegas: a score of 10+ goes first; birdie flips the other team unless both
     teams birdie; net scores below 1 count as 1.
+  - Split match (casual, 2 vs 2 teams only): `game.segments`
+    `[{ from, to, format }]` (best ball 'fourball', combined 'shamble',
+    'singles'); each stretch is its own bet worth `stake`, a singles stretch
+    is two bets (first vs first, second vs second). Paid as of now like every
+    match. Setup: "Split the round" switch under Match play (2 vs 2 teams);
+    no scramble/alternate shot in casual rounds (scores are per player).
 
 ## Accounts
 
@@ -310,7 +316,12 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   `range`. Every stretch is its own point. Score entry uses the match
   covering the current hole (team rows on one-ball stretches), and boards
   label each match "Holes 1–6 · Scramble"; its scorecard shows only those
-  holes. Manage shows the plan and sends you to Ryder Cup setup for matches.
+  holes. Ryder Cup: Manage shows the plan and sends you to Ryder Cup setup
+  for matches. Team leagues: Manage's format list has "Split round" with the
+  same `SplitEditor` (shared component); Add match / Auto-pair make the
+  stretches' matches, ✕ removes a foursome's whole set, and `teeGroups`
+  keeps a set as one group. Match cards show only a stretch's holes
+  (`MatchCard` `range`).
 - Enter scores opens straight on your own foursome's card (at the first
   hole the group hasn't finished); Change group shows the picker
   (commissioners can score any group).

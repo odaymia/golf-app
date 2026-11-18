@@ -146,3 +146,61 @@ describe('matchSummary (live scoreboard)', () => {
     expect(r.balances).toEqual({ a: 100, b: -100 });
   });
 });
+
+describe('split match: different formats over different holes', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  const segments = [
+    { from: 1, to: 6, format: 'fourball' },
+    { from: 7, to: 12, format: 'shamble' },
+    { from: 13, to: 18, format: 'singles' },
+  ];
+  const game = (extra = {}) => ({ net: false, stake: 500, matchups: [[['a', 'b'], ['c', 'd']]], segments, ...extra });
+
+  it('makes one bet per stretch and two for singles, each over its own holes', () => {
+    const ctx = makeCtx(ids, parCard(ids));
+    const r = scoreMatchPlay(ctx, game());
+    expect(r.matchups.map((m) => [m.format, m.range, m.sides])).toEqual([
+      ['fourball', [0, 5], [['a', 'b'], ['c', 'd']]],
+      ['shamble', [6, 11], [['a', 'b'], ['c', 'd']]],
+      ['singles', [12, 17], [['a'], ['c']]],
+      ['singles', [12, 17], [['b'], ['d']]],
+    ]);
+    expect(r.matchups.every((m) => m.status.complete && m.status.up === 0)).toBe(true);
+    expect(r.balances).toEqual({ a: 0, b: 0, c: 0, d: 0 });
+  });
+
+  it('pays each stretch on its own, zero-sum', () => {
+    // a birdies 1 (best ball 1-6 to a+b); b doubles 7 (combined 7-12 to c+d);
+    // a birdies 13 (a beats c); b and d halve.
+    const ctx = makeCtx(ids, parCard(ids, { a: { 1: 3, 13: 3 }, b: { 7: 5 } }));
+    const r = scoreMatchPlay(ctx, game());
+    expect(r.matchups.map((m) => m.status.winner)).toEqual([0, 1, 0, null]);
+    // a: +500 -500 +500 = 500; b: +500 -500 = 0; c: -500 +500 -500 = -500; d: 0
+    expect(r.balances).toEqual({ a: 500, b: 0, c: -500, d: 0 });
+    expect(sum(r.balances)).toBe(0);
+  });
+
+  it('a hole outside a stretch never counts for it', () => {
+    const ctx = makeCtx(ids, parCard(ids, { a: { 13: 3 } }));
+    const r = scoreMatchPlay(ctx, game());
+    expect(r.matchups[0].results[12]).toBe(null);
+    expect(r.matchups[2].results[12]).toBe(1);
+    expect(r.matchups[2].running[12]).toBe(1);
+    expect(r.matchups[2].running[11]).toBe(null);
+  });
+
+  it('in progress: pays whoever leads each stretch so far', () => {
+    const ctx = makeCtx(ids, parCard(ids, { a: { 1: 3 } }, 3));
+    const r = scoreMatchPlay(ctx, game());
+    expect(r.matchups[0].status.played).toBe(3);
+    expect(r.matchups[1].status.played).toBe(0);
+    expect(r.balances).toEqual({ a: 500, b: 500, c: -500, d: -500 });
+  });
+
+  it('ignores segments for anything but 2 vs 2', () => {
+    const ctx = makeCtx(['a', 'b'], matchCard('a================='));
+    const r = scoreMatchPlay(ctx, { net: false, stake: 1000, matchups: [[['a'], ['b']]], segments });
+    expect(r.matchups).toHaveLength(1);
+    expect(r.balances).toEqual({ a: 1000, b: -1000 });
+  });
+});

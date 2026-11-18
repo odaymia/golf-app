@@ -6,6 +6,7 @@ import MoneyView, { Totals } from './MoneyView.jsx';
 import Scorecard from './Scorecard.jsx';
 import { nameMap } from './gameSummary.js';
 import MatchCard from './MatchCard.jsx';
+import { stretchLabel } from './gameSummary.js';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
 
@@ -153,11 +154,14 @@ export default function Play({ round, setRound, onSettle, onHome }) {
           {computed.games
             .filter((g) => g.game.type === 'match')
             .flatMap((g) => g.matchups)
+            // A split match shows the stretch being played on this hole.
+            .filter((m) => !m.range || (h >= m.range[0] && h <= m.range[1]))
             .map((m, i) => (
               <MatchCard
                 key={i}
                 names={m.sides.map((side) => side.map((id) => names[id]).join(' & '))}
                 status={m.status}
+                label={m.range ? stretchLabel(m) : null}
                 compact
               />
             ))}

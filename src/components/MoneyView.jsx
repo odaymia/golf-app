@@ -1,5 +1,5 @@
 import { formatMoney } from '../lib/games/money.js';
-import { gameLines, gameTitle, nameMap } from './gameSummary.js';
+import { gameLines, gameTitle, nameMap, stretchLabel } from './gameSummary.js';
 import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
 import { MatchDetail } from './ScoreTable.jsx';
@@ -53,6 +53,8 @@ export default function MoneyView({ round, computed }) {
                     names={m.sides.map((side) => side.map((id) => nameMap(players)[id]).join(' & '))}
                     status={m.status}
                     results={m.results}
+                range={m.range ?? null}
+                    label={m.range ? stretchLabel(m) : null}
                     onOpen={() => setOpen(open === key ? null : key)}
                   />
                   {open === key && (

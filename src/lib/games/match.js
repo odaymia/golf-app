@@ -1,4 +1,4 @@
-import { bestBall, holeCount } from './scores.js';
+import { bestBall, holeCount, scoreFor } from './scores.js';
 import { emptyBalances, payTeamBet } from './money.js';
 
 // Per-hole result between two sides (each side = 1 or 2 players, best ball):
@@ -57,14 +57,40 @@ function sideLabel(ctx, side) {
 }
 
 // Match play game.
-// game = { net, stake (cents), matchups: [[sideA, sideB], ...] }
+// game = { net, stake (cents), matchups: [[sideA, sideB], ...], segments? }
 // Each matchup is worth `stake` per player to the side that's ahead.
 // Balances show where the money stands if the round ended now.
+//
+// Split match (2 vs 2 only): `segments: [{ from, to, format }]` (1-based,
+// inclusive) plays different formats over different holes, each its own
+// bet worth `stake`: 'fourball' (best ball), 'shamble' (both balls added)
+// or 'singles' (two bets: first vs first, second vs second).
 export function scoreMatchPlay(ctx, game) {
   const balances = emptyBalances(ctx.players.map((p) => p.id));
-  const matchups = game.matchups.map(([a, b]) => {
-    const results = holeResults(ctx, a, b, game.net);
-    const status = matchStatus(results, 0, holeCount(ctx) - 1, { stopAtCloseout: true });
+  const n = holeCount(ctx);
+  const one = (a, b, seg) => {
+    const from = seg ? seg.from - 1 : 0;
+    const to = seg ? seg.to - 1 : n - 1;
+    const combined = seg?.format === 'shamble';
+    const sideScore = (side, h) => {
+      if (!combined) return bestBall(ctx, side, h, game.net);
+      let t = 0;
+      for (const id of side) {
+        const x = scoreFor(ctx, id, h, game.net);
+        if (x == null) return null;
+        t += x;
+      }
+      return t;
+    };
+    const sideScores = [a, b].map((side) => ctx.holes.map((_, h) => sideScore(side, h)));
+    const results = ctx.holes.map((_, h) => {
+      if (h < from || h > to) return null;
+      const [x, y] = [sideScores[0][h], sideScores[1][h]];
+      if (x == null || y == null) return null;
+      return x < y ? 1 : x > y ? -1 : 0;
+    });
+    const status = matchStatus(results, from, to, { stopAtCloseout: true });
+    // As if the round ended now: whoever is ahead collects.
     if (status.winner === 0) payTeamBet(balances, a, b, game.stake);
     if (status.winner === 1) payTeamBet(balances, b, a, game.stake);
     let up = 0;
@@ -73,10 +99,19 @@ export function scoreMatchPlay(ctx, game) {
       label: `${sideLabel(ctx, a)} vs ${sideLabel(ctx, b)}`,
       status,
       results,
-      running: results.map((r, h) => (h >= status.played || r == null ? null : (up += r))),
-      sideScores: [a, b].map((side) => ctx.holes.map((_, h) => bestBall(ctx, side, h, game.net))),
+      running: results.map((r, h) => (h < from || h >= from + status.played || r == null ? null : (up += r))),
+      sideScores,
       text: describeMatch(status),
+      format: seg?.format ?? (a.length === 1 ? 'singles' : 'fourball'),
+      ...(seg ? { range: [from, to] } : {}),
     };
+  };
+  const matchups = game.matchups.flatMap(([a, b]) => {
+    const segs = game.segments?.length && a.length === 2 && b.length === 2 ? game.segments : null;
+    if (!segs) return [one(a, b, null)];
+    return segs.flatMap((seg) =>
+      seg.format === 'singles' ? [one([a[0]], [b[0]], seg), one([a[1]], [b[1]], seg)] : [one(a, b, seg)],
+    );
   });
   return { balances, matchups };
 }

@@ -10,6 +10,7 @@ import {
   formatTime,
   shuffle,
   normalizeTeeSheet,
+  teeGroups,
 } from './pairings.js';
 import { leagueSettings } from './format.js';
 
@@ -170,5 +171,21 @@ describe('tee sheet', () => {
     expect(formatTime('00:05')).toBe('12:05 AM');
     expect(formatTime('12:00')).toBe('12:00 PM');
     expect(normalizeTeeSheet({ mode: 'x', start: 'soon', interval: 0 })).toMatchObject({ mode: 'tee', start: '08:00', interval: 10 });
+  });
+});
+
+describe('tee groups from matches', () => {
+  it('each match is a group, but a split round foursome is one group', () => {
+    const event = {
+      matchups: [
+        { sides: [['a', 'b'], ['c', 'd']], format: 'scramble', holes: [1, 6], set: 1 },
+        { sides: [['a', 'b'], ['c', 'd']], format: 'fourball', holes: [7, 12], set: 1 },
+        { sides: [['a'], ['c']], format: 'singles', holes: [13, 18], set: 1 },
+        { sides: [['b'], ['d']], format: 'singles', holes: [13, 18], set: 1 },
+        { sides: [['e'], ['f']] },
+      ],
+    };
+    expect(teeGroups(event)).toEqual([['a', 'b', 'c', 'd'], ['e', 'f']]);
+    expect(teeGroups({ ...event, groups: [['x']] })).toEqual([['x']]);
   });
 });

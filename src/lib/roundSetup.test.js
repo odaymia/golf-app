@@ -108,6 +108,21 @@ describe('buildGames', () => {
     expect(paid).toEqual(r.totals);
   });
 
+  it('split match: 2 vs 2 teams carry the stretches; everyone-vs-everyone ignores them', () => {
+    const s = defaultSettings();
+    s.match.on = true;
+    s.match.split = [
+      { from: 1, to: 6, format: 'fourball' },
+      { from: 7, to: 12, format: 'shamble' },
+      { from: 13, to: 18, format: 'singles' },
+    ];
+    const g = buildGames(s, four).find((x) => x.type === 'match');
+    expect(g.segments).toEqual(s.match.split);
+    expect(g.segments).not.toBe(s.match.split);
+    s.match.format = 'each';
+    expect(buildGames(s, four).find((x) => x.type === 'match').segments).toBeUndefined();
+  });
+
   it('defaults: no games until you pick them', () => {
     expect(buildGames(defaultSettings(), four)).toEqual([]);
   });

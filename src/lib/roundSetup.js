@@ -219,6 +219,8 @@ export function buildGames(settings, players) {
       net: s.net,
       stake: dollarsToCents(s.stake),
       matchups: matchupsFor(players, s.format, teams),
+      // Split match: 2 vs 2 only, each stretch of holes its own bet.
+      ...(s.split?.length && s.format === 'teams' && players.length === 4 ? { segments: s.split.map((x) => ({ ...x })) } : {}),
     });
   }
   if (on('stroke')) {

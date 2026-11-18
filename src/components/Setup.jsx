@@ -19,6 +19,11 @@ import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
 import { NumberField, Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
+import SplitEditor from './SplitEditor.jsx';
+import { defaultSplit } from '../lib/league/ryder.js';
+
+// Casual split match: best ball, then combined, then singles.
+const splitDefault = (n) => defaultSplit(n).map((x, i) => ({ ...x, format: ['fourball', 'shamble', 'singles'][i] ?? 'singles' }));
 import PlayerSearch from './PlayerSearch.jsx';
 import { listRecentGolfers, rememberGolfers } from '../lib/recentGolfers.js';
 
@@ -421,7 +426,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
               {s.on && available && (
                 <div className="game-body">
                   <p className="rules">{GAME_INFO[type].rules}</p>
-                  <GameOptions type={type} s={s} set={(f, v) => setGame(type, f, v)} playerCount={players.length} />
+                  <GameOptions type={type} s={s} set={(f, v) => setGame(type, f, v)} playerCount={players.length} holeCount={course.holes.length} />
                 </div>
               )}
             </div>
@@ -459,7 +464,7 @@ function names(players, ids) {
   return ids.map((id) => players.find((p) => p.id === id)?.name).join(' & ');
 }
 
-function GameOptions({ type, s, set, playerCount }) {
+function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
   const stakeLabel = {
     nassau: 'Per bet (front / back / 18)',
     skins: s.mode === 'pot' ? 'Buy-in per player' : 'Per skin, from each player',
@@ -517,6 +522,24 @@ function GameOptions({ type, s, set, playerCount }) {
             Everyone vs everyone
           </button>
         </div>
+      )}
+      {type === 'match' && playerCount === 4 && s.format === 'teams' && (
+        <>
+          <Toggle
+            label="Split the round (different formats over different holes)"
+            checked={!!s.split}
+            onChange={(v) => set('split', v ? splitDefault(holeCount) : null)}
+          />
+          {s.split && (
+            <SplitEditor
+              segs={s.split}
+              n={holeCount}
+              formats={['fourball', 'shamble', 'singles']}
+              hint={`Each stretch is its own $${s.stake || 0} bet. A singles stretch is two bets: first player on each team vs each other, and second vs second.`}
+              onChange={(next) => set('split', next)}
+            />
+          )}
+        </>
       )}
       {type === 'nassau' && (
         <label className="field">

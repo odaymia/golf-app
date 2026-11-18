@@ -162,6 +162,7 @@ function RyderBoard({ settings, standings, events, results, members, open, onOpe
                 names={m.names}
                 status={m.status}
                 results={m.results}
+                range={m.range ?? null}
                 label={matchLabel(m, true)}
                 onOpen={() => setCard(card === i ? null : i)}
               />

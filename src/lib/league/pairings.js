@@ -153,10 +153,25 @@ export function makeTeamMatches(teamOrder, playersOf, format) {
   return { matchups, bye: teamOrder.length % 2 ? teamOrder.at(-1) : null };
 }
 
-// The playing groups for a round: its groups, or each match when none are set.
+// The playing groups for a round: its groups, or each match when none are
+// set (a split round's matches with the same `set` are one group).
 export function teeGroups(event) {
   if ((event.groups ?? []).length) return event.groups;
-  return (event.matchups ?? []).map((mu) => mu.sides.flat());
+  const out = [];
+  const sets = new Map();
+  for (const mu of event.matchups ?? []) {
+    if (mu.set == null) {
+      out.push(mu.sides.flat());
+      continue;
+    }
+    if (!sets.has(mu.set)) {
+      sets.set(mu.set, []);
+      out.push(sets.get(mu.set));
+    }
+    const g = sets.get(mu.set);
+    for (const id of mu.sides.flat()) if (!g.includes(id)) g.push(id);
+  }
+  return out;
 }
 
 const pad = (n) => String(n).padStart(2, '0');

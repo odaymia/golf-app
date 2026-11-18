@@ -45,7 +45,7 @@ export function gameLines(result, players) {
     case 'match':
       return result.matchups.map((m) => {
         const [a, b] = m.sides.map((s) => side(names, s));
-        return { text: `${a} vs ${b}: ${matchText(m.status, a, b)}` };
+        return { text: `${m.range ? `${stretchLabel(m)}: ` : ''}${a} vs ${b}: ${matchText(m.status, a, b)}` };
       });
     case 'skins': {
       const lines = players
@@ -100,3 +100,7 @@ export function gameLines(result, players) {
       return [];
   }
 }
+
+// A split match's stretch: "Holes 1–6 · Best ball".
+const STRETCH_WORDS = { fourball: 'Best ball', shamble: 'Combined', singles: 'Singles' };
+export const stretchLabel = (m) => `Holes ${m.range[0] + 1}–${m.range[1] + 1} · ${STRETCH_WORDS[m.format] ?? m.format}`;

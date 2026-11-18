@@ -15,7 +15,8 @@ import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
-import { discrepancies, discrepancyHoles, isSplit, matchLabel, roundFormatText } from '../lib/league/ryder.js';
+import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
+import SplitEditor from './SplitEditor.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -155,6 +156,7 @@ function Results({ settings, result, members, holes, live, reload, standings = [
               names={m.names}
               status={m.status}
               results={m.results}
+                range={m.range ?? null}
               label={settings.unit === 'individual' ? null : matchLabel(m, true)}
               onOpen={() => setOpen(open === i ? null : i)}
             />
@@ -632,11 +634,26 @@ function Manage({ data, event, computed, reload, onDeleted }) {
   // Team formats: the commissioner picks one format for the round.
   const usesFormats = settings.unit !== 'individual';
   const [roundFormat, setRoundFormat] = useState(() =>
-    event.matchups[0] ? matchFormat(event.matchups[0]) : usesFormats ? 'fourball' : 'singles',
+    isSplit(event.matchFormat) ? 'split' : event.matchups[0] ? matchFormat(event.matchups[0]) : usesFormats ? 'fourball' : 'singles',
   );
-  const size = MATCH_FORMATS[roundFormat].size;
+  // Split round: stretches of holes, each its own match (team formats only).
+  const nHoles = event.course.holes.length;
+  const [segs, setSegs] = useState(() => parseSplit(event.matchFormat, nHoles) ?? defaultSplit(nHoles));
+  const split = roundFormat === 'split';
+  const size = split ? 2 : MATCH_FORMATS[roundFormat].size;
+  const nextSet = () => Math.max(0, ...event.matchups.map((mu) => mu.set ?? 0)) + 1;
 
   function changeFormat(f) {
+    if (f === 'split' || split) {
+      if (f === roundFormat) return;
+      if (event.matchups.length) return setError('Remove this round’s matches first to change to or from a split round.');
+      setError('');
+      setRoundFormat(f);
+      setSideA([]);
+      setSideB([]);
+      act(() => updateEvent(event.id, { matchFormat: f === 'split' ? splitText(segs) : null }));
+      return;
+    }
     const need = MATCH_FORMATS[f].size;
     if (event.matchups.some((mu) => mu.sides[0].length !== need)) {
       return setError(
@@ -676,7 +693,10 @@ function Manage({ data, event, computed, reload, onDeleted }) {
     } else {
       const teams = [...new Set(playable.map((m) => m.team).filter(Boolean))];
       const playersOf = (t) => playable.filter((m) => m.team === t).slice(0, size).map((m) => m.id);
-      matchups = roundRobinWeek(teams, week).map(([a, b]) => ({ sides: [playersOf(a), playersOf(b)], format: roundFormat }));
+      const pairs = roundRobinWeek(teams, week);
+      matchups = split
+        ? pairs.flatMap(([a, b], k) => splitMatchups(playersOf(a), playersOf(b), segs, k + 1))
+        : pairs.map(([a, b]) => ({ sides: [playersOf(a), playersOf(b)], format: roundFormat }));
     }
     setMatchups(matchups);
   }
@@ -692,7 +712,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
       const kb = entityKey(settings, members, sideB);
       if (ka === kb) return setError(`Both sides are on ${ka}. Pick players from different ${settings.unit === 'ryder' ? 'sides' : 'teams'}.`);
     }
-    setMatchups([...event.matchups, { sides: [sideA, sideB], format: roundFormat }]);
+    setMatchups(split ? [...event.matchups, ...splitMatchups(sideA, sideB, segs, nextSet())] : [...event.matchups, { sides: [sideA, sideB], format: roundFormat }]);
     setSideA([]);
     setSideB([]);
   }
@@ -717,14 +737,14 @@ function Manage({ data, event, computed, reload, onDeleted }) {
 
   return (
     <>
-      {settings.scoring === 'match' && isSplit(event.matchFormat) && (
+      {settings.scoring === 'match' && settings.unit === 'ryder' && isSplit(event.matchFormat) && (
         <section className="card">
           <h3>Split round</h3>
           <p className="split-plan">{roundFormatText(event.matchFormat, event.course.holes.length)}</p>
           <p className="hint">Each stretch of holes is its own match and point. Set this round&apos;s foursomes under Ryder Cup setup → Matches.</p>
         </section>
       )}
-      {settings.scoring === 'match' && !isSplit(event.matchFormat) && (
+      {settings.scoring === 'match' && !(settings.unit === 'ryder' && isSplit(event.matchFormat)) && (
         <section className="card">
           {usesFormats && (
             <>
@@ -736,7 +756,24 @@ function Manage({ data, event, computed, reload, onDeleted }) {
                     <span className="option-help">{FORMAT_HELP[k]}</span>
                   </button>
                 ))}
+                <button className={`option ${split ? 'on' : ''}`} onClick={() => changeFormat('split')} disabled={busy}>
+                  Split round
+                  <span className="option-help">Different formats over different holes, e.g. 1–6 scramble, 7–12 best ball, 13–18 singles. Each stretch is its own match.</span>
+                </button>
               </div>
+              {split &&
+                (event.matchups.length ? (
+                  <p className="split-plan">{roundFormatText(event.matchFormat, nHoles)}</p>
+                ) : (
+                  <SplitEditor
+                    segs={segs}
+                    n={nHoles}
+                    onChange={(next) => {
+                      setSegs(next);
+                      if (!splitProblem(next, nHoles)) act(() => updateEvent(event.id, { matchFormat: splitText(next) }));
+                    }}
+                  />
+                ))}
             </>
           )}
           <h3>Matches</h3>
@@ -746,13 +783,19 @@ function Manage({ data, event, computed, reload, onDeleted }) {
               <li key={i} className="match-line">
                 <span>
                   {mu.sides[0].map(name).join(' & ')} <em className="muted">vs</em> {mu.sides[1].map(name).join(' & ')}
-                  {usesFormats && <span className="muted small"> · {MATCH_FORMATS[matchFormat(mu)].short}</span>}
+                  {usesFormats && (
+                    <span className="muted small">
+                      {' '}
+                      · {mu.holes ? `Holes ${mu.holes[0]}–${mu.holes[1]} ` : ''}
+                      {MATCH_FORMATS[matchFormat(mu)].short}
+                    </span>
+                  )}
                 </span>
                 <button
                   className="btn btn-ghost btn-small"
                   disabled={busy}
-                  onClick={() => setMatchups(event.matchups.filter((_, j) => j !== i))}
-                  aria-label="Remove match"
+                  onClick={() => setMatchups(event.matchups.filter((x, j) => (mu.set != null ? x.set !== mu.set : j !== i)))}
+                  aria-label={mu.set != null ? 'Remove this foursome’s matches' : 'Remove match'}
                 >
                   ✕
                 </button>

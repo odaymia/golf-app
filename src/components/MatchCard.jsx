@@ -2,10 +2,13 @@ import { matchSummary } from '../lib/games/match.js';
 
 // Live match-play scoreboard: who's up, by how much, and who won each hole.
 // names: [sideA, sideB]; status: matchStatus(); results: per-hole 1 / -1 / 0 / null.
-export default function MatchCard({ names, status, results = [], label, compact = false, onOpen }) {
+// range: [from, to] hole indexes when the match covers only some holes.
+export default function MatchCard({ names, status, results = [], label, compact = false, onOpen, range = null }) {
   const s = matchSummary(status);
   const leaderClass = s.leader === 0 ? 'side-a' : s.leader === 1 ? 'side-b' : '';
-  const shown = s.small === 'final' ? status.played : results.length;
+  const first = range ? range[0] : 0;
+  const holeIdx = range ? results.map((_, i) => i).filter((i) => i >= range[0] && i <= range[1]) : results.map((_, i) => i);
+  const shown = s.small === 'final' ? first + status.played : results.length;
   return (
     <div
       className={`match-card ${compact ? 'compact' : ''} ${s.small === 'final' ? 'done' : ''} ${onOpen ? 'tappable' : ''}`}
@@ -33,15 +36,18 @@ export default function MatchCard({ names, status, results = [], label, compact 
       </div>
       {!compact && results.length > 0 && (
         <div className="match-holes" aria-label="Hole by hole">
-          {results.map((r, i) => (
-            <span
-              key={i}
-              title={`Hole ${i + 1}`}
-              className={`mh ${i >= shown ? 'after' : r === 1 ? 'a' : r === -1 ? 'b' : r === 0 ? 'halved' : ''}`}
-            >
-              {i + 1}
-            </span>
-          ))}
+          {holeIdx.map((i) => {
+            const r = results[i];
+            return (
+              <span
+                key={i}
+                title={`Hole ${i + 1}`}
+                className={`mh ${i >= shown ? 'after' : r === 1 ? 'a' : r === -1 ? 'b' : r === 0 ? 'halved' : ''}`}
+              >
+                {i + 1}
+              </span>
+            );
+          })}
         </div>
       )}
       {onOpen && !compact && <p className="tap-hint">Tap for scorecard</p>}
