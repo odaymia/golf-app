@@ -21,6 +21,16 @@ const steele = (id, name, pars, hcps, tees) => ({
   source: { provider: 'scribble', note: 'Built into Scribble' },
 });
 
+// Singing Hills Golf Resort at Sycuan, El Cajon, CA: two 18-hole courses.
+const singingHills = (id, name, pars, hcps, tees) => ({
+  id,
+  name: `Singing Hills Golf Resort at Sycuan ${name}`,
+  place: 'El Cajon, CA',
+  holes: holes(pars, hcps),
+  tees: tees.map(([teeName, yards, rating, slope]) => ({ name: teeName, rating, slope, yards })),
+  source: { provider: 'scribble', note: 'Built into Scribble' },
+});
+
 export const BUILTIN_COURSES = [
   steele(
     'sc-steele-vineyard-canyon',
@@ -68,6 +78,34 @@ export const BUILTIN_COURSES = [
       ['Gold (W)', 5577, 72.5, 127],
       ['Combo (W)', 5105, 69.9, 121],
       ['Red (W)', 4747, 67.9, 117],
+    ],
+  ),
+  singingHills(
+    'sc-singing-hills-willow-glen',
+    'Willow Glen',
+    [4, 4, 4, 4, 5, 3, 4, 5, 3, 5, 4, 3, 4, 4, 4, 4, 5, 3],
+    [7, 13, 3, 11, 9, 15, 5, 1, 17, 12, 8, 16, 14, 10, 6, 2, 4, 18],
+    [
+      ['Blue', 6651, 72.3, 128],
+      ['White', 6200, 70.1, 123],
+      ['Red', 5454, 66.5, 115],
+      ['Blue (W)', 6651, 78.3, 142],
+      ['White (W)', 6200, 75.8, 136],
+      ['Red (W)', 5454, 71.9, 128],
+    ],
+  ),
+  singingHills(
+    'sc-singing-hills-oak-glen',
+    'Oak Glen',
+    [4, 4, 4, 3, 4, 3, 5, 4, 4, 5, 4, 4, 4, 4, 3, 4, 4, 5],
+    [5, 15, 9, 13, 1, 17, 7, 11, 3, 6, 12, 10, 8, 18, 16, 2, 14, 4],
+    [
+      ['Blue', 6820, 72.8, 132],
+      ['White', 6186, 70.0, 125],
+      ['Red', 5359, 65.8, 115],
+      ['Blue (W)', 6820, 79.2, 143],
+      ['White (W)', 6186, 75.7, 135],
+      ['Red (W)', 5359, 71.1, 124],
     ],
   ),
 ];

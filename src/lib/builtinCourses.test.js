@@ -21,6 +21,20 @@ describe('built-in courses', () => {
     expect(byName['Ranch/Vineyard'].holes.slice(9).map((h) => h.par)).toEqual(byName['Vineyard/Canyon'].holes.slice(0, 9).map((h) => h.par));
   });
 
+  it('Singing Hills at Sycuan: Willow Glen and Oak Glen, both par 72', () => {
+    const find = (id) => BUILTIN_COURSES.find((c) => c.id === id);
+    for (const id of ['sc-singing-hills-willow-glen', 'sc-singing-hills-oak-glen']) {
+      const c = find(id);
+      expect(c.holes.reduce((s, h) => s + h.par, 0)).toBe(72);
+      expect([...c.holes.map((h) => h.hcp)].sort((a, b) => a - b)).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
+      for (const t of c.tees) expect(courseProblems(c, t)).toEqual([]);
+    }
+    expect(find('sc-singing-hills-oak-glen').holes.slice(0, 9).reduce((s, h) => s + h.par, 0)).toBe(35);
+    expect(matchSaved('singing hills', BUILTIN_COURSES)).toHaveLength(2);
+    expect(matchSaved('sycuan oak glen', BUILTIN_COURSES).map((c) => c.id)).toEqual(['sc-singing-hills-oak-glen']);
+    expect(matchSaved('willow glen', BUILTIN_COURSES).map((c) => c.id)).toEqual(['sc-singing-hills-willow-glen']);
+  });
+
   it('shows up in search, even misspelled', () => {
     expect(matchSaved('steele canyon', BUILTIN_COURSES)).toHaveLength(3);
     expect(matchSaved('steel canyon ranch', BUILTIN_COURSES).map((c) => c.id)).toContain('sc-steele-canyon-ranch');
