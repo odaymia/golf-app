@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
             app: resolve(__dirname, 'app/index.html'),
             privacy: resolve(__dirname, 'privacy/index.html'),
             terms: resolve(__dirname, 'terms/index.html'),
+            admin: resolve(__dirname, 'admin/index.html'),
           },
         },
       },

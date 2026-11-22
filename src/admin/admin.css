@@ -1,0 +1,52 @@
+/* Owner dashboard (desktop). Brand green on cream, quiet grid. */
+.ad { max-width: 1240px; margin: 0 auto; padding: 24px 28px 60px; font-family: Montserrat, system-ui, sans-serif; color: #1c2a20; }
+.ad-signin { max-width: 440px; margin: 40px auto; padding: 0 16px; }
+.ad-center { text-align: center; padding: 60px 0; color: #6b7a6f; }
+.ad-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.ad-top > div:first-child { display: flex; align-items: center; gap: 14px; }
+.ad-logo { height: 40px; }
+.ad-top h1 { margin: 0; font-size: 22px; font-family: Fraunces, Georgia, serif; color: #033a1a; }
+.ad-top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ad-btn { border: none; border-radius: 10px; padding: 9px 14px; background: #065025; color: #fff; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.ad-btn:disabled { opacity: 0.6; }
+.ad-btn.ghost { background: transparent; color: #065025; }
+.ad-muted { color: #6b7a6f; font-size: 13px; margin: 2px 0 10px; }
+.ad-card { background: #fffdf7; border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 2px rgb(28 42 32 / 6%), 0 6px 20px rgb(28 42 32 / 6%); }
+.ad-card h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.ad-sub { margin-top: 18px !important; }
+.ad-note { max-width: 640px; margin: 40px auto; }
+.ad-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.ad-tile { display: flex; flex-direction: column; gap: 4px; padding: 16px; }
+.ad-tile-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7a6f; }
+.ad-tile-value { font-family: Fraunces, Georgia, serif; font-size: 34px; line-height: 1.1; color: #033a1a; }
+.ad-tile-sub { font-size: 12.5px; color: #6b7a6f; min-height: 16px; }
+.ad-tile-sub em { font-style: normal; font-weight: 700; margin-right: 6px; }
+.ad-tile-sub em.up { color: #065025; }
+.ad-tile-sub em.down { color: #b42318; }
+.ad-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+section.ad-card { margin-bottom: 16px; }
+.ad-chart { position: relative; }
+.ad-chart svg { display: block; width: 100%; height: auto; }
+.ad-axes text { font-size: 11px; fill: #8a978d; font-variant-numeric: tabular-nums; }
+.ad-grid { stroke: #ece6d8; stroke-width: 1; }
+.ad-line { fill: none; stroke: #065025; stroke-width: 2; stroke-linejoin: round; }
+.ad-area { fill: #065025; opacity: 0.08; }
+.ad-bar { fill: #065025; opacity: 0.85; }
+.ad-bar.on { opacity: 1; }
+.ad-cross { stroke: #8a978d; stroke-width: 1; stroke-dasharray: 3 3; }
+.ad-dot { fill: #065025; stroke: #fffdf7; stroke-width: 2; }
+.ad-tip { position: absolute; top: 4px; transform: translateX(-50%); pointer-events: none; background: #1c2a20; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+.ad-tip strong { font-size: 15px; }
+.ad-tip span { opacity: 0.8; }
+.ad-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.ad-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7a6f; padding: 8px 8px; border-bottom: 1px solid #ece6d8; }
+.ad-table td { padding: 8px; border-bottom: 1px solid #f2ede2; }
+.ad-table .num { text-align: right; }
+.ad-spark { width: 120px; height: 28px; display: block; }
+.ad-spark path { fill: none; stroke: #065025; stroke-width: 1.5; }
+.ad-scroll { overflow-x: auto; }
+.ad-ret td.ad-heat { background: rgb(6 80 37 / calc(var(--heat, 0) * 0.85 + 0.04)); color: #1c2a20; font-weight: 600; }
+@media (max-width: 1000px) {
+  .ad-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ad-grid2 { grid-template-columns: 1fr; }
+}

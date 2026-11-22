@@ -18,6 +18,7 @@ import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 // scoring), kept on the phone so closing the app and opening it again goes
 // straight back there.
 import { readPlace, writePlace } from './lib/place.js';
+import { logEvent, logVisit } from './lib/usage.js';
 
 // Shared post link (/app/?post=ID), read once when the app loads.
 const LINKED_POST = (() => {
@@ -78,6 +79,7 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
     claimMyInvites().catch(() => {});
+    logVisit(userId);
     let code = null;
     try {
       code = sessionStorage.getItem('golf-app:join');
@@ -148,6 +150,7 @@ export default function App() {
   function startRound(r) {
     setRound(r);
     setScreen('play');
+    logEvent('round_started');
   }
 
   function goHome() {

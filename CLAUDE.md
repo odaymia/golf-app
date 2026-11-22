@@ -67,7 +67,8 @@ Public repo `odaymia/golf-app`. Every push to `main` runs
 deploys `dist/` to GitHub Pages (repo Settings → Pages → Source: GitHub
 Actions). A failing test blocks the deploy.
 
-- Website at `/`, app at `/app/` (Vite multi-page input in `vite.config.js`).
+- Website at `/`, app at `/app/`, owner dashboard at `/admin/` (Vite
+  multi-page input in `vite.config.js`).
   PWA `start_url` is `/app/`; offline navigations under `/app/` fall back to
   `app/index.html`. League invites link to `/app/`.
 - Builds use base path `/` for the custom domain. DNS at
@@ -192,6 +193,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
+supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
+                    log_event(), am_i_admin(), admin_stats() (owner dashboard)
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -229,6 +232,20 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
     is two bets (first vs first, second vs second). Paid as of now like every
     match. Setup: "Split the round" switch under Match play (2 vs 2 teams);
     no scramble/alternate shot in casual rounds (scores are per player).
+
+## Owner dashboard
+
+`/admin/` (admin/index.html, src/admin/: Admin.jsx, charts.jsx, metrics.js
+tested; noindex). Same sign-in as the app; only accounts in
+`public.app_admins` see anything (add one in the SQL Editor, see the top of
+supabase/admin_stats.sql). `admin_stats()` returns everything in one call:
+total/new users, DAU/WAU/MAU (+ DAU/MAU stickiness), weekly sign-ups and
+active users, 12-week retention cohorts, weekly activity (casual rounds,
+league score cards, posts, likes, comments, messages), totals, most active
+players, top courses. Usage tracking is minimal: `log_visit()` once a day
+per person (lib/usage.js, called at sign-in) into `app_visits`, and
+`log_event('round_started')` for casual rounds (they live on the phone).
+Download CSV for decks. Days are Pacific time.
 
 ## Accounts
 
