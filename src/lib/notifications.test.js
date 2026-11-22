@@ -35,5 +35,7 @@ describe('notificationText', () => {
     expect(notificationText({ type: 'message', count: 3, body: 'Hello' })).toBe('sent you 3 messages: Hello');
     expect(notificationText({ type: 'review_request', body: 'Slice' })).toBe('sent you a swing to review: “Slice”');
     expect(notificationText({ type: 'review_answer', body: 'Grip' })).toBe('reviewed your swing: Grip');
+    expect(notificationText({ type: 'league_invite', body: 'Club Championship' })).toMatch(/^added you to Club Championship\./);
+    expect(notificationText({ type: 'round_added', body: 'Round 2' })).toMatch(/^put you in Round 2\./);
   });
 });

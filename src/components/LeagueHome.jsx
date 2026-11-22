@@ -432,7 +432,7 @@ function Members({ data, computed, me, isAdmin, reload }) {
                       {settings.handicap.mode === 'league' && leagueIdx?.[m.id] != null && leagueIdx[m.id] !== m.index
                         ? ` · league ${formatIndex(leagueIdx[m.id])}`
                         : ''}
-                      {m.userId ? '' : m.inviteEmail ? ' · invited, waiting to join' : ' · needs an account'}
+                      {m.userId ? (m.pending ? ' · waiting to accept' : '') : m.inviteEmail ? ' · invited, waiting to join' : ' · needs an account'}
                     </span>
                   </button>
                 </li>

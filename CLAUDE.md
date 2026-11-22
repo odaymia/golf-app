@@ -189,6 +189,9 @@ supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
 supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
+supabase/invites.sql  league_members.invite_status, league_events.rsvp,
+                    respond_league_invite(), respond_round(), league_invite /
+                    round_added notifications
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -350,6 +353,17 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   commissioner gets "Who's in your foursome?" (`FoursomeStart`, you
   preselected, up to 4, "Score a different group" for the old picker), which
   saves the foursome to `league_events.groups` so the others open on it too.
+- Home screen top (`HomeLeagueCards`, `homeLeagueStatus` in leagueApi; needs
+  supabase/invites.sql, fails soft without it): a round today you're in
+  shows "Today · Round 1 · League" with **Tee off** (opens its Enter
+  scores); a league/tournament that added you asks **Accept / Decline**
+  (`league_members.invite_status` 'pending' when someone else links your
+  account, set by a trigger; `respond_league_invite()`; declining deletes
+  your spot); upcoming rounds you're grouped in ask **I'm in / Can't make
+  it** (`respond_round()` -> `league_events.rsvp` {memberId: bool}; the
+  commissioner sees "Who's playing" in the round's Manage). Triggers also
+  write `league_invite` / `round_added` notifications (notifications.league_id
+  / event_id; never block the change). Members show "waiting to accept".
 - Reopening the app goes back to where you were (`lib/place.js`, tested,
   localStorage so it survives the app being closed or the phone turned
   off; expires after 12 h): a casual round (Play/Settle) or a league/

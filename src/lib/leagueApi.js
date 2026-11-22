@@ -58,6 +58,8 @@ const toMember = (r) => ({
   userId: r.user_id,
   active: !!r.user_id,
   inviteEmail: '',
+  // Added by the commissioner and hasn't accepted yet (supabase/invites.sql).
+  pending: r.invite_status === 'pending',
   name: r.name,
   index: r.handicap_index == null ? null : Number(r.handicap_index),
   ghinNumber: r.ghin_number ?? '',
@@ -77,6 +79,7 @@ const toEvent = (r) => ({
   matchFormat: r.match_format ?? null,
   status: r.status,
   tier: r.tier ?? 'regular',
+  rsvp: r.rsvp ?? {}, // { memberId: true (in) | false (can't make it) }
 });
 
 const toLeague = (r) => ({ id: r.id, name: r.name, code: r.invite_code, settings: r.settings, createdAt: r.created_at });
@@ -129,7 +132,9 @@ export async function loadLeague(id) {
   try {
     const [league, members, events, scores] = await Promise.all([
       call(supabase.from('leagues').select('*').eq('id', id).single()),
-      call(supabase.from('league_members').select(MEMBER_COLUMNS).eq('league_id', id).order('created_at')),
+      call(supabase.from('league_members').select(`${MEMBER_COLUMNS}, invite_status`).eq('league_id', id).order('created_at')).catch(() =>
+        call(supabase.from('league_members').select(MEMBER_COLUMNS).eq('league_id', id).order('created_at')),
+      ),
       call(supabase.from('league_events').select('*').eq('league_id', id).order('event_date')),
       call(supabase.from('event_scores').select('event_id, member_id, gross').eq('league_id', id)),
     ]);
@@ -372,4 +377,62 @@ export function pendingScoreCount() {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => flushScores().catch(() => {}));
+}
+
+// --- Invites, round answers and today's round (home screen) -----------------
+
+// What to show at the top of the home screen for this player:
+//   invites: leagues/tournaments that added them and wait for Accept/Decline
+//   rounds:  upcoming rounds they're grouped in and haven't answered
+//   today:   rounds today they're in (Tee off)
+// Fails soft to nothing (offline, or supabase/invites.sql not run yet).
+export async function homeLeagueStatus(userId, today) {
+  const empty = { invites: [], rounds: [], today: [] };
+  if (!userId) return empty;
+  try {
+    let mine = await call(supabase.from('league_members').select('id, league_id, invite_status').eq('user_id', userId)).catch(() =>
+      call(supabase.from('league_members').select('id, league_id').eq('user_id', userId)),
+    );
+    if (!mine.length) return empty;
+    const leagueIds = [...new Set(mine.map((m) => m.league_id))];
+    const leagues = await call(supabase.from('leagues').select('id, name, settings').in('id', leagueIds));
+    const cols = 'id, league_id, name, event_date, status, groups, matchups, tee_sheet, course';
+    const evQuery = (c) =>
+      supabase.from('league_events').select(c).in('league_id', leagueIds).neq('status', 'final').gte('event_date', today).order('event_date').limit(60);
+    const events = await call(evQuery(`${cols}, rsvp`)).catch(() => call(evQuery(cols)));
+    const leagueOf = (id) => leagues.find((l) => l.id === id);
+    const memberIn = (leagueId) => mine.find((m) => m.league_id === leagueId);
+    const invites = mine
+      .filter((m) => m.invite_status === 'pending' && leagueOf(m.league_id))
+      .map((m) => ({ leagueId: m.league_id, name: leagueOf(m.league_id).name, kind: leagueOf(m.league_id).settings?.kind ?? 'league' }));
+    const pendingLeagues = new Set(invites.map((i) => i.leagueId));
+    const rows = events.map(toEvent).map((e, i) => ({ ...e, leagueId: events[i].league_id }));
+    const inGroup = (e, memberId) => (e.groups ?? []).some((g) => g.includes(memberId)) || (e.matchups ?? []).some((mu) => mu.sides.flat().includes(memberId));
+    const todayRounds = [];
+    const rounds = [];
+    for (const e of rows) {
+      const m = memberIn(e.leagueId);
+      if (!m || pendingLeagues.has(e.leagueId)) continue;
+      const league = leagueOf(e.leagueId);
+      const grouped = (e.groups ?? []).length || (e.matchups ?? []).length;
+      if (e.date === today && (!grouped || inGroup(e, m.id))) {
+        if (!todayRounds.some((t) => t.leagueId === e.leagueId)) todayRounds.push({ leagueId: e.leagueId, leagueName: league.name, event: e, memberId: m.id });
+      } else if (e.date > today && inGroup(e, m.id) && e.rsvp?.[m.id] === undefined) {
+        rounds.push({ leagueId: e.leagueId, leagueName: league.name, event: e, memberId: m.id });
+      }
+    }
+    return { invites, rounds: rounds.slice(0, 3), today: todayRounds };
+  } catch {
+    return empty;
+  }
+}
+
+// Accept or decline a league/tournament spot (declining gives it up).
+export function respondLeagueInvite(leagueId, accept) {
+  return call(supabase.rpc('respond_league_invite', { p_league: leagueId, p_accept: accept }));
+}
+
+// I'm in / can't make it for a round.
+export function respondRound(eventId, playing) {
+  return call(supabase.rpc('respond_round', { p_event: eventId, p_in: playing }));
 }

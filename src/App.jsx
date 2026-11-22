@@ -249,6 +249,12 @@ export default function App() {
       )}
       <Home
         profile={profile}
+        userId={user?.id}
+        onTeeOff={(id, eventId) => {
+          setLeagueStart({ eventId, tab: 'score' });
+          setLeagueId(id);
+          setScreen('league');
+        }}
         onProfile={() => onTab('me')}
         onNew={() => setScreen('setup')}
         onOpen={openRound}

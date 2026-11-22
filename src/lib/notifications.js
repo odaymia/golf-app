@@ -110,6 +110,10 @@ export function notificationText(n) {
       return n.body ? `sent you a swing to review: “${n.body}”` : 'sent you a swing to review.';
     case 'review_answer':
       return `reviewed your swing: ${n.body}`;
+    case 'league_invite':
+      return `added you to ${n.body || 'a league'}. Accept it on your Golf home screen.`;
+    case 'round_added':
+      return `put you in ${n.body || 'a round'}. Say if you're in on your Golf home screen.`;
     default:
       return '';
   }

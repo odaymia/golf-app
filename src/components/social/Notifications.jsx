@@ -124,6 +124,8 @@ export default function Notifications({ meId, nav, back }) {
                       <img className="notif-thumb" src={n.thumb} alt="" loading="lazy" />
                     ) : n.type === 'message' ? (
                       <span className="notif-kind" aria-hidden="true">💬</span>
+                    ) : n.type === 'league_invite' || n.type === 'round_added' ? (
+                      <span className="notif-kind" aria-hidden="true">⛳</span>
                     ) : n.type.startsWith('review') ? (
                       <span className="notif-kind" aria-hidden="true">🎥</span>
                     ) : null}

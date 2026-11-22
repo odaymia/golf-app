@@ -6,7 +6,7 @@ import { formatIndex, parseIndex } from '../../lib/roundSetup.js';
 import { parseRoster, splitNew } from '../../lib/league/pro.js';
 import { orderEvents } from '../../lib/league/season.js';
 
-const statusOf = (m) => (m.active ? 'Active' : m.inviteEmail ? 'Invited' : 'Needs account');
+const statusOf = (m) => (m.active ? (m.pending ? 'Waiting to accept' : 'Active') : m.inviteEmail ? 'Invited' : 'Needs account');
 const idx = (n) => (n == null ? '' : formatIndex(n));
 
 // Roster: every player, sortable and editable, plus email invites and import.

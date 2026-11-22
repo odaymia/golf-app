@@ -921,6 +921,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
           {waiting} invited player{waiting === 1 ? ' hasn’t' : 's haven’t'} joined yet, so they can&apos;t be paired or scored.
         </p>
       )}
+      <RsvpList event={event} members={members} />
       <PairingsEditor
         data={data}
         event={event}
@@ -1106,3 +1107,32 @@ function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, s
 }
 
 
+
+// Commissioner: who answered "I'm in" / "Can't make it" for this round
+// (from the home-screen prompt; supabase/invites.sql).
+function RsvpList({ event, members }) {
+  const rsvp = event.rsvp ?? {};
+  const grouped = new Set((event.groups ?? []).flat());
+  if (!Object.keys(rsvp).length && !grouped.size) return null;
+  const nameOf = (id) => members.find((m) => m.id === id)?.name ?? '?';
+  const yes = Object.keys(rsvp).filter((id) => rsvp[id] === true);
+  const no = Object.keys(rsvp).filter((id) => rsvp[id] === false);
+  const waiting = [...grouped].filter((id) => rsvp[id] === undefined && members.find((m) => m.id === id)?.userId);
+  return (
+    <section className="card rsvp">
+      <h3>Who’s playing</h3>
+      <p>
+        <strong>In:</strong> {yes.length ? yes.map(nameOf).join(', ') : '–'}
+      </p>
+      <p>
+        <strong>Can’t make it:</strong> {no.length ? no.map(nameOf).join(', ') : '–'}
+      </p>
+      {waiting.length > 0 && (
+        <p className="muted">
+          <strong>No answer yet:</strong> {waiting.map(nameOf).join(', ')}
+        </p>
+      )}
+      <p className="hint">Players answer from the home screen once they’re in a group for this round.</p>
+    </section>
+  );
+}

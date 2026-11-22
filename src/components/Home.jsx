@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { listRounds, deleteRound } from '../lib/storage.js';
 import { GAME_INFO, formatIndex } from '../lib/roundSetup.js';
 import LeaguesSection from './LeaguesSection.jsx';
+import HomeLeagueCards from './HomeLeagueCards.jsx';
 
-export default function Home({ profile, onProfile, onNew, onOpen, onOpenLeague, onCreateLeague }) {
+export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpenLeague, onCreateLeague, onTeeOff }) {
   const [rounds, setRounds] = useState(null);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function Home({ profile, onProfile, onNew, onOpen, onOpenLeague, 
           </span>
         </button>
       </div>
+      <HomeLeagueCards userId={userId} onTeeOff={onTeeOff} onOpenLeague={onOpenLeague} />
       <header className="hero">
         <h1 className="brand">
           <img className="brand-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
