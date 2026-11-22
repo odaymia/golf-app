@@ -115,10 +115,10 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
           <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} isAdmin={isAdmin} meId={me?.id} />
         ) : (
           <>
-            {computed.settings.unit !== 'ryder' && isAdmin && (
+            {computed.settings.scoring !== 'match' && isAdmin && (
               <SavedPayoutsEditor title="Season payouts" data={data} settings={computed.settings} entrants={computed.standings.length} reload={reload} />
             )}
-            {computed.settings.unit !== 'ryder' && (
+            {computed.settings.scoring !== 'match' && (
               <PayoutsBoard
                 title="Season payouts"
                 config={computed.settings.payouts}

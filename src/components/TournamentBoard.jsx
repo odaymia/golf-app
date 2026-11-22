@@ -52,7 +52,7 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent, i
   const allFinal = events.length >= (settings.rounds ?? 1) && events.every((e) => e.status === 'final');
   return (
     <>
-      {isAdmin && <SavedPayoutsEditor title="Tournament payouts" data={data} settings={settings} entrants={standings.length} reload={reload} />}
+      {isAdmin && settings.scoring !== 'match' && <SavedPayoutsEditor title="Tournament payouts" data={data} settings={settings} entrants={standings.length} reload={reload} />}
       <PayoutsBoard
         title="Tournament payouts"
         config={settings.payouts}

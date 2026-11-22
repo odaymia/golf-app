@@ -73,25 +73,3 @@ describe('payouts by place', () => {
     expect(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd'].join()).toBe([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal).join());
   });
 });
-
-import { rowsByToPar } from './payouts.js';
-
-describe('finishing order for match-play rounds', () => {
-  const members = [
-    { id: 'a', name: 'A' },
-    { id: 'b', name: 'B' },
-    { id: 'c', name: 'C' },
-    { id: 'd', name: 'D' },
-  ];
-  const p = (thru, gross, net, par) => ({ thru, grossTotal: gross, netTotal: net, parPlayed: par });
-  it('ranks by net (or gross) to par on the holes played; ties share; no holes = unplaced', () => {
-    const players = { a: p(18, 75, 70, 72), b: p(18, 74, 72, 72), c: p(9, 36, 34, 36), d: p(0, 0, 0, 0) };
-    expect(rowsByToPar(players, members, true)).toEqual([
-      { key: 'a', name: 'A', position: 1 }, // -2
-      { key: 'c', name: 'C', position: 1 }, // -2 thru 9
-      { key: 'b', name: 'B', position: 3 }, // E
-      { key: 'd', name: 'D', position: null },
-    ]);
-    expect(rowsByToPar(players, members, false).map((r) => r.key)).toEqual(['c', 'b', 'a', 'd']);
-  });
-});

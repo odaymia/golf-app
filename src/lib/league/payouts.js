@@ -93,24 +93,3 @@ export function ordinal(n) {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
-
-// Finishing order by score to par on the holes played (net or gross), for
-// rounds that have no board of their own (match play). players: the round
-// result's players { id: { thru, grossTotal, netTotal, parPlayed } }.
-// Returns [{ key, name, position }] best first; no holes played = unplaced.
-export function rowsByToPar(players, members, net) {
-  const rows = members
-    .filter((m) => players[m.id])
-    .map((m) => {
-      const p = players[m.id];
-      const toPar = p.thru ? (net ? p.netTotal : p.grossTotal) - p.parPlayed : null;
-      return { key: m.id, name: m.name, toPar };
-    });
-  const played = rows.filter((r) => r.toPar != null).sort((a, b) => a.toPar - b.toPar);
-  let pos = 0;
-  const ranked = played.map((r, i) => {
-    if (i === 0 || played[i - 1].toPar !== r.toPar) pos = i + 1;
-    return { key: r.key, name: r.name, position: pos };
-  });
-  return [...ranked, ...rows.filter((r) => r.toPar == null).map((r) => ({ key: r.key, name: r.name, position: null }))];
-}

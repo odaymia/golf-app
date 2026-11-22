@@ -402,16 +402,16 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   the whole purse); only as many places paid as players placed; ties split
   the places they cover to the cent. From entries, balances = winnings −
   entry and `settle()` gives the fewest payments (individuals only; teams
-  just see amounts); a fixed purse has no settle-up. Round payouts (every
-  round type, league or tournament): `event.sideGames.payouts` set in
-  Manage → Side games & payouts, shown on Results from the round's board
-  (match-play rounds have none, so `rowsByToPar`: net/gross to par on holes
-  played). Tournament payouts: `leagues.settings.payouts`, set by the
-  commissioner on the tournament leaderboard, from overall standings;
-  "If it ended now" until every planned round is final. Season payouts
-  (leagues, not Ryder Cup): the same `settings.payouts` on Standings
-  (`SavedPayoutsEditor`), from season standings. Casual rounds: the
-  "Payouts by place" game (below). Shared split picker: `PlacesPicker`.
+  just see amounts); a fixed purse has no settle-up. Every format except
+  match play (so not Ryder Cups or match-play leagues). Set when creating or
+  editing a tournament/league (LeagueBuilder "5. Payouts" ->
+  `leagues.settings.payouts`), or later by the commissioner on the
+  tournament leaderboard / league Standings (`SavedPayoutsEditor`).
+  Tournament: from overall standings, "If it ended now" until every planned
+  round is final. League: from season standings. Round payouts:
+  `event.sideGames.payouts` in a round's Manage → Side games & payouts,
+  from the round's board. Casual rounds: the "Payouts by place" game
+  (below). Shared split picker: `PlacesPicker`.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,
