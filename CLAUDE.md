@@ -244,8 +244,10 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
 ## Round recap and course ratings
 
 - After a round (casual: Settle once every hole is in; league/tournament:
-  round review after Submit scores) the app shows an AI recap that hypes
-  the best round and ribs the worst, then "Rate <course>": 1-5 stars for
+  round review after Submit scores) the app shows an AI recap that spreads
+  hype and ribbing across the group (good and bad holes, nines, money, not
+  just first and last), one per round (no rewrites; Try again only after an
+  error), then "Rate <course>": 1-5 stars for
   Conditions, Layout, Price (5 = great value), Difficulty (5 = tough).
 - Recap: `recapFacts` (lib/roundRecap.js) sends only names, scores, results,
   best/worst holes and money as text; the `round-recap` Edge Function checks

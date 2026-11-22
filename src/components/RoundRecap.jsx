@@ -3,7 +3,8 @@ import { requestRecap, rateCourse, myCourseRating } from '../lib/courseRatings.j
 import { RATING_CATEGORIES, rateableKey } from '../lib/roundRecap.js';
 
 // The AI round recap card. Writes itself once when shown (if there's no saved
-// recap), then keeps the text via onRecap so it isn't written twice.
+// recap), then keeps the text via onRecap so it isn't written twice. One
+// recap per round: no rewrites (each one costs), only Try again after an error.
 export function RoundRecap({ facts, recap, onRecap }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -53,9 +54,9 @@ export function RoundRecap({ facts, recap, onRecap }) {
             {copied ? 'Copied!' : 'Share recap'}
           </button>
         )}
-        {!busy && (recap || error) && (
+        {!busy && !recap && error && (
           <button className="btn btn-ghost" onClick={write}>
-            {recap ? 'Write another' : 'Try again'}
+            Try again
           </button>
         )}
       </div>
