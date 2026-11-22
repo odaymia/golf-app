@@ -184,7 +184,7 @@ supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
-                    search_courses(); re-run to refresh
+                    search_courses(); loaded but NOT used by the app
 ```
 
 ### Engine conventions
@@ -586,16 +586,12 @@ docs/instructors.md.
   desktop) use the same picker via `CoursePicker` (recents on tap, close
   matches, new course, tees dropdown).
 
-Course search reads our own copy of the open OpenGolfAPI data first:
-`public.courses` in Supabase (supabase/courses.sql: table, public read RLS,
-typo-tolerant `search_courses(q, lim)` RPC via pg_trgm, and a loader that
-pulls https://github.com/opengolfapi/data's NDJSON with the `http`
-extension; re-run the file to refresh). Same course ids as the API, so
-saved `oga-<id>` courses still match. The open data has par + stroke index
-per hole but no tee ratings/slopes (setup uses par/113 with a warning).
-If our copy is missing or errors, it falls back to OpenGolfAPI
-(https://api.opengolfapi.org/api/v1), called straight from the phone (CORS
-is open).
+Course search uses only OpenGolfAPI (https://api.opengolfapi.org/api/v1),
+called straight from the phone (CORS is open); when it's down, only courses
+saved on the phone show. Not used (Nov 2026, the owner's call): our own copy
+of the open data, `public.courses` + `search_courses()` in Supabase
+(supabase/courses.sql, still loaded): the open data has no tee ratings or
+slopes. Turning it back on would mean searching it in courseSearch.js.
 - When OpenGolfAPI is down (it returns 500/522 after ~20 s), requests give
   up after 8 s and say the course database isn't responding (not a status
   code). CourseSearch always lists matching courses saved on the phone
@@ -608,8 +604,7 @@ is open).
   `© OpenStreetMap contributors · contains data from OpenGolfAPI
   (opengolfapi.org) · ODbL 1.0`) wherever results appear. Our Supabase copy
   is a derived database, so it must stay ODbL and openly readable.
-- Open-data gaps: a course's `holes` there counts holes with data (16 when
-  two are missing), so results only show 9/18/27/36. A card numbered past 9
+- Data gaps: a card numbered past 9
   is 18 holes; missing pars become 4 and, when most stroke indexes are known
   without repeats, missing holes get the unused ones; warnings name the holes.
 - Data is community-maintained: `courseImport.js` drops stray holes past 18,

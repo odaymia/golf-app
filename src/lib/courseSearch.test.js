@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { DOWN_MESSAGE, detailFromRow, matchSaved, searchCourses } from './courseSearch.js';
-import { courseFromApi } from './courseImport.js';
+import { DOWN_MESSAGE, matchSaved, searchCourses } from './courseSearch.js';
 
 const saved = [
   { id: 'oga-1', name: 'Steele Canyon Golf Club' },
@@ -35,25 +34,3 @@ describe('when the course database is down', () => {
   });
 });
 
-describe('our Supabase copy of the course data', () => {
-  it('turns a row into a course the same way as the API', () => {
-    const row = {
-      id: '0e1e596d-8e86-4ff8-90e9-6a439a0ba271',
-      name: 'Egyptian Country Club',
-      city: 'Mounds',
-      state: 'IL',
-      holes: 9,
-      par: 36,
-      scorecard: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((hole) => ({ hole, par: hole % 3 ? 4 : 3, handicap_index: [9, 5, 1, 7, 3, 8, 4, 6, 2][hole - 1] })),
-    };
-    const d = detailFromRow(row);
-    expect(d.holes_data[0]).toEqual({ number: 1, par: 4, handicap_index: 9 });
-    const { course, warnings } = courseFromApi(d);
-    expect(course.id).toBe('oga-0e1e596d-8e86-4ff8-90e9-6a439a0ba271');
-    expect(course.name).toBe('Egyptian Country Club');
-    expect(course.place).toBe('Mounds, IL');
-    expect(course.holes).toHaveLength(18); // nine played twice
-    expect(course.tees).toEqual([{ name: 'White', rating: course.holes.reduce((s, h) => s + h.par, 0), slope: 113 }]);
-    expect(warnings.join(' ')).toMatch(/No tee ratings/);
-  });
-});
