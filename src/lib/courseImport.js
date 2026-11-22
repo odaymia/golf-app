@@ -4,7 +4,7 @@
 // can fix it in the holes editor before teeing off.
 import { DEFAULT_HCPS } from './roundSetup.js';
 
-export const ATTRIBUTION = '© OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI';
+export const ATTRIBUTION = '© OpenStreetMap contributors · contains data from OpenGolfAPI (opengolfapi.org) · ODbL 1.0';
 
 export function courseIdFor(apiId) {
   return `oga-${apiId}`;

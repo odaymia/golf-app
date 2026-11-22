@@ -183,6 +183,8 @@ supabase/instructors.sql  instructor profiles, tiers, subscriptions, interest,
 supabase/tee_times.sql  Adds league_events.tee_sheet
 supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
                     join_league/can_score require an account
+supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
+                    search_courses(); re-run to refresh
 ```
 
 ### Engine conventions
@@ -584,8 +586,16 @@ docs/instructors.md.
   desktop) use the same picker via `CoursePicker` (recents on tap, close
   matches, new course, tees dropdown).
 
-Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
-called straight from the phone (CORS is open).
+Course search reads our own copy of the open OpenGolfAPI data first:
+`public.courses` in Supabase (supabase/courses.sql: table, public read RLS,
+typo-tolerant `search_courses(q, lim)` RPC via pg_trgm, and a loader that
+pulls https://github.com/opengolfapi/data's NDJSON with the `http`
+extension; re-run the file to refresh). Same course ids as the API, so
+saved `oga-<id>` courses still match. The open data has par + stroke index
+per hole but no tee ratings/slopes (setup uses par/113 with a warning).
+If our copy is missing or errors, it falls back to OpenGolfAPI
+(https://api.opengolfapi.org/api/v1), called straight from the phone (CORS
+is open).
 - When OpenGolfAPI is down (it returns 500/522 after ~20 s), requests give
   up after 8 s and say the course database isn't responding (not a status
   code). CourseSearch always lists matching courses saved on the phone
@@ -594,9 +604,10 @@ called straight from the phone (CORS is open).
 - No API key in the app: search and detail work without one (per-device daily
   limit), and anything shipped in a public PWA is readable by anyone. Keep the
   user's key out of the repo; it's only useful later from a server.
-- Data is ODbL 1.0. Show the attribution `© OpenStreetMap contributors (ODbL
-  1.0) via OpenGolfAPI` wherever results appear. A shared course database
-  built from it (e.g. in Supabase) must also be ODbL.
+- Data is ODbL 1.0. Show the attribution (`ATTRIBUTION` in courseImport.js:
+  `© OpenStreetMap contributors · contains data from OpenGolfAPI
+  (opengolfapi.org) · ODbL 1.0`) wherever results appear. Our Supabase copy
+  is a derived database, so it must stay ODbL and openly readable.
 - Data is community-maintained: `courseImport.js` drops stray holes past 18,
   plays 9-hole courses twice (stroke index n -> 2n-1 out, 2n in), doubles
   9-hole ratings, and fills missing pars/handicaps/ratings with defaults plus a

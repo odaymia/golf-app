@@ -1,3 +1,4 @@
+import { ATTRIBUTION } from '../../lib/courseImport.js';
 import { useEffect, useRef, useState } from 'react';
 import { searchPosts, searchProfiles } from '../../lib/social.js';
 import { searchCourses } from '../../lib/courseSearch.js';
@@ -247,7 +248,7 @@ function CourseResults({ q, go }) {
           );
         })}
       </ul>
-      {items.length > 0 && <p className="hint center">© OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI</p>}
+      {items.length > 0 && <p className="hint center">Course data {ATTRIBUTION}</p>}
     </section>
   );
 }
