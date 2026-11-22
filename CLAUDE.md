@@ -206,6 +206,11 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   - Wolf: lone/blind wolf wins or loses stake x multiplier with each of the 3.
   - Vegas: a score of 10+ goes first; birdie flips the other team unless both
     teams birdie; net scores below 1 count as 1.
+  - Payouts by place (casual, `games/places.js`, tested): everyone pays
+    `entry` cents, the pot pays 1st/2nd/3rd… by percent (`places`), ranked by
+    lowest total (net or gross) on holes everyone has finished; ties split
+    via `computePayoutsCents` (league/payouts.js); balances = winnings −
+    entry; nothing owed before a full hole.
   - Split match (casual, 2 vs 2 teams only): `game.segments`
     `[{ from, to, format }]` (best ball 'fourball', combined 'shamble',
     'singles'); each stretch is its own bet worth `stake`, a singles stretch
@@ -397,12 +402,16 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   the whole purse); only as many places paid as players placed; ties split
   the places they cover to the cent. From entries, balances = winnings −
   entry and `settle()` gives the fewest payments (individuals only; teams
-  just see amounts); a fixed purse has no settle-up. Round payouts
-  (stroke/Stableford rounds, league or tournament): `event.sideGames.payouts`
-  set in Manage → Side games & payouts, shown on Results from the round's
-  board. Tournament payouts: `leagues.settings.payouts`, set by the
+  just see amounts); a fixed purse has no settle-up. Round payouts (every
+  round type, league or tournament): `event.sideGames.payouts` set in
+  Manage → Side games & payouts, shown on Results from the round's board
+  (match-play rounds have none, so `rowsByToPar`: net/gross to par on holes
+  played). Tournament payouts: `leagues.settings.payouts`, set by the
   commissioner on the tournament leaderboard, from overall standings;
-  "If it ended now" until every planned round is final. Not for match play.
+  "If it ended now" until every planned round is final. Season payouts
+  (leagues, not Ryder Cup): the same `settings.payouts` on Standings
+  (`SavedPayoutsEditor`), from season standings. Casual rounds: the
+  "Payouts by place" game (below). Shared split picker: `PlacesPicker`.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,

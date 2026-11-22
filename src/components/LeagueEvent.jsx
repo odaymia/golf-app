@@ -12,6 +12,7 @@ import { canScore, groupOf } from '../lib/league/groups.js';
 import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
 import { SideGamesBoard, SideGamesEditor } from './SideGames.jsx';
 import { PayoutsBoard } from './Payouts.jsx';
+import { rowsByToPar } from '../lib/league/payouts.js';
 import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
@@ -94,13 +95,22 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack, initial
           meId={me?.id}
         />
       )}
-      {tab === 'results' && settings.scoring !== 'match' && (
+      {tab === 'results' && (
         <PayoutsBoard
           title="Payouts · this round"
           config={event.sideGames?.payouts}
-          rows={result.board.map((e) => ({ key: e.key, name: e.name, position: e.position ?? null }))}
-          final={final || (result.board.length > 0 && result.board.every((e) => e.complete))}
-          people={settings.unit === 'individual'}
+          rows={
+            settings.scoring === 'match'
+              ? rowsByToPar(result.players, data.members.filter((m) => m.active), settings.net)
+              : result.board.map((e) => ({ key: e.key, name: e.name, position: e.position ?? null }))
+          }
+          final={
+            final ||
+            (settings.scoring === 'match'
+              ? Object.values(result.players).every((p) => p.thru === event.course.holes.length)
+              : result.board.length > 0 && result.board.every((e) => e.complete))
+          }
+          people={settings.scoring === 'match' || settings.unit === 'individual'}
           meKey={me?.id}
         />
       )}
@@ -936,7 +946,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         key={event.id}
         event={event}
         members={members}
-        payouts={settings.scoring !== 'match'}
+        payouts
         busy={busy}
         onSave={(sideGames) => act(() => updateEvent(event.id, { sideGames }))}
       />

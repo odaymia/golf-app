@@ -45,11 +45,22 @@ export function purseCents(cfg, entrants) {
 //     balances: { key: cents } | null (payout minus entry; zero-sum) }
 export function computePayouts(config, rows) {
   const cfg = normalizePayouts(config);
-  const purse = purseCents(cfg, rows.length);
+  const fixed = fixedPurse(cfg);
+  return computePayoutsCents(
+    { entryCents: Math.max(0, dollarsToCents(cfg.entry)), purseCents: fixed ? dollarsToCents(cfg.purse) : null, places: cfg.places },
+    rows,
+  );
+}
+
+// The same in cents (the casual-round engine uses this directly).
+// { entryCents, purseCents: null = entries x entrants, places: [percent] }
+export function computePayoutsCents({ entryCents = 0, purseCents = null, places = [] }, rows) {
+  const fromEntries = purseCents == null;
+  const purse = fromEntries ? entryCents * rows.length : purseCents;
   const ranked = rows.filter((r) => r.position != null);
   // Only as many paid places as there are players placed, so the whole
   // purse is always paid out.
-  const pcts = cfg.places.filter((x) => x > 0).slice(0, ranked.length);
+  const pcts = places.map((x) => Math.max(0, Number(x) || 0)).filter((x) => x > 0).slice(0, ranked.length);
   const idx = pcts.map((_, i) => String(i));
   const split = splitByWeight(purse, idx, Object.fromEntries(pcts.map((x, i) => [String(i), x])));
   const amounts = idx.map((i) => split[i]);
@@ -70,9 +81,9 @@ export function computePayouts(config, rows) {
     }
     i = j;
   }
-  const fromEntries = !fixedPurse(cfg);
-  const entry = fromEntries ? Math.max(0, dollarsToCents(cfg.entry)) : 0;
-  const balances = fromEntries ? Object.fromEntries(rows.map((r) => [r.key, byKey[r.key] - entry])) : null;
+  // With nobody placed yet nothing is paid, so no one owes anything either.
+  const entry = fromEntries ? entryCents : 0;
+  const balances = fromEntries ? Object.fromEntries(rows.map((r) => [r.key, ranked.length ? byKey[r.key] - entry : 0])) : null;
   return { purse, entry, fromEntries, amounts, lines, byKey, balances };
 }
 
@@ -81,4 +92,25 @@ export function ordinal(n) {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// Finishing order by score to par on the holes played (net or gross), for
+// rounds that have no board of their own (match play). players: the round
+// result's players { id: { thru, grossTotal, netTotal, parPlayed } }.
+// Returns [{ key, name, position }] best first; no holes played = unplaced.
+export function rowsByToPar(players, members, net) {
+  const rows = members
+    .filter((m) => players[m.id])
+    .map((m) => {
+      const p = players[m.id];
+      const toPar = p.thru ? (net ? p.netTotal : p.grossTotal) - p.parPlayed : null;
+      return { key: m.id, name: m.name, toPar };
+    });
+  const played = rows.filter((r) => r.toPar != null).sort((a, b) => a.toPar - b.toPar);
+  let pos = 0;
+  const ranked = played.map((r, i) => {
+    if (i === 0 || played[i - 1].toPar !== r.toPar) pos = i + 1;
+    return { key: r.key, name: r.name, position: pos };
+  });
+  return [...ranked, ...rows.filter((r) => r.toPar == null).map((r) => ({ key: r.key, name: r.name, position: null }))];
 }

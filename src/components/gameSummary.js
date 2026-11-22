@@ -1,5 +1,6 @@
 // Plain-English lines describing where each game stands.
 import { GAME_INFO } from '../lib/roundSetup.js';
+import { formatMoney } from '../lib/games/money.js';
 
 export function nameMap(players) {
   return Object.fromEntries(players.map((p) => [p.id, p.name]));
@@ -90,6 +91,17 @@ export function gameLines(result, players) {
       });
       if (!lines.length) lines.push({ text: 'No holes played yet' });
       return lines;
+    }
+    case 'places': {
+      const paid = [...result.standings].filter((s) => s.position != null).sort((a, b) => a.position - b.position);
+      if (!paid.length) return [{ text: 'No holes everyone has finished yet' }];
+      const tied = (s) => paid.filter((o) => o.position === s.position).length > 1;
+      return [
+        { text: `Pot ${formatMoney(result.purse)}${result.thru < 18 ? ` · thru ${result.thru}` : ''}`, head: true },
+        ...paid.map((s) => ({
+          text: `${tied(s) ? 'T' : ''}${s.position}. ${names[s.id]}: ${s.total}${s.cents > 0 ? ` · wins ${formatMoney(s.cents)}` : ''}`,
+        })),
+      ];
     }
     case 'vegas': {
       const [a, b] = game.teams.map((t) => side(names, t));

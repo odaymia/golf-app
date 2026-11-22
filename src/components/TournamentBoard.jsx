@@ -6,9 +6,7 @@ import Leaderboard from './Leaderboard.jsx';
 import { MatchDetail } from './ScoreTable.jsx';
 import { matchLabel } from '../lib/league/ryder.js';
 import { useLiveRefresh } from './useLiveRefresh.js';
-import { PayoutsBoard, PayoutsEditor } from './Payouts.jsx';
-import { normalizePayouts } from '../lib/league/payouts.js';
-import { updateLeague } from '../lib/leagueApi.js';
+import { PayoutsBoard, SavedPayoutsEditor } from './Payouts.jsx';
 
 const toParText = (n) => (n == null ? '–' : n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`);
 const toParClass = (n) => (n == null ? '' : n < 0 ? 'red' : n === 0 ? 'even' : '');
@@ -54,7 +52,7 @@ export default function TournamentBoard({ computed, data, reload, onOpenEvent, i
   const allFinal = events.length >= (settings.rounds ?? 1) && events.every((e) => e.status === 'final');
   return (
     <>
-      {isAdmin && <TournamentPayouts data={data} settings={settings} entrants={standings.length} reload={reload} />}
+      {isAdmin && <SavedPayoutsEditor title="Tournament payouts" data={data} settings={settings} entrants={standings.length} reload={reload} />}
       <PayoutsBoard
         title="Tournament payouts"
         config={settings.payouts}
@@ -195,46 +193,5 @@ function RyderBoard({ settings, standings, events, results, members, open, onOpe
       )}
       {open && <p className="hint center">Live: updates every 20 seconds as groups enter scores.</p>}
     </>
-  );
-}
-
-// Commissioner: payouts by place on the overall leaderboard (saved in the
-// tournament's settings).
-function TournamentPayouts({ data, settings, entrants, reload }) {
-  const [cfg, setCfg] = useState(() => normalizePayouts(settings.payouts));
-  const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  async function save() {
-    setBusy(true);
-    setError('');
-    try {
-      await updateLeague(data.league.id, { settings: { ...data.league.settings, payouts: cfg } });
-      setDirty(false);
-      await reload();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <section className="card side-games-edit">
-      <PayoutsEditor
-        title="Tournament payouts"
-        cfg={cfg}
-        entrants={entrants}
-        onChange={(next) => {
-          setCfg(next);
-          setDirty(true);
-        }}
-      />
-      {error && <p className="search-error">{error}</p>}
-      {dirty && (
-        <button className="btn btn-primary full" disabled={busy} onClick={save}>
-          {busy ? 'Saving…' : 'Save payouts'}
-        </button>
-      )}
-    </section>
   );
 }

@@ -12,6 +12,7 @@ import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
 import { Seg } from './controls.jsx';
 import TournamentBoard from './TournamentBoard.jsx';
+import { PayoutsBoard, SavedPayoutsEditor } from './Payouts.jsx';
 
 const fmtPts = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''));
 const fmtDate = (d) =>
@@ -113,7 +114,22 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
         (computed.settings.kind === 'tournament' ? (
           <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} isAdmin={isAdmin} meId={me?.id} />
         ) : (
-          <Standings computed={computed} events={events} />
+          <>
+            {computed.settings.unit !== 'ryder' && isAdmin && (
+              <SavedPayoutsEditor title="Season payouts" data={data} settings={computed.settings} entrants={computed.standings.length} reload={reload} />
+            )}
+            {computed.settings.unit !== 'ryder' && (
+              <PayoutsBoard
+                title="Season payouts"
+                config={computed.settings.payouts}
+                rows={computed.standings.map((r) => ({ key: r.key, name: r.name, position: (r.played ?? 1) > 0 ? r.position : null }))}
+                final={false}
+                people={computed.settings.unit === 'individual'}
+                meKey={me?.id}
+              />
+            )}
+            <Standings computed={computed} events={events} />
+          </>
         ))}
       {tab === 'rounds' && (
         <Rounds data={data} computed={computed} isAdmin={isAdmin} meId={me?.id} reload={reload} onOpenEvent={onOpenEvent} />

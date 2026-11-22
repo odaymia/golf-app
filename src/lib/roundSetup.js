@@ -108,6 +108,11 @@ export const GAME_INFO = {
     rules:
       'The wolf rotates each hole (player order). The wolf picks a partner after tee shots, or goes Lone Wolf (2× against all three) or Blind Wolf before anyone hits (3×). Low ball wins the hole.',
   },
+  places: {
+    name: 'Payouts by place',
+    rules:
+      'Everyone puts in the entry and the pot pays 1st, 2nd, 3rd… a share (you pick the split). Lowest total score wins, net or gross. Ties split the places they cover.',
+  },
   vegas: {
     name: 'Vegas',
     rules:
@@ -134,6 +139,7 @@ export function defaultSettings() {
     },
     wolf: { on: false, stake: 1, net: true, loneMult: 2, blindMult: 3 },
     vegas: { on: false, stake: 0.1, net: true, birdieFlip: true },
+    places: { on: false, stake: 20, net: true, places: [50, 30, 20] }, // stake = entry per player
   };
 }
 
@@ -162,6 +168,7 @@ export const GAME_LIMITS = {
   stableford: [2, MAX_PLAYERS],
   wolf: [4, 4],
   vegas: [4, 4],
+  places: [2, MAX_PLAYERS],
 };
 
 export function gameAvailable(type, playerCount) {
@@ -221,6 +228,16 @@ export function buildGames(settings, players) {
       matchups: matchupsFor(players, s.format, teams),
       // Split match: 2 vs 2 only, each stretch of holes its own bet.
       ...(s.split?.length && s.format === 'teams' && players.length === 4 ? { segments: s.split.map((x) => ({ ...x })) } : {}),
+    });
+  }
+  if (on('places')) {
+    const s = settings.places;
+    games.push({
+      id: 'places',
+      type: 'places',
+      net: s.net,
+      entry: dollarsToCents(s.stake),
+      places: (s.places ?? [50, 30, 20]).map((x) => Math.max(0, Number(x) || 0)),
     });
   }
   if (on('stroke')) {

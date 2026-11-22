@@ -20,6 +20,7 @@ import CourseSearch from './CourseSearch.jsx';
 import { NumberField, Switch, Toggle } from './controls.jsx';
 import StablefordScoring from './StablefordScoring.jsx';
 import SplitEditor from './SplitEditor.jsx';
+import { PlacesPicker } from './Payouts.jsx';
 import { defaultSplit } from '../lib/league/ryder.js';
 
 // Casual split match: best ball, then combined, then singles.
@@ -478,6 +479,7 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
           : 'Per player you beat',
     wolf: 'Per hole',
     vegas: 'Per point',
+    places: 'Entry per player',
   }[type];
   return (
     <div className="options">
@@ -522,6 +524,14 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
             Everyone vs everyone
           </button>
         </div>
+      )}
+      {type === 'places' && (
+        <>
+          <PlacesPicker places={s.places ?? [50, 30, 20]} onChange={(next) => set('places', next)} purse={Math.round((Number(s.stake) || 0) * 100) * playerCount} />
+          <p className="hint">
+            {playerCount} × ${Number(s.stake) || 0} = ${(Number(s.stake) || 0) * playerCount} pot. Lowest total wins; mid-round it compares the holes everyone has finished.
+          </p>
+        </>
       )}
       {type === 'match' && playerCount === 4 && s.format === 'teams' && (
         <>

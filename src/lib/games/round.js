@@ -7,6 +7,7 @@ import { scoreSkins } from './skins.js';
 import { scoreWolf } from './wolf.js';
 import { scoreVegas } from './vegas.js';
 import { scoreStableford } from './stableford.js';
+import { scorePlaces } from './places.js';
 import { settle } from './settle.js';
 
 // round = {
@@ -26,6 +27,7 @@ export const SCORERS = {
   wolf: scoreWolf,
   vegas: scoreVegas,
   stableford: scoreStableford,
+  places: scorePlaces,
 };
 
 export function coursePar(holes) {
