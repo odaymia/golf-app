@@ -14,10 +14,10 @@ import { useUnreadNotifications } from './components/useUnreadNotifications.js';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
 import { getSession, loadProfile, onAuthChange } from './lib/account.js';
-
-// Where the player is, kept across reloads (an app update reloads the page)
-// so they land back on the same round instead of the home screen.
-const PLACE_KEY = 'golf-app:place';
+// Where the player is (a casual round, or a league/tournament round they're
+// scoring), kept on the phone so closing the app and opening it again goes
+// straight back there.
+import { readPlace, writePlace } from './lib/place.js';
 
 // Shared post link (/app/?post=ID), read once when the app loads.
 const LINKED_POST = (() => {
@@ -27,23 +27,6 @@ const LINKED_POST = (() => {
   return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
 })();
 
-function readPlace() {
-  try {
-    return JSON.parse(sessionStorage.getItem(PLACE_KEY));
-  } catch {
-    return null;
-  }
-}
-
-function writePlace(place) {
-  try {
-    if (place) sessionStorage.setItem(PLACE_KEY, JSON.stringify(place));
-    else sessionStorage.removeItem(PLACE_KEY);
-  } catch {
-    // storage blocked: nothing to restore later, which is fine
-  }
-}
-
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = still checking
   const [profile, setProfile] = useState(undefined);
@@ -51,6 +34,7 @@ export default function App() {
   const [screen, setScreen] = useState('home');
   const [round, setRound] = useState(null);
   const [leagueId, setLeagueId] = useState(null);
+  const [leagueStart, setLeagueStart] = useState(null); // { eventId, tab } to reopen
   const [newKind, setNewKind] = useState('league');
   const [socialStart, setSocialStart] = useState({ name: 'feed', params: {} });
   const [joinError, setJoinError] = useState('');
@@ -104,6 +88,7 @@ export default function App() {
     if (!code) return;
     joinLeague(code, profile)
       .then((id) => {
+        setLeagueStart(null);
         setLeagueId(id);
         setScreen('league');
       })
@@ -130,6 +115,12 @@ export default function App() {
 
   useEffect(() => {
     const place = readPlace();
+    if (place?.leagueId) {
+      setLeagueStart(place.eventId ? { eventId: place.eventId, tab: place.tab } : null);
+      setLeagueId(place.leagueId);
+      setScreen('league');
+      return;
+    }
     if (!place?.roundId) return;
     getRound(place.roundId)
       .then((r) => {
@@ -142,7 +133,9 @@ export default function App() {
 
   const roundId = round?.id;
   useEffect(() => {
-    writePlace(roundId && (screen === 'play' || screen === 'settle') ? { roundId, screen } : null);
+    // League/tournament scoring is recorded by League itself (onPlace).
+    if (roundId && (screen === 'play' || screen === 'settle')) writePlace({ roundId, screen });
+    else if (screen !== 'league') writePlace(null);
   }, [roundId, screen]);
 
   async function openRound(id) {
@@ -194,7 +187,19 @@ export default function App() {
     return <Profile firstTime user={user} profile={profile} onSaved={setProfile} />;
 
   if (screen === 'league' && leagueId)
-    return <League leagueId={leagueId} user={user} onBack={goHome} />;
+    return (
+      <League
+        key={leagueId}
+        leagueId={leagueId}
+        user={user}
+        start={leagueStart}
+        onPlace={(p) => writePlace(p ? { leagueId, ...p } : null)}
+        onBack={() => {
+          setLeagueStart(null);
+          goHome();
+        }}
+      />
+    );
   if (screen === 'newLeague')
     return (
       <LeagueBuilder
@@ -202,6 +207,7 @@ export default function App() {
         onCancel={goHome}
         onSave={async ({ name, settings }) => {
           const id = await createLeague({ name, settings, profile });
+          setLeagueStart(null);
           setLeagueId(id);
           setScreen('league');
         }}
@@ -247,6 +253,7 @@ export default function App() {
         onNew={() => setScreen('setup')}
         onOpen={openRound}
         onOpenLeague={(id) => {
+          setLeagueStart(null);
           setLeagueId(id);
           setScreen('league');
         }}

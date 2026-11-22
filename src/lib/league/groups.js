@@ -37,3 +37,22 @@ export function autoGroups(ids, size = 4) {
   }
   return out;
 }
+
+// The round a player should tap Play for: a round that isn't final and that
+// they're in (their group or match; rounds with no groups or matches include
+// everyone), today's first, else the latest one that has started.
+// today: 'YYYY-MM-DD' (local). Returns the event or null.
+export function roundToPlay(events, memberId, today) {
+  if (!memberId) return null;
+  const inRound = (e) => {
+    const groups = e.groups ?? [];
+    const matches = e.matchups ?? [];
+    if (!groups.length && !matches.length) return true;
+    return groups.some((g) => g.includes(memberId)) || matches.some((m) => m.sides.flat().includes(memberId));
+  };
+  const open = events.filter((e) => e.status !== 'final' && inRound(e));
+  const todays = open.filter((e) => e.date === today);
+  if (todays.length) return todays[0];
+  const started = open.filter((e) => e.date && e.date < today).sort((a, b) => (a.date < b.date ? 1 : -1));
+  return started[0] ?? null;
+}

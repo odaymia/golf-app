@@ -83,7 +83,7 @@ Actions). A failing test blocks the deploy.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps
   resume rather than relaunch) and every 30 min. An update reloads the page;
-  `App.jsx` keeps the open round in sessionStorage and reopens it.
+  `App.jsx` reopens the round you were on (`lib/place.js`, localStorage).
 
 ## Structure
 
@@ -325,9 +325,18 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   keeps a set as one group. The editor has one-tap presets: Front 9 / back 9
   and Three 6s (keeping the chosen formats). Match cards show only a stretch's holes
   (`MatchCard` `range`).
-- Enter scores opens straight on your own foursome's card (at the first
-  hole the group hasn't finished); Change group shows the picker
-  (commissioners can score any group).
+- Play button (league/tournament home, `roundToPlay` in league/groups.js,
+  tested): the round that's today (else the latest started, not final)
+  that you're in (your group/match; rounds without groups include
+  everyone), with date, course and your tee time; it opens that round on
+  Enter scores. Enter scores opens straight on your own foursome's card (at
+  the first hole the group hasn't finished). Players score only their own
+  foursome (no group switcher); commissioners get Change group (any group).
+- Reopening the app goes back to where you were (`lib/place.js`, tested,
+  localStorage so it survives the app being closed or the phone turned
+  off; expires after 12 h): a casual round (Play/Settle) or a league/
+  tournament round's Enter scores (`League` `start`/`onPlace`). A
+  remembered round that's gone falls back to the league page.
 - Score entry layout (no date line, tee time or team board; those are on
   Results): green hole bar (‹ prev / Hole n, par, stroke index,
   tee / next ›), slim hole dots, then one row per player: name (playing

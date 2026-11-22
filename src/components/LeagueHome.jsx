@@ -3,6 +3,7 @@ import RyderSetup from './RyderSetup.jsx';
 import CoursePicker from './CoursePicker.jsx';
 import AddMembers from './AddMembers.jsx';
 import { myTeeTime } from '../lib/league/pairings.js';
+import { roundToPlay } from '../lib/league/groups.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { addMember, createEvent, inviteLink, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
@@ -25,6 +26,11 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   const [tab, setTab] = useState(() =>
     ryderSetup && (events.length === 0 || events.some((e) => !e.matchups.length)) ? 'setup' : 'standings',
   );
+
+  // Tap Play to go straight to your foursome's scorecard.
+  const today = new Date().toLocaleDateString('en-CA');
+  const playRound = roundToPlay(events, me?.id, today);
+  const playTee = playRound ? (myTeeTime(playRound, me?.id)?.label ?? null) : null;
 
   async function share() {
     const text = `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
@@ -58,6 +64,23 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
       {data.offline && <div className="card warn-box">No connection: showing the last copy on this phone.</div>}
       {data.pending > 0 && (
         <div className="card warn-box">{data.pending} score card(s) saved on this phone, waiting for signal to send.</div>
+      )}
+
+      {playRound && (
+        <button className="card play-now" onClick={() => onOpenEvent(playRound.id, 'score')}>
+          <span className="play-now-icon" aria-hidden="true">
+            ▶
+          </span>
+          <span className="play-now-text">
+            <strong>Play {playRound.name}</strong>
+            <span>
+              {[playRound.date === today ? 'Today' : fmtDate(playRound.date), playRound.course?.name, playTee].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+          <span className="play-now-go" aria-hidden="true">
+            ›
+          </span>
+        </button>
       )}
 
       <div className="card invite">

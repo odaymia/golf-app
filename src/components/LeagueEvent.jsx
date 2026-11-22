@@ -21,11 +21,18 @@ import SplitEditor from './SplitEditor.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
-export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
+// initialTab: 'results' | 'score' | 'manage'; onTab(tab) when it changes.
+export default function LeagueEvent({ data, eventId, me, reload, onBack, initialTab = 'results', onTab = () => {} }) {
   const computed = useLeagueComputed(data);
   const event = data.events.find((e) => e.id === eventId);
-  const [tab, setTab] = useState('results');
   const isAdmin = me?.role === 'commissioner';
+  const [tab, setTabState] = useState(() =>
+    initialTab === 'score' && event?.status === 'final' && !isAdmin ? 'results' : initialTab === 'manage' && !isAdmin ? 'results' : initialTab,
+  );
+  const setTab = (t) => {
+    setTabState(t);
+    onTab(t);
+  };
   if (!event) return null;
   const result = computed.results[event.id];
   const { settings } = computed;
@@ -582,15 +589,18 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       </div>
       <p className="hint center">{status || 'Scores save automatically.'}</p>
       <div className="row2">
-        <button
-          className="btn btn-ghost"
-          onClick={async () => {
-            await flush();
-            setPicked([]);
-          }}
-        >
-          Change group
-        </button>
+        {/* Players score only their own foursome; commissioners can switch. */}
+        {isAdmin && (
+          <button
+            className="btn btn-ghost"
+            onClick={async () => {
+              await flush();
+              setPicked([]);
+            }}
+          >
+            Change group
+          </button>
+        )}
         <button className="btn btn-ghost" onClick={() => setReview(true)}>
           Card
         </button>

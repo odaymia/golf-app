@@ -3906,3 +3906,12 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .payout-place { grid-template-columns: auto 46px auto; }
 .payout-place input { width: 46px; padding: 4px 4px; font-size: 16px; }
 .payout-presets .chip { font-size: 13px; padding: 6px 10px; }
+
+/* Play: straight to your foursome's scorecard */
+.play-now { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: none; background: var(--green, #065025); color: #fff; text-align: left; font: inherit; cursor: pointer; }
+.play-now:active { background: var(--green-deep, #033a1a); }
+.play-now-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgb(255 255 255 / 18%); font-size: 16px; }
+.play-now-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.play-now-text strong { font-size: 18px; }
+.play-now-text span { font-size: 13px; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.play-now-go { flex: none; font-size: 26px; opacity: 0.8; }
