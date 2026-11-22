@@ -80,6 +80,12 @@ Actions). A failing test blocks the deploy.
   `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
   `apple-touch-icon.png` (iPhone home screen), `favicon.png`.
 - Install on iPhone: open https://scribblegolfclub.com in Safari → Share → Add to Home Screen.
+  Android: Chrome → ⋮ → Install app / Add to Home screen (on the website too).
+- Older phones (out-of-date Android Chrome / Samsung Internet, older iOS):
+  `src/polyfills.js` (loaded first in main.jsx, tested) adds `.at()` and
+  `structuredClone` when missing. CSS: don't put `:has()` in a selector list
+  with other selectors (an unsupported selector drops the whole rule); give
+  container-query units (`cqw`) a fallback.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps
   resume rather than relaunch) and every 30 min. An update reloads the page;

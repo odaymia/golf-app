@@ -3705,7 +3705,8 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .lb2-thru { color: var(--muted); width: 44px; }
 .lb2-section td { padding: 6px 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--fill); }
 .lb2-card > td { padding: 0 0 10px; background: #f7f3e8; border-bottom: 1px solid var(--hairline); }
-.pc { padding: 8px 10px 0; width: 100cqw; box-sizing: border-box; }
+.pc { padding: 8px 10px 0; width: calc(100vw - 32px); max-width: 100%; box-sizing: border-box; }
+@supports (width: 1cqw) { .pc { width: 100cqw; max-width: none; } }
 .pc-tee { margin: 0 0 6px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .pc-tee strong { color: var(--text); }
 
@@ -3757,9 +3758,9 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .mb-status.left { margin-left: -12px; padding-left: 14px; clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); }
 .mb-status.right { margin-right: -12px; padding-right: 14px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
 /* Winners: their names and points filled in team color */
-.mb-row:has(.mb-pts.won.side-0) .mb-pts:first-child,
+.mb-pts.won.side-0,
 .mb-side.won.side-0 { background: #2d4be0; }
-.mb-row:has(.mb-pts.won.side-1) .mb-pts:last-child,
+.mb-pts.won.side-1,
 .mb-side.won.side-1 { background: #f03a3a; }
 .mb-pts.won, .mb-side.won b, .mb-side.won em { color: #fff; }
 .mb-side.ahead.side-0 { background: #eef2fd; }
