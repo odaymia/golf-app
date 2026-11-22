@@ -268,7 +268,8 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   only for shared course ids (`oga-<id>`, built-in `sc-…`); league round
   snapshots now keep `course.key`; older rounds without one find it by
   exact name (`resolveCourseKey`: built-in courses, then course search; only
-  a single exact match counts).
+  a single exact match counts); with no exact match the card asks "Which
+  course did you play?" from close matches (`courseCandidates`).
   Members read only their own rows; averages come from
   `course_rating_summary(keys)`. Overall stars = conditions/layout/price
   (difficulty shown, not averaged in). Shown as "★ 4.3 (12)" in course

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { requestRecap, rateCourse, myCourseRating, resolveCourseKey } from '../lib/courseRatings.js';
+import { requestRecap, rateCourse, myCourseRating, resolveCourseKey, courseCandidates } from '../lib/courseRatings.js';
 import { RATING_CATEGORIES, rateableKey } from '../lib/roundRecap.js';
 
 // The AI round recap card. Writes itself once when shown (if there's no saved
@@ -139,10 +139,18 @@ export function RateCourse({ course, rated, onRated }) {
   const [status, setStatus] = useState(rated ? 'done' : 'idle'); // idle | saving | done | error
   const [error, setError] = useState('');
 
+  const [picked, setPicked] = useState(null); // { key, name } chosen from close matches
+  const [options, setOptions] = useState(null); // close matches when no exact one
+
   useEffect(() => {
     if (key || !course?.name) return;
     let live = true;
-    resolveCourseKey(course).then((k) => live && k && setKey(k));
+    resolveCourseKey(course).then(async (k) => {
+      if (!live) return;
+      if (k) return setKey(k);
+      const list = await courseCandidates(course.name);
+      if (live) setOptions(list);
+    });
     return () => {
       live = false;
     };
@@ -154,12 +162,37 @@ export function RateCourse({ course, rated, onRated }) {
     myCourseRating(key).then((r) => r && setStars(r));
   }, [key]);
 
-  if (!key) return null;
+  if (!key) {
+    // No course id on this round: ask which course it was.
+    if (!options?.length) return null;
+    return (
+      <section className="card rate-card">
+        <h3>Rate the course</h3>
+        <p className="hint">Which course did you play?</p>
+        <ul className="search-results">
+          {options.map((c) => (
+            <li key={c.key}>
+              <button
+                onClick={() => {
+                  setPicked(c);
+                  setKey(c.key);
+                }}
+              >
+                <strong>{c.name}</strong>
+                {c.place && <span className="muted">{c.place}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+  const courseName = picked?.name ?? course.name;
   const complete = RATING_CATEGORIES.every((c) => stars[c.key]);
   const save = async () => {
     setStatus('saving');
     try {
-      await rateCourse({ key, name: course.name }, Object.fromEntries(RATING_CATEGORIES.map((c) => [c.key, stars[c.key]])));
+      await rateCourse({ key, name: courseName }, Object.fromEntries(RATING_CATEGORIES.map((c) => [c.key, stars[c.key]])));
       setStatus('done');
       onRated?.();
     } catch (e) {
@@ -171,7 +204,7 @@ export function RateCourse({ course, rated, onRated }) {
   if (status === 'done') {
     return (
       <section className="card rate-card">
-        <p className="share-status">Thanks for rating {course.name} ✓</p>
+        <p className="share-status">Thanks for rating {courseName} ✓</p>
         <button className="btn btn-ghost full" onClick={() => setStatus('idle')}>
           Change my rating
         </button>
@@ -180,7 +213,7 @@ export function RateCourse({ course, rated, onRated }) {
   }
   return (
     <section className="card rate-card">
-      <h3>Rate {course.name}</h3>
+      <h3>Rate {courseName}</h3>
       <p className="hint">Helps other golfers pick where to play. Shows on the course’s page.</p>
       <ul className="rate-rows">
         {RATING_CATEGORIES.map((c) => (

@@ -3,7 +3,7 @@
 import { supabase } from './supabase.js';
 import { rateableKey, matchCourseKey } from './roundRecap.js';
 import { BUILTIN_COURSES } from './builtinCourses.js';
-import { searchCourses } from './courseSearch.js';
+import { searchCourses, matchSaved } from './courseSearch.js';
 
 // A course's shared id for ratings: its own key, else an exact name match in
 // the built-in courses, else in the course search. null when unsure.
@@ -74,6 +74,20 @@ export async function rateCourse(course, stars) {
   );
   if (error) throw new Error(/course_ratings/.test(error.message) ? 'Ratings aren’t set up yet.' : error.message);
   summaryCache.delete(key);
+}
+
+// Close matches for a course name, for "Which course was it?" when a round
+// has no course id: built-in courses first, then the course search.
+export async function courseCandidates(name) {
+  const builtin = matchSaved(name ?? '', BUILTIN_COURSES).map((c) => ({ key: c.id, name: c.name, place: c.place }));
+  let found = [];
+  try {
+    found = (await searchCourses(name ?? '')).map((c) => ({ key: `oga-${c.id}`, name: c.name, place: c.place }));
+  } catch {
+    // search down: built-in only
+  }
+  const seen = new Set();
+  return [...builtin, ...found].filter((c) => !seen.has(c.key) && seen.add(c.key)).slice(0, 6);
 }
 
 // { [courseKey]: { ratings, conditions, layout, price, difficulty } }, cached
