@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { computeSideGames, normalizeSideGames, anySideGames } from '../lib/league/sideGames.js';
 import { formatMoney } from '../lib/games/money.js';
 import { Switch } from './controls.jsx';
+import { PayoutsEditor } from './Payouts.jsx';
 
 const NAMES = { skins: 'Skins', stableford: 'Stableford points', stroke: 'Stroke play' };
 const HELP = {
@@ -13,7 +14,9 @@ const HELP = {
 };
 
 // Commissioner: choose this round's side games, stakes and who's in.
-export function SideGamesEditor({ event, members, busy, onSave }) {
+// payouts: offer payouts by place (stroke/Stableford rounds, which have a
+// finishing order).
+export function SideGamesEditor({ event, members, busy, onSave, payouts = false }) {
   const [sg, setSg] = useState(() => normalizeSideGames(event.sideGames));
   const [dirty, setDirty] = useState(false);
   const active = members.filter((m) => m.active !== false);
@@ -37,7 +40,7 @@ export function SideGamesEditor({ event, members, busy, onSave }) {
 
   return (
     <section className="card side-games-edit">
-      <h3>Side games</h3>
+      <h3>{payouts ? 'Side games & payouts' : 'Side games'}</h3>
       <p className="hint">Bets across the whole field, settled automatically. Each group still scores on its own phone.</p>
       {['skins', 'stableford', 'stroke'].map((type) => {
         const g = sg[type];
@@ -109,6 +112,17 @@ export function SideGamesEditor({ event, members, busy, onSave }) {
           </div>
         );
       })}
+      {payouts && (
+        <PayoutsEditor
+          title="Payouts by place (this round)"
+          cfg={sg.payouts}
+          entrants={active.length}
+          onChange={(p) => {
+            setSg((s) => ({ ...s, payouts: p }));
+            setDirty(true);
+          }}
+        />
+      )}
       {anySideGames(sg) && (
         <>
           <h3 className="pairings-sub">Who’s in</h3>

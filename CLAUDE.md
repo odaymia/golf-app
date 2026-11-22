@@ -376,6 +376,18 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
   so the same zero-sum, integer-cents rules apply; a hole counts once
   everyone in has finished it.
 
+- Payouts by place (`league/payouts.js`, tested; UI `Payouts.jsx`): purse =
+  entry x entrants, or a fixed purse; percent per place (presets winner /
+  60-40 / 50-30-20 / 40-30-20-10 / 35-25-18-13-9, or custom; scaled to pay
+  the whole purse); only as many places paid as players placed; ties split
+  the places they cover to the cent. From entries, balances = winnings −
+  entry and `settle()` gives the fewest payments (individuals only; teams
+  just see amounts); a fixed purse has no settle-up. Round payouts
+  (stroke/Stableford rounds, league or tournament): `event.sideGames.payouts`
+  set in Manage → Side games & payouts, shown on Results from the round's
+  board. Tournament payouts: `leagues.settings.payouts`, set by the
+  commissioner on the tournament leaderboard, from overall standings;
+  "If it ended now" until every planned round is final. Not for match play.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,

@@ -88,7 +88,7 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
       )}
       {tab === 'standings' &&
         (computed.settings.kind === 'tournament' ? (
-          <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} />
+          <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={onOpenEvent} isAdmin={isAdmin} meId={me?.id} />
         ) : (
           <Standings computed={computed} events={events} />
         ))}

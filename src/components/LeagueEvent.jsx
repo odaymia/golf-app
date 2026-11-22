@@ -11,6 +11,7 @@ import { Seg } from './controls.jsx';
 import { canScore, groupOf } from '../lib/league/groups.js';
 import PairingsEditor, { MyTeeTime, TeeSheet } from './PairingsEditor.jsx';
 import { SideGamesBoard, SideGamesEditor } from './SideGames.jsx';
+import { PayoutsBoard } from './Payouts.jsx';
 import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
@@ -84,6 +85,16 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack }) {
           indexes={computed.indexes[event.id] ?? {}}
           handicap={settings.handicap}
           meId={me?.id}
+        />
+      )}
+      {tab === 'results' && settings.scoring !== 'match' && (
+        <PayoutsBoard
+          title="Payouts · this round"
+          config={event.sideGames?.payouts}
+          rows={result.board.map((e) => ({ key: e.key, name: e.name, position: e.position ?? null }))}
+          final={final || (result.board.length > 0 && result.board.every((e) => e.complete))}
+          people={settings.unit === 'individual'}
+          meKey={me?.id}
         />
       )}
       {tab === 'results' && <TeeSheet event={event} members={data.members} meId={me?.id} />}
@@ -853,6 +864,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         key={event.id}
         event={event}
         members={members}
+        payouts={settings.scoring !== 'match'}
         busy={busy}
         onSave={(sideGames) => act(() => updateEvent(event.id, { sideGames }))}
       />

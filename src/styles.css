@@ -3887,3 +3887,22 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .split-list li { align-items: flex-start; }
 .split-presets { margin: 0 0 6px; }
 .split-presets { flex-wrap: nowrap; gap: 6px; } .split-presets .chip { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
+
+/* Payouts by place */
+.payout-presets { margin: 8px 0; }
+.payout-places { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 6px 0; }
+.payout-place { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px; padding: 6px 8px; border-radius: 10px; background: var(--fill); font-weight: 700; }
+.payout-place input { width: 100%; min-width: 0; padding: 4px 6px; text-align: right; font-weight: 700; }
+.payout-place em { font-style: normal; color: var(--muted); }
+.payout-place small { grid-column: 1 / -1; text-align: right; font-weight: 600; color: var(--green-deep); }
+.payout-place-actions { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.payout-lines { list-style: none; margin: 8px 0 0; padding: 0; }
+.payout-lines li { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px solid var(--hairline); }
+.payout-lines li.mine { background: var(--green-soft); border-radius: 8px; }
+.payout-pos { font-weight: 800; color: var(--gold, #b8860b); }
+.payout-lines li:first-child .payout-pos { color: #b8860b; }
+.payout-name { font-weight: 700; }
+.payout-lines strong { font-family: var(--serif); font-size: 18px; color: var(--green-deep); }
+.payout-place { grid-template-columns: auto 46px auto; }
+.payout-place input { width: 46px; padding: 4px 4px; font-size: 16px; }
+.payout-presets .chip { font-size: 13px; padding: 6px 10px; }

@@ -7,11 +7,13 @@
 //   { skins: { on, net, carryover, mode: 'pot'|'perSkin', buyIn, stake },
 //     stableford: { on, net, mode: 'perPoint'|'perPlayer', stake },
 //     stroke: { on, net, mode: 'perOpponent'|'perStroke', stake },
-//     players: [memberId] | null }        // null = everyone playing the round
+//     players: [memberId] | null,        // null = everyone playing the round
+//     payouts: { on, entry, purse, places } }  // by finishing place (payouts.js)
 // Stakes and buy-ins are in dollars (as typed); the engine works in cents.
 
 import { buildGames, defaultSettings } from '../roundSetup.js';
 import { computeRound } from '../games/round.js';
+import { defaultPayouts, normalizePayouts } from './payouts.js';
 
 export const SIDE_GAME_TYPES = ['skins', 'stableford', 'stroke'];
 
@@ -21,13 +23,14 @@ export function defaultSideGames() {
     stableford: { on: false, net: true, mode: 'perPoint', stake: 1 },
     stroke: { on: false, net: true, mode: 'perOpponent', stake: 5 },
     players: null,
+    payouts: defaultPayouts(),
   };
 }
 
 export function normalizeSideGames(sg) {
   const d = defaultSideGames();
   if (!sg || typeof sg !== 'object') return d;
-  const out = { players: Array.isArray(sg.players) ? sg.players : null };
+  const out = { players: Array.isArray(sg.players) ? sg.players : null, payouts: normalizePayouts(sg.payouts) };
   for (const t of SIDE_GAME_TYPES) out[t] = { ...d[t], ...(sg[t] ?? {}) };
   return out;
 }

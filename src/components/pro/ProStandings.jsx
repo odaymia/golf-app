@@ -37,7 +37,7 @@ export default function ProStandings({ data, computed, reload, openEvent }) {
       </p>
       <div className="pro-standings">
         {tournament ? (
-          <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={openEvent} />
+          <TournamentBoard computed={computed} data={data} reload={reload} onOpenEvent={openEvent} isAdmin />
         ) : (
           <Standings computed={computed} events={data.events} />
         )}
