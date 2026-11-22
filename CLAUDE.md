@@ -332,6 +332,10 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   Enter scores. Enter scores opens straight on your own foursome's card (at
   the first hole the group hasn't finished). Players score only their own
   foursome (no group switcher); commissioners get Change group (any group).
+  Not in a foursome yet: a player goes straight to their own card; the
+  commissioner gets "Who's in your foursome?" (`FoursomeStart`, you
+  preselected, up to 4, "Score a different group" for the old picker), which
+  saves the foursome to `league_events.groups` so the others open on it too.
 - Reopening the app goes back to where you were (`lib/place.js`, tested,
   localStorage so it survives the app being closed or the phone turned
   off; expires after 12 h): a casual round (Play/Settle) or a league/

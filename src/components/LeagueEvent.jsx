@@ -243,11 +243,15 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   const scored = useMemo(() => data.scores[event.id] ?? {}, [data.scores, event.id]);
   // Open straight on my foursome's card (players and a playing commissioner).
   // Not in a group yet: show the picker.
+  // Open straight on my foursome. A player not in one yet scores their own
+  // card; the commissioner picks their foursome first (saved to the round).
   const [picked, setPicked] = useState(() => {
     if (!me) return [];
     const mine = groupOf(event, me.id);
-    return mine.length > 1 ? mine : [];
+    if (mine.length > 1) return mine;
+    return me.role === 'commissioner' ? [] : [me.id];
   });
+  const [anyGroup, setAnyGroup] = useState(false); // commissioner: show every group
   const myUserId = me?.userId ?? null;
   const entries = useMemo(() => data.entries?.[event.id] ?? [], [data.entries, event.id]);
   // Each scorekeeper keeps their own card. It starts from what I entered
@@ -382,6 +386,24 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       );
     }
     const groups = event.groups ?? [];
+    if (!anyGroup)
+      return (
+        <FoursomeStart
+          me={me}
+          members={data.members.filter((m) => m.active)}
+          taken={new Set(groups.flat())}
+          onStart={async (ids) => {
+            setPicked(ids);
+            try {
+              await updateEvent(event.id, { groups: [...groups.filter((g) => !g.some((id) => ids.includes(id))), ids] });
+              reload({ quiet: true });
+            } catch {
+              // offline: score now; the foursome can be set again later
+            }
+          }}
+          onOther={() => setAnyGroup(true)}
+        />
+      );
     return (
       <section className="card">
         <h3>Who are you scoring?</h3>
@@ -612,6 +634,46 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       </div>
       <Keypad kp={kp} onUndo={undo} onSave={save} saveLabel={holeDone && hole === holes.length ? 'Save & review' : 'Save scores'} />
     </>
+  );
+}
+
+// Commissioner playing in a round with no foursome for them yet: pick the
+// foursome (you're already in it). Saved as a group so everyone in it opens
+// straight onto this card and can score it.
+function FoursomeStart({ me, members, taken, onStart, onOther }) {
+  const [sel, setSel] = useState([me.id]);
+  const [busy, setBusy] = useState(false);
+  const toggle = (id) => {
+    if (id === me.id) return;
+    setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 4 ? [...s, id] : s));
+  };
+  const open = members.filter((m) => m.id === me.id || !taken.has(m.id));
+  return (
+    <section className="card">
+      <h3>Who’s in your foursome?</h3>
+      <p className="hint">You’re in. Tap the players in your group (up to 4). They’ll open straight onto this card on their phones too.</p>
+      <div className="chips">
+        {open.map((m) => (
+          <button key={m.id} className={`chip big ${sel.includes(m.id) ? 'on' : ''}`} onClick={() => toggle(m.id)} disabled={m.id === me.id}>
+            {m.name}
+            {m.id === me.id ? ' (you)' : ''}
+          </button>
+        ))}
+      </div>
+      <button
+        className="btn btn-primary btn-xl"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await onStart(sel);
+        }}
+      >
+        Start scoring{sel.length > 1 ? ` · ${sel.length} players` : ' my card'}
+      </button>
+      <button className="btn btn-ghost full" onClick={onOther}>
+        Score a different group
+      </button>
+    </section>
   );
 }
 
