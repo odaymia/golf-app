@@ -108,11 +108,6 @@ export const GAME_INFO = {
     rules:
       'The wolf rotates each hole (player order). The wolf picks a partner after tee shots, or goes Lone Wolf (2× against all three) or Blind Wolf before anyone hits (3×). Low ball wins the hole.',
   },
-  places: {
-    name: 'Payouts by place',
-    rules:
-      'Everyone puts in the entry and the pot pays 1st, 2nd, 3rd… a share (you pick the split). Lowest total score wins, net or gross. Ties split the places they cover.',
-  },
   vegas: {
     name: 'Vegas',
     rules:
@@ -139,7 +134,6 @@ export function defaultSettings() {
     },
     wolf: { on: false, stake: 1, net: true, loneMult: 2, blindMult: 3 },
     vegas: { on: false, stake: 0.1, net: true, birdieFlip: true },
-    places: { on: false, stake: 20, net: true, places: [50, 30, 20] }, // stake = entry per player
   };
 }
 
@@ -168,7 +162,6 @@ export const GAME_LIMITS = {
   stableford: [2, MAX_PLAYERS],
   wolf: [4, 4],
   vegas: [4, 4],
-  places: [2, MAX_PLAYERS],
 };
 
 export function gameAvailable(type, playerCount) {
@@ -183,6 +176,9 @@ export function gameLimitText(type) {
   if (max >= MAX_PLAYERS) return `needs ${min}+ players`;
   return `${min}–${max} players`;
 }
+
+// Payout by place: percent per place (1st, 2nd, 3rd...), default 50/30/20.
+const placesOf = (s) => (s.places ?? [50, 30, 20]).map((x) => Math.max(0, Number(x) || 0));
 
 // Turn setup-screen settings (dollars) into engine game configs (cents).
 export function buildGames(settings, players) {
@@ -230,19 +226,16 @@ export function buildGames(settings, players) {
       ...(s.split?.length && s.format === 'teams' && players.length === 4 ? { segments: s.split.map((x) => ({ ...x })) } : {}),
     });
   }
-  if (on('places')) {
-    const s = settings.places;
-    games.push({
-      id: 'places',
-      type: 'places',
-      net: s.net,
-      entry: dollarsToCents(s.stake),
-      places: (s.places ?? [50, 30, 20]).map((x) => Math.max(0, Number(x) || 0)),
-    });
-  }
   if (on('stroke')) {
     const s = settings.stroke;
-    games.push({ id: 'stroke', type: 'stroke', net: s.net, mode: s.mode, stake: dollarsToCents(s.stake) });
+    games.push({
+      id: 'stroke',
+      type: 'stroke',
+      net: s.net,
+      mode: s.mode,
+      stake: dollarsToCents(s.stake),
+      ...(s.mode === 'places' ? { places: placesOf(s) } : {}),
+    });
   }
   if (on('stableford')) {
     const s = settings.stableford;
@@ -252,7 +245,8 @@ export function buildGames(settings, players) {
       type: 'stableford',
       net: s.net,
       stake: dollarsToCents(s.stake),
-      mode: s.mode,
+      mode: s.mode === 'places' && asTeams ? 'perOpponent' : s.mode,
+      ...(s.mode === 'places' && !asTeams ? { places: placesOf(s) } : {}),
       scoring: normalizeScoring(s.scoring),
       teams: asTeams ? teams : null,
       teamScore: s.teamScore,

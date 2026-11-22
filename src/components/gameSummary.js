@@ -22,7 +22,22 @@ export function matchText(status, nameA, nameB) {
 }
 
 export function gameTitle(game) {
-  return GAME_INFO[game.type]?.name ?? game.type;
+  if (game.type === 'places') return 'Payouts by place'; // older rounds
+  const name = GAME_INFO[game.type]?.name ?? game.type;
+  return game.mode === 'places' ? `${name} · by place` : name;
+}
+
+// "Pot $100 · thru 9" then "1. Sean: 32 · wins $50"... for games paid by place.
+function placeLines(result, names, unit = '') {
+  const ranked = [...result.standings].filter((s) => s.position != null).sort((a, b) => a.position - b.position);
+  if (!ranked.length) return [{ text: 'No holes everyone has finished yet' }];
+  const tied = (s) => ranked.filter((o) => o.position === s.position).length > 1;
+  return [
+    { text: `Pot ${formatMoney(result.purse)}${result.thru < 18 ? ` · thru ${result.thru}` : ''}`, head: true },
+    ...ranked.map((s) => ({
+      text: `${tied(s) ? 'T' : ''}${s.position}. ${names[s.id]}: ${s.total}${unit}${s.cents > 0 ? ` · wins ${formatMoney(s.cents)}` : ''}`,
+    })),
+  ];
 }
 
 // Returns [{ text, sub? }]
@@ -65,6 +80,7 @@ export function gameLines(result, players) {
       return lines;
     }
     case 'stableford': {
+      if (game.mode === 'places' && result.purse != null) return placeLines(result, names, ' pts');
       if (result.teamTotals) {
         const [a, b] = game.teams.map((t) => side(names, t));
         const [ta, tb] = result.teamTotals;
@@ -76,6 +92,7 @@ export function gameLines(result, players) {
       }));
     }
     case 'stroke':
+      if (game.mode === 'places') return placeLines(result, names);
       return result.standings.map((s, i) => ({
         text: `${i + 1}. ${names[s.id]}: ${s.total}${s.thru < 18 ? ` thru ${s.thru}` : ''}`,
       }));
@@ -92,17 +109,8 @@ export function gameLines(result, players) {
       if (!lines.length) lines.push({ text: 'No holes played yet' });
       return lines;
     }
-    case 'places': {
-      const paid = [...result.standings].filter((s) => s.position != null).sort((a, b) => a.position - b.position);
-      if (!paid.length) return [{ text: 'No holes everyone has finished yet' }];
-      const tied = (s) => paid.filter((o) => o.position === s.position).length > 1;
-      return [
-        { text: `Pot ${formatMoney(result.purse)}${result.thru < 18 ? ` · thru ${result.thru}` : ''}`, head: true },
-        ...paid.map((s) => ({
-          text: `${tied(s) ? 'T' : ''}${s.position}. ${names[s.id]}: ${s.total}${s.cents > 0 ? ` · wins ${formatMoney(s.cents)}` : ''}`,
-        })),
-      ];
-    }
+    case 'places':
+      return placeLines(result, names);
     case 'vegas': {
       const [a, b] = game.teams.map((t) => side(names, t));
       const p = result.points;

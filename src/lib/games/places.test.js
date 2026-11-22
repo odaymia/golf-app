@@ -55,3 +55,47 @@ describe('payouts by place (casual round)', () => {
     expect(r.totals.a).toBe(2000 + 0); // won 1st ($40) minus $20 entry
   });
 });
+
+import { scoreStrokePlay } from './stroke.js';
+import { scoreStableford } from './stableford.js';
+import { buildGames, defaultSettings } from '../roundSetup.js';
+
+describe('paying stroke play and Stableford by place', () => {
+  it('stroke play by place: lowest total wins, entry is the stake', () => {
+    const ctx = makeCtx(ids, parCard(ids, { a: { 1: 3, 2: 3 }, b: { 1: 3 }, d: { 1: 5 } }));
+    const r = scoreStrokePlay(ctx, { net: false, mode: 'places', stake: 2000, places: [50, 30, 20] });
+    expect(r.balances).toEqual({ a: 2000, b: 400, c: -400, d: -2000 });
+    expect(sum(r.balances)).toBe(0);
+  });
+
+  it('Stableford by place: most points wins', () => {
+    const ctx = makeCtx(ids, parCard(ids, { a: { 1: 3 }, b: { 1: 6 } }));
+    const s = defaultSettings();
+    s.stableford.on = true;
+    s.stableford.mode = 'places';
+    s.stableford.stake = 10;
+    s.stableford.places = [100];
+    const game = buildGames(s, ids.map((id) => ({ id, name: id, index: 0 }))).find((g) => g.type === 'stableford');
+    expect(game.mode).toBe('places');
+    expect(game.places).toEqual([100]);
+    const r = scoreStableford({ ...ctx, playing: {}, strokes: ctx.strokes }, { ...game, net: false });
+    // a birdied a hole, so a has the most points and takes the $40 pot
+    expect(r.balances).toEqual({ a: 3000, b: -1000, c: -1000, d: -1000 });
+  });
+
+  it('setup only sends places for those two games, and Stableford teams keep their own payout', () => {
+    const s = defaultSettings();
+    s.stroke.on = true;
+    s.stroke.mode = 'places';
+    s.stableford.on = true;
+    s.stableford.mode = 'places';
+    s.stableford.format = 'teams';
+    const four = ids.map((id) => ({ id, name: id, index: 0 }));
+    const games = buildGames(s, four);
+    expect(games.find((g) => g.type === 'stroke').places).toEqual([50, 30, 20]);
+    const sf = games.find((g) => g.type === 'stableford');
+    expect(sf.mode).toBe('perOpponent');
+    expect(sf.places).toBeUndefined();
+    expect(games.some((g) => g.type === 'places')).toBe(false);
+  });
+});

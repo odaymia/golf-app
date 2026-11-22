@@ -470,17 +470,20 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
     nassau: 'Per bet (front / back / 18)',
     skins: s.mode === 'pot' ? 'Buy-in per player' : 'Per skin, from each player',
     match: 'Per match',
-    stroke: s.mode === 'perStroke' ? 'Per stroke' : 'Per player you beat',
+    stroke: s.mode === 'places' ? 'Entry per player' : s.mode === 'perStroke' ? 'Per stroke' : 'Per player you beat',
     stableford:
-      s.mode === 'perPoint'
-        ? 'Per point'
-        : s.format === 'teams' && playerCount === 4
-          ? 'Per player, to the winning team'
-          : 'Per player you beat',
+      s.mode === 'places' && !(s.format === 'teams' && playerCount === 4)
+        ? 'Entry per player'
+        : s.mode === 'perPoint'
+          ? 'Per point'
+          : s.format === 'teams' && playerCount === 4
+            ? 'Per player, to the winning team'
+            : 'Per player you beat',
     wolf: 'Per hole',
     vegas: 'Per point',
-    places: 'Entry per player',
   }[type];
+  // Paying by place (stroke play, or Stableford every player for themselves).
+  const byPlace = s.mode === 'places' && (type === 'stroke' || (type === 'stableford' && !(s.format === 'teams' && playerCount === 4)));
   return (
     <div className="options">
       <label className="field money">
@@ -524,14 +527,6 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
             Everyone vs everyone
           </button>
         </div>
-      )}
-      {type === 'places' && (
-        <>
-          <PlacesPicker places={s.places ?? [50, 30, 20]} onChange={(next) => set('places', next)} purse={Math.round((Number(s.stake) || 0) * 100) * playerCount} />
-          <p className="hint">
-            {playerCount} × ${Number(s.stake) || 0} = ${(Number(s.stake) || 0) * playerCount} pot. Lowest total wins; mid-round it compares the holes everyone has finished.
-          </p>
-        </>
       )}
       {type === 'match' && playerCount === 4 && s.format === 'teams' && (
         <>
@@ -579,6 +574,12 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
           <button className={s.mode === 'perStroke' ? 'on' : ''} onClick={() => set('mode', 'perStroke')}>
             Per stroke
           </button>
+          <button className={s.mode === 'places' ? 'on' : ''} onClick={() => {
+                set('mode', 'places');
+                if ((Number(s.stake) || 0) < 5) set('stake', 20); // an entry, not a per-point bet
+              }}>
+            By place
+          </button>
         </div>
       )}
       {type === 'stableford' && (
@@ -613,8 +614,25 @@ function GameOptions({ type, s, set, playerCount, holeCount = 18 }) {
             <button className={s.mode === 'perOpponent' ? 'on' : ''} onClick={() => set('mode', 'perOpponent')}>
               {s.format === 'teams' && playerCount === 4 ? 'Winner takes stake' : 'Per player beaten'}
             </button>
+            {!(s.format === 'teams' && playerCount === 4) && (
+              <button className={s.mode === 'places' ? 'on' : ''} onClick={() => {
+                set('mode', 'places');
+                if ((Number(s.stake) || 0) < 5) set('stake', 20); // an entry, not a per-point bet
+              }}>
+                By place
+              </button>
+            )}
           </div>
           <StablefordScoring value={s.scoring} net={s.net} onChange={(v) => set('scoring', v)} />
+        </>
+      )}
+      {byPlace && (
+        <>
+          <PlacesPicker places={s.places ?? [50, 30, 20]} onChange={(next) => set('places', next)} purse={Math.round((Number(s.stake) || 0) * 100) * playerCount} />
+          <p className="hint">
+            Everyone puts in ${Number(s.stake) || 0}: {playerCount} × ${Number(s.stake) || 0} = ${(Number(s.stake) || 0) * playerCount} pot, paid by place.{' '}
+            {type === 'stroke' ? 'Lowest total wins.' : 'Most points wins.'} Ties split the places they cover.
+          </p>
         </>
       )}
       {type === 'wolf' && (

@@ -1,13 +1,19 @@
 import { scoreFor, holeCount } from './scores.js';
 import { emptyBalances } from './money.js';
+import { payByPlace } from './places.js';
 
 // Stroke play: everyone plays everyone, head to head.
-// game = { net, mode: 'perOpponent' | 'perStroke', stake (cents) }
+// game = { net, mode: 'perOpponent' | 'perStroke' | 'places', stake (cents), places? }
 //   perOpponent: lower total collects `stake` from each player they beat.
 //   perStroke:   pay `stake` for every stroke you lose by.
+//   places:      `stake` is each player's entry; the pot pays 1st, 2nd,
+//                3rd... by `places` percents (games/places.js).
 // Each pair is compared only on holes both players have scored.
 export function scoreStrokePlay(ctx, game) {
   const ids = ctx.players.map((p) => p.id);
+  if (game.mode === 'places') {
+    return payByPlace({ ids, n: holeCount(ctx), valueOn: (id, h) => scoreFor(ctx, id, h, game.net), lowerWins: true, entry: game.stake, places: game.places ?? [50, 30, 20] });
+  }
   const balances = emptyBalances(ids);
   const totals = {};
   const thru = {};

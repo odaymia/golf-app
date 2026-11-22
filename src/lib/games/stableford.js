@@ -1,3 +1,4 @@
+import { payByPlace } from './places.js';
 import { scoreFor, grossScore, holeCount } from './scores.js';
 import { emptyBalances, payTeamBet } from './money.js';
 
@@ -131,6 +132,10 @@ export function scoreStableford(ctx, game) {
     return { balances, teamTotals: totals, thru };
   }
 
+  if (game.mode === 'places') {
+    // Most points wins; `stake` is each player's entry (games/places.js).
+    return payByPlace({ ids, n, valueOn: pointsOn, lowerWins: false, entry: game.stake, places: game.places ?? [50, 30, 20] });
+  }
   const totals = {};
   const thru = {};
   for (const id of ids) {

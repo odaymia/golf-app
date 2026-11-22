@@ -206,11 +206,14 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   - Wolf: lone/blind wolf wins or loses stake x multiplier with each of the 3.
   - Vegas: a score of 10+ goes first; birdie flips the other team unless both
     teams birdie; net scores below 1 count as 1.
-  - Payouts by place (casual, `games/places.js`, tested): everyone pays
-    `entry` cents, the pot pays 1st/2nd/3rd… by percent (`places`), ranked by
-    lowest total (net or gross) on holes everyone has finished; ties split
-    via `computePayoutsCents` (league/payouts.js); balances = winnings −
-    entry; nothing owed before a full hole.
+  - Paying by place (casual stroke play and individual Stableford, mode
+    'places'; `payByPlace` in games/places.js, tested): `stake` is each
+    player's entry, the pot pays 1st/2nd/3rd… by percent (`places`), ranked
+    on holes everyone has finished (stroke: lowest total; Stableford: most
+    points); ties split via `computePayoutsCents` (league/payouts.js);
+    balances = winnings − entry; nothing owed before a full hole. Setup:
+    "By place" next to the other payout buttons (entry defaults to $20).
+    Old rounds with a stand-alone `places` game still score (`scorePlaces`).
   - Split match (casual, 2 vs 2 teams only): `game.segments`
     `[{ from, to, format }]` (best ball 'fourball', combined 'shamble',
     'singles'); each stretch is its own bet worth `stake`, a singles stretch
@@ -410,8 +413,9 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   Tournament: from overall standings, "If it ended now" until every planned
   round is final. League: from season standings. Round payouts:
   `event.sideGames.payouts` in a round's Manage → Side games & payouts,
-  from the round's board. Casual rounds: the "Payouts by place" game
-  (below). Shared split picker: `PlacesPicker`.
+  from the round's board. Casual rounds: a payout option of stroke play and
+  Stableford (below), not a game of its own. Shared split picker:
+  `PlacesPicker`.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,
