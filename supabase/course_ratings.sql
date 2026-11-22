@@ -84,3 +84,63 @@ end;
 $$;
 revoke all on function public.claim_recap() from public, anon;
 grant execute on function public.claim_recap() to authenticated;
+
+-- One shared recap per foursome in a league/tournament round, so the whole
+-- group sees the same recap and it's paid for once. group_key = the group's
+-- player keys, sorted, joined with commas. Written only by the round-recap
+-- Edge Function through these functions; readable by league members.
+create table if not exists public.round_recaps (
+  event_id uuid not null references public.league_events (id) on delete cascade,
+  group_key text not null,
+  recap text,
+  claimed_by uuid references auth.users (id) on delete set null,
+  claimed_at timestamptz not null default now(),
+  primary key (event_id, group_key)
+);
+alter table public.round_recaps enable row level security;
+-- No policies: only the functions below touch it.
+
+-- Ready recap, or claim the job of writing it. Returns
+-- {status: 'ready', recap} | {status: 'writing'} | {status: 'claimed'} | {status: 'denied'}.
+-- A claim nobody finished in 2 minutes can be taken over.
+create or replace function public.start_round_recap(p_event uuid, p_group text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare r round_recaps;
+begin
+  if auth.uid() is null or not exists (
+    select 1 from league_events e where e.id = p_event and is_league_member(e.league_id)
+  ) then
+    return jsonb_build_object('status', 'denied');
+  end if;
+  insert into round_recaps (event_id, group_key, claimed_by)
+  values (p_event, left(p_group, 500), auth.uid())
+  on conflict do nothing;
+  if found then return jsonb_build_object('status', 'claimed'); end if;
+  select * into r from round_recaps where event_id = p_event and group_key = left(p_group, 500);
+  if r.recap is not null then return jsonb_build_object('status', 'ready', 'recap', r.recap); end if;
+  if r.claimed_at < now() - interval '2 minutes' then
+    update round_recaps set claimed_by = auth.uid(), claimed_at = now()
+    where event_id = p_event and group_key = left(p_group, 500) and recap is null;
+    return jsonb_build_object('status', 'claimed');
+  end if;
+  return jsonb_build_object('status', 'writing');
+end;
+$$;
+revoke all on function public.start_round_recap(uuid, text) from public, anon;
+grant execute on function public.start_round_recap(uuid, text) to authenticated;
+
+-- Save the recap you claimed (null gives the claim back after a failure).
+create or replace function public.finish_round_recap(p_event uuid, p_group text, p_recap text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_recap is null then
+    delete from round_recaps
+    where event_id = p_event and group_key = left(p_group, 500) and recap is null and claimed_by = auth.uid();
+  else
+    update round_recaps set recap = left(p_recap, 4000)
+    where event_id = p_event and group_key = left(p_group, 500) and recap is null and claimed_by = auth.uid();
+  end if;
+end;
+$$;
+revoke all on function public.finish_round_recap(uuid, text, text) from public, anon;
+grant execute on function public.finish_round_recap(uuid, text, text) to authenticated;

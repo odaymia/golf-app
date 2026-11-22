@@ -20,7 +20,7 @@ import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, par
 import SplitEditor from './SplitEditor.jsx';
 import { matchSummary } from '../lib/games/match.js';
 import { recapFacts } from '../lib/roundRecap.js';
-import { RoundRecap, RateCourse } from './RoundRecap.jsx';
+import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -1144,11 +1144,33 @@ function RsvpList({ event, members }) {
   );
 }
 
-// After the group submits: the AI recap of their round (kept on this phone)
-// and the course rating.
+// After the group submits: the AI recap of their round, each player's own
+// recap on request, and the course rating. Recaps are shared in Supabase
+// (one per foursome, one per player, written once) and cached on the phone.
 function GroupRecap({ event, holes, rows, cardOf, strokesOf, net, matches }) {
-  const store = `scribble:recap:${event.id}:${rows.map((r) => r.key).join(',')}`;
-  const [recap, setRecap] = useState(() => localStorage.getItem(store) || '');
+  const groupKey = rows
+    .map((r) => r.key)
+    .sort()
+    .join(',');
+  const store = `scribble:recap:${event.id}:${groupKey}`;
+  const read = () => {
+    try {
+      return JSON.parse(localStorage.getItem(store) || '{}');
+    } catch {
+      return {};
+    }
+  };
+  const [saved, setSaved] = useState(read);
+  const keep = (patch) =>
+    setSaved((cur) => {
+      const next = { ...cur, ...patch, players: { ...cur.players, ...patch.players } };
+      try {
+        localStorage.setItem(store, JSON.stringify(next));
+      } catch {
+        // storage full
+      }
+      return next;
+    });
   const facts = useMemo(
     () =>
       recapFacts({
@@ -1164,21 +1186,24 @@ function GroupRecap({ event, holes, rows, cardOf, strokesOf, net, matches }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [event.id],
   );
+  const keyOf = Object.fromEntries(rows.map((r) => [r.name, r.key]));
   const done = facts.players.some((p) => p.holesPlayed > 0);
   return (
     <div className="group-recap">
       {done && (
         <RoundRecap
           facts={facts}
-          recap={recap}
-          onRecap={(t) => {
-            setRecap(t);
-            try {
-              localStorage.setItem(store, t);
-            } catch {
-              // storage full
-            }
-          }}
+          recap={saved.group}
+          onRecap={(t) => keep({ group: t })}
+          opts={{ eventId: event.id, groupKey }}
+        />
+      )}
+      {done && (
+        <PlayerRecaps
+          facts={facts}
+          saved={saved.players}
+          onSaved={(name, t) => keep({ players: { [name]: t } })}
+          optsFor={(name) => ({ eventId: event.id, groupKey: `player:${keyOf[name]}` })}
         />
       )}
       <RateCourse course={{ key: event.course.key, name: event.course.name }} />

@@ -5,7 +5,51 @@ import { RATING_CATEGORIES, rateableKey } from '../lib/roundRecap.js';
 // The AI round recap card. Writes itself once when shown (if there's no saved
 // recap), then keeps the text via onRecap so it isn't written twice. One
 // recap per round: no rewrites (each one costs), only Try again after an error.
-export function RoundRecap({ facts, recap, onRecap }) {
+// opts go to requestRecap (league rounds: eventId + groupKey, shared).
+export function RoundRecap({ facts, recap, onRecap, opts }) {
+  return (
+    <section className="card recap-card">
+      <h3>🎙️ Round recap</h3>
+      <RecapBody facts={facts} recap={recap} onRecap={onRecap} opts={opts} auto />
+    </section>
+  );
+}
+
+// Each player's own recap, only written when they tap for it.
+// saved: { [name]: text }; optsFor(name) -> requestRecap opts.
+export function PlayerRecaps({ facts, saved = {}, onSaved, optsFor = () => ({}) }) {
+  const [open, setOpen] = useState(null);
+  const players = facts.players.filter((p) => p.holesPlayed > 0);
+  if (players.length < 2) return null;
+  return (
+    <section className="card recap-card player-recaps">
+      <h3>Your own recap</h3>
+      <p className="hint">Tap your name for a recap of just your round.</p>
+      <ul className="player-recap-list">
+        {players.map((p) => (
+          <li key={p.name}>
+            <button className={`player-recap-btn ${open === p.name ? 'on' : ''}`} onClick={() => setOpen(open === p.name ? null : p.name)}>
+              <strong>{p.name}</strong>
+              <span>{saved[p.name] ? 'Read' : 'Recap my round'} ›</span>
+            </button>
+            {open === p.name && (
+              <RecapBody
+                key={p.name}
+                facts={facts}
+                recap={saved[p.name]}
+                onRecap={(t) => onSaved(p.name, t)}
+                opts={{ focus: p.name, ...optsFor(p.name) }}
+                auto
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function RecapBody({ facts, recap, onRecap, opts, auto }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -15,7 +59,7 @@ export function RoundRecap({ facts, recap, onRecap }) {
     setBusy(true);
     setError('');
     try {
-      onRecap(await requestRecap(facts));
+      onRecap(await requestRecap(facts, opts));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -24,7 +68,7 @@ export function RoundRecap({ facts, recap, onRecap }) {
   };
 
   useEffect(() => {
-    if (recap || asked.current) return;
+    if (!auto || recap || asked.current) return;
     asked.current = true;
     write();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,15 +87,14 @@ export function RoundRecap({ facts, recap, onRecap }) {
   };
 
   return (
-    <section className="card recap-card">
-      <h3>🎙️ Round recap</h3>
-      {busy && <p className="recap-busy">Writing up your round…</p>}
+    <div className="recap-body">
+      {busy && <p className="recap-busy">Writing it up…</p>}
       {!busy && recap && <p className="recap-text">{recap}</p>}
       {!busy && error && <p className="search-error">{error}</p>}
       <div className="recap-actions">
         {recap && !busy && (
           <button className="btn btn-ghost outline" onClick={share}>
-            {copied ? 'Copied!' : 'Share recap'}
+            {copied ? 'Copied!' : 'Share'}
           </button>
         )}
         {!busy && !recap && error && (
@@ -60,7 +103,7 @@ export function RoundRecap({ facts, recap, onRecap }) {
           </button>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 

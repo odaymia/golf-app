@@ -200,7 +200,8 @@ supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
                     log_event(), am_i_admin(), admin_stats(), admin_users()
                     (owner dashboard)
 supabase/course_ratings.sql  course_ratings (4 categories, 1-5), course_rating_summary(),
-                    ai_recaps + claim_recap() (20 recaps/day per person)
+                    ai_recaps + claim_recap() (20 recaps/day per person),
+                    round_recaps (shared league recaps)
 supabase/functions/round-recap/index.ts  Edge Function: AI round recap via Claude
                     (secret ANTHROPIC_API_KEY lives only in Supabase)
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
@@ -253,8 +254,14 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   best/worst holes and money as text; the `round-recap` Edge Function checks
   sign-in, calls `claim_recap()` (20/day per person), and asks Claude
   (`claude-opus-5-5`, effort low, server-side refusal fallback). The key
-  never ships in the app. Casual recaps save on the round (`round.recap`);
-  league recaps in localStorage per round + group. Deploy: Supabase
+  never ships in the app. One group recap per round, plus "Your own recap":
+  each player taps their name for a recap of just their round (`focus` =
+  their name; written only when tapped, once). Casual: saved on the round
+  (`round.recap`, `round.playerRecaps[name]`). League/tournament: shared in
+  `round_recaps` (one per foursome, group_key = sorted player keys; one per
+  player, `player:<key>`) via `start_round_recap()` / `finish_round_recap()`
+  so the group pays once and sees the same text (a groupmate's in-progress
+  recap is waited for), cached in localStorage. Deploy: Supabase
   dashboard -> Edge Functions -> new function `round-recap` (paste the
   file), Secrets -> ANTHROPIC_API_KEY.
 - Ratings (`course_ratings`, one per golfer per course, re-rating replaces)

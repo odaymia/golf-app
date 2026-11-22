@@ -3,9 +3,22 @@
 import { supabase } from './supabase.js';
 import { rateableKey } from './roundRecap.js';
 
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // Ask the round-recap Edge Function for a recap of these facts.
-export async function requestRecap(facts) {
-  const { data, error } = await supabase.functions.invoke('round-recap', { body: { facts } });
+// opts: { focus: player name (their own recap), eventId + groupKey (league
+// rounds: shared, written once; if a groupmate is writing it, wait for it) }.
+export async function requestRecap(facts, opts = {}) {
+  for (let tries = 0; tries < 20; tries++) {
+    const data = await callRecap({ facts, ...opts });
+    if (!data.writing) return data.recap;
+    await wait(4000);
+  }
+  throw new Error('Still writing. Check back in a minute.');
+}
+
+async function callRecap(body) {
+  const { data, error } = await supabase.functions.invoke('round-recap', { body });
   if (error) {
     let msg = '';
     try {
@@ -16,7 +29,7 @@ export async function requestRecap(facts) {
     if (!msg && /Failed to send|fetch/i.test(error.message)) msg = 'No signal. The recap will be here when you’re back online.';
     throw new Error(msg || 'Couldn’t write a recap. Try again.');
   }
-  return data.recap;
+  return data;
 }
 
 export async function myCourseRating(courseKey) {

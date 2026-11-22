@@ -5,7 +5,7 @@ import { Payments, Totals } from './MoneyView.jsx';
 import { gameTitle, nameMap } from './gameSummary.js';
 import { saveRound } from '../lib/storage.js';
 import { casualRecapFacts } from '../lib/roundRecap.js';
-import { RoundRecap, RateCourse } from './RoundRecap.jsx';
+import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
 
 export default function Settle({ round, setRound, onBack, onHome }) {
   const computed = useMemo(() => computeRound(round), [round]);
@@ -67,7 +67,14 @@ export default function Settle({ round, setRound, onBack, onHome }) {
         </div>
       )}
 
-      {facts && <RoundRecap facts={facts} recap={round.recap} onRecap={(recap) => setRound({ ...round, recap })} />}
+      {facts && <RoundRecap facts={facts} recap={round.recap} onRecap={(recap) => setRound((r) => ({ ...r, recap }))} />}
+      {facts && (
+        <PlayerRecaps
+          facts={facts}
+          saved={round.playerRecaps}
+          onSaved={(name, text) => setRound((r) => ({ ...r, playerRecaps: { ...r.playerRecaps, [name]: text } }))}
+        />
+      )}
 
       <section className="card settle-card">
         <h2>Who pays who</h2>
@@ -112,7 +119,7 @@ export default function Settle({ round, setRound, onBack, onHome }) {
       </section>
 
       {computed.finished && (
-        <RateCourse course={{ key: round.course.id, name: round.course.name }} rated={round.rated} onRated={() => setRound({ ...round, rated: true })} />
+        <RateCourse course={{ key: round.course.id, name: round.course.name }} rated={round.rated} onRated={() => setRound((r) => ({ ...r, rated: true }))} />
       )}
 
       <div className="stack">
