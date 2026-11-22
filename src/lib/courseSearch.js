@@ -2,21 +2,55 @@
 // Search and course detail need no API key (per-device daily limit), so no
 // key ships in the app: anything in a public PWA is readable by anyone.
 import { courseFromApi } from './courseImport.js';
-import { keyWords, rankClose } from './fuzzy.js';
+import { keyWords, matchScore, rankClose } from './fuzzy.js';
 
 const BASE = 'https://api.opengolfapi.org/api/v1';
+// When the course database is down its requests hang ~20 s; give up sooner.
+const TIMEOUT_MS = 8000;
+
+export const DOWN_MESSAGE = 'The course database isn’t responding right now. Pick a course saved on this phone, or add it as a new course.';
 
 async function get(path, signal) {
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort();
+  signal?.addEventListener('abort', onAbort);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, TIMEOUT_MS);
   let res;
   try {
-    res = await fetch(`${BASE}${path}`, { signal });
+    res = await fetch(`${BASE}${path}`, { signal: ctrl.signal });
   } catch (e) {
+    if (timedOut) throw new Error(DOWN_MESSAGE);
     if (e.name === 'AbortError') throw e;
-    throw new Error('No connection. Pick a saved course or enter it by hand.');
+    throw new Error('No connection. Pick a course saved on this phone, or add it as a new course.');
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
   }
   if (res.status === 429) throw new Error('Course search is busy right now. Try again in a bit.');
+  if (res.status >= 500) throw new Error(DOWN_MESSAGE);
   if (!res.ok) throw new Error(`Course search failed (${res.status}).`);
   return res.json();
+}
+
+// Courses saved on this phone that match what's typed (works offline and
+// when the course database is down). saved: [{ id, name, ... }].
+export function matchSaved(query, saved) {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const want = keyWords(q);
+  return saved
+    .map((c) => {
+      const name = (c.name ?? '').toLowerCase();
+      const hit = want.length ? (want.every((w) => name.includes(w)) ? 0 : matchScore(q, c.name)) : name.includes(q.toLowerCase()) ? 0 : null;
+      return { c, hit };
+    })
+    .filter((x) => x.hit != null)
+    .sort((a, b) => a.hit - b.hit)
+    .map((x) => x.c);
 }
 
 const toResult = (c) => ({

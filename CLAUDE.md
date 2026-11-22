@@ -574,6 +574,11 @@ docs/instructors.md.
 
 Course search uses OpenGolfAPI (https://api.opengolfapi.org/api/v1),
 called straight from the phone (CORS is open).
+- When OpenGolfAPI is down (it returns 500/522 after ~20 s), requests give
+  up after 8 s and say the course database isn't responding (not a status
+  code). CourseSearch always lists matching courses saved on the phone
+  first ("Saved on this phone", `matchSaved`, typo-tolerant), so recent
+  courses and "+ Use … as a new course" keep working offline or in an outage.
 - No API key in the app: search and detail work without one (per-device daily
   limit), and anything shipped in a public PWA is readable by anyone. Keep the
   user's key out of the repo; it's only useful later from a server.

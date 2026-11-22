@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { searchCourses, fetchCourse } from '../lib/courseSearch.js';
+import { searchCourses, fetchCourse, matchSaved } from '../lib/courseSearch.js';
 import { ATTRIBUTION } from '../lib/courseImport.js';
 
 // Type a course name, tap a result, get the full card. onPick({ course, warnings }).
@@ -53,6 +53,10 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
   }
 
   const searching = query.trim().length >= 3;
+  // Courses already on this phone that match: instant, and still there when
+  // the course database is down.
+  const saved = onPickRecent ? matchSaved(query, recent).slice(0, 5) : [];
+  const savedIds = new Set(saved.map((c) => c.id));
   return (
     <div className="course-search">
       <label className="field">
@@ -87,18 +91,39 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
           </ul>
         </div>
       )}
+      {saved.length > 0 && (
+        <div className="recent-courses">
+          <p className="ps-h">Saved on this phone</p>
+          <ul className="search-results">
+            {saved.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => {
+                    setQuery('');
+                    setResults([]);
+                    onPickRecent(c);
+                  }}
+                >
+                  <strong>{c.name}</strong>
+                  <span className="muted">{[c.place, c.tees?.map((t) => t.name).filter(Boolean).join(' / ')].filter(Boolean).join(' · ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {status === 'searching' && <p className="muted">Searching…</p>}
       {status === 'loading' && <p className="muted">Loading scorecard…</p>}
       {status === 'error' && <p className="search-error">{error}</p>}
-      {searching && status === 'idle' && results.length === 0 && (
+      {searching && status === 'idle' && results.length === 0 && saved.length === 0 && (
         <p className="muted">No courses found. Try another spelling{onCustom ? ', or add it as a new course' : ''}.</p>
       )}
       {results.length > 0 && (
         <>
           <ul className="search-results">
-            {results.map((c, i) => (
+            {results.filter((c) => !savedIds.has(`oga-${c.id}`)).map((c, i, list) => (
               <li key={c.id}>
-                {c.similar && !results[i - 1]?.similar && (
+                {c.similar && !list[i - 1]?.similar && (
                   <p className="ps-h similar-h">{i === 0 ? `No exact match for “${query.trim()}”. Similar names:` : 'Similar names'}</p>
                 )}
                 <button onClick={() => pick(c.id)} disabled={status === 'loading'}>
