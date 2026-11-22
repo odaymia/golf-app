@@ -604,6 +604,11 @@ slopes. Turning it back on would mean searching it in courseSearch.js.
   `© OpenStreetMap contributors · contains data from OpenGolfAPI
   (opengolfapi.org) · ODbL 1.0`) wherever results appear. Our Supabase copy
   is a derived database, so it must stay ODbL and openly readable.
+- Built-in courses (`lib/builtinCourses.js`, tested): full cards with real
+  tees/ratings/slopes, always in search under "Courses in Scribble" (even
+  when OpenGolfAPI is down); picking one goes through `onPick` like an API
+  course. Now: Steele Canyon (Jamul, CA) Vineyard/Canyon, Canyon/Ranch,
+  Ranch/Vineyard (GolfPass ratings, Nov 2026). Add more there.
 - Data gaps: a card numbered past 9
   is 18 holes; missing pars become 4 and, when most stroke indexes are known
   without repeats, missing holes get the unused ones; warnings name the holes.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { searchCourses, fetchCourse, matchSaved } from '../lib/courseSearch.js';
 import { ATTRIBUTION } from '../lib/courseImport.js';
+import { BUILTIN_COURSES } from '../lib/builtinCourses.js';
 
 // Type a course name, tap a result, get the full card. onPick({ course, warnings }).
 // recent (optional): courses saved on this phone, shown when the box is
@@ -57,6 +58,14 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
   // the course database is down.
   const saved = onPickRecent ? matchSaved(query, recent).slice(0, 5) : [];
   const savedIds = new Set(saved.map((c) => c.id));
+  // Courses built into Scribble (real tees and ratings, always available).
+  const builtin = matchSaved(query, BUILTIN_COURSES).filter((c) => !savedIds.has(c.id));
+  const pickBuiltin = (c) => {
+    setQuery('');
+    setResults([]);
+    setStatus('idle');
+    onPick({ course: structuredClone(c), warnings: [] });
+  };
   return (
     <div className="course-search">
       <label className="field">
@@ -112,10 +121,27 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
           </ul>
         </div>
       )}
+      {builtin.length > 0 && (
+        <div className="recent-courses">
+          <p className="ps-h">Courses in Scribble</p>
+          <ul className="search-results">
+            {builtin.map((c) => (
+              <li key={c.id}>
+                <button onClick={() => pickBuiltin(c)}>
+                  <strong>{c.name}</strong>
+                  <span className="muted">
+                    {c.place} · par {c.holes.reduce((t, h) => t + h.par, 0)} · {c.tees.filter((t) => !t.name.endsWith('(W)')).map((t) => t.name).join(' / ')}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {status === 'searching' && <p className="muted">Searching…</p>}
       {status === 'loading' && <p className="muted">Loading scorecard…</p>}
       {status === 'error' && <p className="search-error">{error}</p>}
-      {searching && status === 'idle' && results.length === 0 && saved.length === 0 && (
+      {searching && status === 'idle' && results.length === 0 && saved.length === 0 && builtin.length === 0 && (
         <p className="muted">No courses found. Try another spelling{onCustom ? ', or add it as a new course' : ''}.</p>
       )}
       {results.length > 0 && (
