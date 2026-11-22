@@ -236,7 +236,7 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
 
 ## Owner dashboard
 
-`/admin/` (admin/index.html, src/admin/: Admin.jsx, charts.jsx, metrics.js
+`/admin/` (admin/index.html, src/admin/: Admin.jsx, charts.jsx, metrics.js; kept out of the service worker precache so it always loads fresh;
 tested; noindex). Same sign-in as the app; only accounts in
 `public.app_admins` see anything (add one in the SQL Editor, see the top of
 supabase/admin_stats.sql). `admin_stats()` returns everything in one call:

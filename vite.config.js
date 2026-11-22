@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // The owner dashboard always loads fresh (never served from the app's offline cache).
+        globIgnores: ['admin/**', 'assets/admin-*'],
         // Offline, any /app/... address opens the app shell.
         navigateFallback: '/app/index.html',
         navigateFallbackAllowlist: [/^\/app(\/|$)/],
