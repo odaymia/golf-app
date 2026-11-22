@@ -1,7 +1,8 @@
 import { ATTRIBUTION } from '../../lib/courseImport.js';
 import { useEffect, useRef, useState } from 'react';
 import { searchPosts, searchProfiles } from '../../lib/social.js';
-import { searchCourses } from '../../lib/courseSearch.js';
+import { searchCourses, matchSaved } from '../../lib/courseSearch.js';
+import { BUILTIN_COURSES } from '../../lib/builtinCourses.js';
 import { RatingBadge, useCourseRatings } from '../CourseRatings.jsx';
 import { instructorBadges } from '../../lib/instructors.js';
 import { addRecent, clearRecent, listRecent, removeRecent, entryId } from '../../lib/searchHistory.js';
@@ -224,34 +225,48 @@ function ProfileResults({ q, meId, go }) {
 
 function CourseResults({ q, go }) {
   const { items, error } = useResults((x) => (x.trim().length < 3 ? Promise.resolve([]) : searchCourses(x)), q);
-  const ratings = useCourseRatings((items ?? []).map((c) => `oga-${c.id}`));
-  if (items === null) return <p className="muted center">Searching courses…</p>;
+  // Courses built into Scribble show right away, even when the course
+  // database is down.
+  const builtin = q.trim().length < 3 ? [] : matchSaved(q, BUILTIN_COURSES).map((c) => ({ key: c.id, name: c.name, place: c.place, info: c.place }));
+  const found = (items ?? []).map((c) => ({
+    key: `oga-${c.id}`,
+    name: c.name,
+    place: c.place,
+    lat: c.lat,
+    lng: c.lng,
+    info: [c.place, c.holes ? `${c.holes} holes` : '', c.par ? `par ${c.par}` : ''].filter(Boolean).join(' · '),
+  }));
+  const list = [...builtin, ...found];
+  const ratings = useCourseRatings(list.map((c) => c.key));
   return (
     <section className="results">
-      {error && <div className="card warn-box">{error}</div>}
-      {items.length === 0 && !error && (
+      {list.length > 0 && (
+        <ul className="course-results">
+          {list.map((c) => {
+            const course = { key: c.key, name: c.name, place: c.place, lat: c.lat, lng: c.lng };
+            return (
+              <li key={c.key}>
+                <button onClick={() => go('course', { course }, { type: 'course', course })}>
+                  <span className="recent-icon">📍</span>
+                  <span className="recent-text">
+                    <strong>{c.name}</strong>
+                    <em>
+                      <RatingBadge summary={ratings[c.key]} />
+                      {c.info}
+                    </em>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {items === null && <p className="muted center">Searching courses…</p>}
+      {error && <div className="card warn-box">{builtin.length ? 'The course database isn’t responding right now, so only courses built into Scribble are showing.' : error}</div>}
+      {items !== null && list.length === 0 && !error && (
         <p className="muted center">{q.trim().length < 3 ? 'Type at least 3 letters to find a course.' : `No courses named “${q}”.`}</p>
       )}
-      <ul className="course-results">
-        {items.map((c) => {
-          const course = { key: `oga-${c.id}`, name: c.name, place: c.place, lat: c.lat, lng: c.lng };
-          return (
-            <li key={c.id}>
-              <button onClick={() => go('course', { course }, { type: 'course', course })}>
-                <span className="recent-icon">📍</span>
-                <span className="recent-text">
-                  <strong>{c.name}</strong>
-                  <em>
-                    <RatingBadge summary={ratings[`oga-${c.id}`]} />
-                    {[c.place, c.holes ? `${c.holes} holes` : '', c.par ? `par ${c.par}` : ''].filter(Boolean).join(' · ')}
-                  </em>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      {items.length > 0 && <p className="hint center">Course data {ATTRIBUTION}</p>}
+      {found.length > 0 && <p className="hint center">Course data {ATTRIBUTION}</p>}
     </section>
   );
 }

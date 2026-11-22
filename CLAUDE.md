@@ -552,7 +552,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   20, "Clear search history"). Enter shows three tabs: For you
   (`searchPosts`: tagged course, caption, or author name; ranked by
   `rankPosts` course > caption > author, newest first), Profiles (name,
-  then home course) and Golf courses (OpenGolfAPI search). A course opens
+  then home course) and Golf courses (built-in courses first, shown even
+  when OpenGolfAPI is down, then OpenGolfAPI search; ★ rating badges). A course opens
   its location page with an OpenStreetMap embed and an Open in Maps link
   (search results carry lat/lng). Back returns to the same search and tab
   (Social `nav(name, params, keep)` saves params on the current screen).
