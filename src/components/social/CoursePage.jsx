@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { listCoursePosts } from '../../lib/social.js';
 import { timeAgo } from '../../lib/socialFormat.js';
 import PostGrid from './PostGrid.jsx';
+import { RatingSummary, useCourseRatings } from '../CourseRatings.jsx';
+import { rateableKey } from '../../lib/roundRecap.js';
 
 // "2h ago", "just now", or a date for older posts.
 const agoText = (iso) => {
@@ -24,6 +26,7 @@ export default function CoursePage({ course, meId, nav, back }) {
       });
   }, [course.key, meId]);
 
+  const ratings = useCourseRatings(rateableKey(course.key) ? [course.key] : []);
   const latest = posts?.[0];
   return (
     <div className="screen">
@@ -37,9 +40,11 @@ export default function CoursePage({ course, meId, nav, back }) {
       <section className="course-head">
         <h2>{course.name}</h2>
         {course.place && <p className="muted">{course.place}</p>}
+        {rateableKey(course.key) && <RatingSummary summary={ratings[course.key]} />}
         <CourseMap course={course} />
         {posts && (
           <p className="course-meta">
+            <strong>Recent photos</strong> · 
             {posts.length === 0
               ? 'No posts yet'
               : `${posts.length} post${posts.length === 1 ? '' : 's'} · latest ${agoText(latest.createdAt)}`}

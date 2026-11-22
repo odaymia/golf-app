@@ -144,7 +144,7 @@ function TeamsStep({ data, sides, onTeams, players, me, reload, next }) {
 // A round's course as saved on the round (name, holes, chosen tee).
 const snapshot = (course, teeIdx) => {
   const raw = course.tees[teeIdx] ?? course.tees[0];
-  return { name: course.name, holes: course.holes, tee: { name: raw.name, rating: Number(raw.rating), slope: Number(raw.slope) } };
+  return { key: course.id, name: course.name, holes: course.holes, tee: { name: raw.name, rating: Number(raw.rating), slope: Number(raw.slope) } };
 };
 
 function RoundsStep({ data, computed, events, reload, next }) {

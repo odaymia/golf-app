@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { searchCourses, fetchCourse, matchSaved } from '../lib/courseSearch.js';
 import { ATTRIBUTION } from '../lib/courseImport.js';
 import { BUILTIN_COURSES } from '../lib/builtinCourses.js';
+import { RatingBadge, useCourseRatings } from './CourseRatings.jsx';
 
 // Type a course name, tap a result, get the full card. onPick({ course, warnings }).
 // recent (optional): courses saved on this phone, shown when the box is
@@ -60,6 +61,7 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
   const savedIds = new Set(saved.map((c) => c.id));
   // Courses built into Scribble (real tees and ratings, always available).
   const builtin = matchSaved(query, BUILTIN_COURSES).filter((c) => !savedIds.has(c.id));
+  const ratings = useCourseRatings([...builtin.map((c) => c.id), ...results.map((c) => `oga-${c.id}`)]);
   const pickBuiltin = (c) => {
     setQuery('');
     setResults([]);
@@ -128,7 +130,9 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
             {builtin.map((c) => (
               <li key={c.id}>
                 <button onClick={() => pickBuiltin(c)}>
-                  <strong>{c.name}</strong>
+                  <strong>
+                    {c.name} <RatingBadge summary={ratings[c.id]} />
+                  </strong>
                   <span className="muted">
                     {c.place} · par {c.holes.reduce((t, h) => t + h.par, 0)} · {c.tees.filter((t) => !t.name.endsWith('(W)')).map((t) => t.name).join(' / ')}
                   </span>
@@ -153,7 +157,9 @@ export default function CourseSearch({ onPick, recent = [], onPickRecent, onCust
                   <p className="ps-h similar-h">{i === 0 ? `No exact match for “${query.trim()}”. Similar names:` : 'Similar names'}</p>
                 )}
                 <button onClick={() => pick(c.id)} disabled={status === 'loading'}>
-                  <strong>{c.name}</strong>
+                  <strong>
+                    {c.name} <RatingBadge summary={ratings[`oga-${c.id}`]} />
+                  </strong>
                   <span className="muted">
                     {c.place}
                     {c.holes ? ` · ${c.holes} holes` : ''}

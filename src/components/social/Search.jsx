@@ -2,6 +2,7 @@ import { ATTRIBUTION } from '../../lib/courseImport.js';
 import { useEffect, useRef, useState } from 'react';
 import { searchPosts, searchProfiles } from '../../lib/social.js';
 import { searchCourses } from '../../lib/courseSearch.js';
+import { RatingBadge, useCourseRatings } from '../CourseRatings.jsx';
 import { instructorBadges } from '../../lib/instructors.js';
 import { addRecent, clearRecent, listRecent, removeRecent, entryId } from '../../lib/searchHistory.js';
 import Avatar from './Avatar.jsx';
@@ -223,6 +224,7 @@ function ProfileResults({ q, meId, go }) {
 
 function CourseResults({ q, go }) {
   const { items, error } = useResults((x) => (x.trim().length < 3 ? Promise.resolve([]) : searchCourses(x)), q);
+  const ratings = useCourseRatings((items ?? []).map((c) => `oga-${c.id}`));
   if (items === null) return <p className="muted center">Searching courses…</p>;
   return (
     <section className="results">
@@ -240,6 +242,7 @@ function CourseResults({ q, go }) {
                 <span className="recent-text">
                   <strong>{c.name}</strong>
                   <em>
+                    <RatingBadge summary={ratings[`oga-${c.id}`]} />
                     {[c.place, c.holes ? `${c.holes} holes` : '', c.par ? `par ${c.par}` : ''].filter(Boolean).join(' · ')}
                   </em>
                 </span>

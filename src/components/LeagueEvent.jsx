@@ -18,6 +18,9 @@ import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
 import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
+import { matchSummary } from '../lib/games/match.js';
+import { recapFacts } from '../lib/roundRecap.js';
+import { RoundRecap, RateCourse } from './RoundRecap.jsx';
 
 const fmtToPar = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : String(n));
 
@@ -513,6 +516,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   if (review) {
     return (
       <RoundReview
+        event={event}
         holes={holes}
         rows={cardRows}
         cardOf={(row) => holes.map((_, i) => rowScore(row, i))}
@@ -1047,7 +1051,7 @@ function ScoreChecks({ data, event }) {
 
 // End of round: the whole group's card to check before submitting. Tap a
 // score to go back to that hole and fix it.
-function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, submitted, onHole, onBack, onSubmit }) {
+function RoundReview({ event, holes, rows, cardOf, strokesOf, net, badHoles, matches, submitted, onHole, onBack, onSubmit }) {
   const n = holes.length;
   const sum = (arr, a, b) => {
     let t = 0;
@@ -1093,7 +1097,10 @@ function RoundReview({ holes, rows, cardOf, strokesOf, net, badHoles, matches, s
       {badHoles.length > 0 && <p className="search-error">Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Fix them before submitting.</p>}
       {missing && <p className="hint">Some holes are still blank.</p>}
       {submitted ? (
-        <p className="share-status">Scores submitted ✓ They’re on the leaderboard.</p>
+        <>
+          <p className="share-status">Scores submitted ✓ They’re on the leaderboard.</p>
+          <GroupRecap event={event} holes={holes} rows={rows} cardOf={cardOf} strokesOf={strokesOf} net={net} matches={matches} />
+        </>
       ) : (
         <button className="btn btn-primary btn-xl" disabled={badHoles.length > 0} onClick={onSubmit}>
           Submit scores
@@ -1134,5 +1141,47 @@ function RsvpList({ event, members }) {
       )}
       <p className="hint">Players answer from the home screen once they’re in a group for this round.</p>
     </section>
+  );
+}
+
+// After the group submits: the AI recap of their round (kept on this phone)
+// and the course rating.
+function GroupRecap({ event, holes, rows, cardOf, strokesOf, net, matches }) {
+  const store = `scribble:recap:${event.id}:${rows.map((r) => r.key).join(',')}`;
+  const [recap, setRecap] = useState(() => localStorage.getItem(store) || '');
+  const facts = useMemo(
+    () =>
+      recapFacts({
+        course: event.course.name,
+        holes,
+        net,
+        players: rows.map((r) => ({ name: r.name, card: cardOf(r), strokes: net ? strokesOf(r) : [] })),
+        matches: matches.map((m) => {
+          const s = matchSummary(m.status);
+          return `${m.names[0]} vs ${m.names[1]}: ${s.leader == null ? s.big : `${m.names[s.leader]} ${s.big}`} (${s.small})`;
+        }),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event.id],
+  );
+  const done = facts.players.some((p) => p.holesPlayed > 0);
+  return (
+    <div className="group-recap">
+      {done && (
+        <RoundRecap
+          facts={facts}
+          recap={recap}
+          onRecap={(t) => {
+            setRecap(t);
+            try {
+              localStorage.setItem(store, t);
+            } catch {
+              // storage full
+            }
+          }}
+        />
+      )}
+      <RateCourse course={{ key: event.course.key, name: event.course.name }} />
+    </div>
   );
 }

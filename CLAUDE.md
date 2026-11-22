@@ -123,6 +123,9 @@ src/
     fuzzy.js        Close-match scoring for course names (typos, filler words)
     searchHistory.js Recent searches (device, per account) + post ranking
     notifications.js The only notifications code: list, unread count, mark read
+    roundRecap.js   Pure: round -> recap facts for the AI recap (tested),
+                    rating categories, rateableKey, overallStars
+    courseRatings.js The only course-ratings + AI recap code (Edge Function call)
     instructors.js  The only instructor-table code (+ swing review uploads)
     instructor/     fees.js (platform fee split, integer cents, tested);
                     payments.js (PAYMENTS_LIVE=false; Stripe hooks in here)
@@ -196,6 +199,10 @@ supabase/invites.sql  league_members.invite_status, league_events.rsvp,
 supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
                     log_event(), am_i_admin(), admin_stats(), admin_users()
                     (owner dashboard)
+supabase/course_ratings.sql  course_ratings (4 categories, 1-5), course_rating_summary(),
+                    ai_recaps + claim_recap() (20 recaps/day per person)
+supabase/functions/round-recap/index.ts  Edge Function: AI round recap via Claude
+                    (secret ANTHROPIC_API_KEY lives only in Supabase)
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -233,6 +240,29 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
     is two bets (first vs first, second vs second). Paid as of now like every
     match. Setup: "Split the round" switch under Match play (2 vs 2 teams);
     no scramble/alternate shot in casual rounds (scores are per player).
+
+## Round recap and course ratings
+
+- After a round (casual: Settle once every hole is in; league/tournament:
+  round review after Submit scores) the app shows an AI recap that hypes
+  the best round and ribs the worst, then "Rate <course>": 1-5 stars for
+  Conditions, Layout, Price (5 = great value), Difficulty (5 = tough).
+- Recap: `recapFacts` (lib/roundRecap.js) sends only names, scores, results,
+  best/worst holes and money as text; the `round-recap` Edge Function checks
+  sign-in, calls `claim_recap()` (20/day per person), and asks Claude
+  (`claude-opus-5-5`, effort low, server-side refusal fallback). The key
+  never ships in the app. Casual recaps save on the round (`round.recap`);
+  league recaps in localStorage per round + group. Deploy: Supabase
+  dashboard -> Edge Functions -> new function `round-recap` (paste the
+  file), Secrets -> ANTHROPIC_API_KEY.
+- Ratings (`course_ratings`, one per golfer per course, re-rating replaces)
+  only for shared course ids (`oga-<id>`, built-in `sc-…`); league round
+  snapshots now keep `course.key` (older rounds have none, so no prompt).
+  Members read only their own rows; averages come from
+  `course_rating_summary(keys)`. Overall stars = conditions/layout/price
+  (difficulty shown, not averaged in). Shown as "★ 4.3 (12)" in course
+  search (round setup and social Search) and as a block on the course page
+  above its recent photos.
 
 ## Owner dashboard
 

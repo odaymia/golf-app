@@ -4,12 +4,15 @@ import { formatMoney } from '../lib/games/money.js';
 import { Payments, Totals } from './MoneyView.jsx';
 import { gameTitle, nameMap } from './gameSummary.js';
 import { saveRound } from '../lib/storage.js';
+import { casualRecapFacts } from '../lib/roundRecap.js';
+import { RoundRecap, RateCourse } from './RoundRecap.jsx';
 
 export default function Settle({ round, setRound, onBack, onHome }) {
   const computed = useMemo(() => computeRound(round), [round]);
   const [copied, setCopied] = useState(false);
   const names = nameMap(round.players);
   const final = round.status === 'final';
+  const facts = useMemo(() => (computed.finished ? casualRecapFacts(round, computed, gameTitle) : null), [round, computed]);
 
   function summaryText() {
     const lines = [`${round.course.name} – ${new Date(round.createdAt).toLocaleDateString()}`];
@@ -64,6 +67,8 @@ export default function Settle({ round, setRound, onBack, onHome }) {
         </div>
       )}
 
+      {facts && <RoundRecap facts={facts} recap={round.recap} onRecap={(recap) => setRound({ ...round, recap })} />}
+
       <section className="card settle-card">
         <h2>Who pays who</h2>
         <Payments players={round.players} payments={computed.payments} />
@@ -105,6 +110,10 @@ export default function Settle({ round, setRound, onBack, onHome }) {
           </tbody>
         </table>
       </section>
+
+      {computed.finished && (
+        <RateCourse course={{ key: round.course.id, name: round.course.name }} rated={round.rated} onRated={() => setRound({ ...round, rated: true })} />
+      )}
 
       <div className="stack">
         <button className="btn btn-ghost btn-xl" onClick={share}>

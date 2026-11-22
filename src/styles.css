@@ -3930,3 +3930,36 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .home-alert-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .home-alert-actions .btn { padding: 9px 16px; }
 .rsvp p { margin: 4px 0; }
+
+/* Round recap + course ratings */
+.recap-card h3 { margin: 0 0 8px; }
+.recap-text { white-space: pre-line; line-height: 1.55; margin: 0 0 10px; font-size: 15.5px; }
+.recap-busy { color: var(--muted); font-style: italic; margin: 0 0 10px; animation: recap-pulse 1.4s ease-in-out infinite; }
+@keyframes recap-pulse { 50% { opacity: 0.45; } }
+.recap-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.group-recap { margin-top: 12px; text-align: left; }
+.rate-card h3 { margin: 0 0 4px; }
+.rate-rows { list-style: none; padding: 0; margin: 12px 0 14px; display: flex; flex-direction: column; gap: 10px; }
+.rate-rows li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rate-label { display: flex; flex-direction: column; min-width: 0; }
+.rate-label em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+.stars { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.stars button { background: none; border: 0; padding: 4px 2px; cursor: pointer; line-height: 1; min-width: 34px; min-height: 40px; }
+.star {
+  display: inline-block; line-height: 1;
+  background: linear-gradient(90deg, var(--gold) var(--fill), #d6d0c0 var(--fill));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stars-big .star { font-size: 30px; }
+.stars-small .star { font-size: 17px; }
+.rating-badge { font-style: normal; font-weight: 700; color: #9a7618; font-size: 13px; margin-right: 6px; white-space: nowrap; }
+.rating-badge span { font-weight: 500; color: var(--muted); }
+.rating-summary { margin: 10px 0 12px; }
+.rating-overall { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rating-overall > strong { font-family: 'Fraunces', serif; font-size: 30px; line-height: 1; }
+.rating-cats { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.rating-cats li { display: grid; grid-template-columns: 84px 1fr 30px; align-items: center; gap: 8px; font-size: 13.5px; }
+.rating-cats strong { text-align: right; }
+.rating-bar { height: 6px; border-radius: 3px; background: #e6e0d0; overflow: hidden; }
+.rating-bar span { display: block; height: 100%; background: var(--gold); border-radius: 3px; }
+.rating-empty { margin: 8px 0 10px; }

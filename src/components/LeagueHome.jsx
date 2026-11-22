@@ -286,7 +286,7 @@ function AddRound({ leagueId, usesTiers, count, label, onDone }) {
         name: name.trim() || `${label} ${count + 1}`,
         date,
         tier: usesTiers ? tier : 'regular',
-        course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
+        course: { key: course.id, name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
       });
       onDone(ev);
     } catch (e) {

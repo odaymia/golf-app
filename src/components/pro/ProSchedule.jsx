@@ -138,7 +138,7 @@ function ScheduleBuilder({ leagueId, count, label, usesTiers, defaultRounds, onD
           name: `${prefix.trim() || label} ${count + i + 1}`,
           date: dates[i],
           tier: usesTiers ? tier : 'regular',
-          course: { name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
+          course: { key: course.id, name: course.name, holes: course.holes, tee: { name: tee.name, rating: tee.rating, slope: tee.slope } },
         });
         setProgress(i + 1);
       }
