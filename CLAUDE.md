@@ -608,6 +608,10 @@ is open).
   `© OpenStreetMap contributors · contains data from OpenGolfAPI
   (opengolfapi.org) · ODbL 1.0`) wherever results appear. Our Supabase copy
   is a derived database, so it must stay ODbL and openly readable.
+- Open-data gaps: a course's `holes` there counts holes with data (16 when
+  two are missing), so results only show 9/18/27/36. A card numbered past 9
+  is 18 holes; missing pars become 4 and, when most stroke indexes are known
+  without repeats, missing holes get the unused ones; warnings name the holes.
 - Data is community-maintained: `courseImport.js` drops stray holes past 18,
   plays 9-hole courses twice (stroke index n -> 2n-1 out, 2n in), doubles
   9-hole ratings, and fills missing pars/handicaps/ratings with defaults plus a

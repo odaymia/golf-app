@@ -91,7 +91,9 @@ const fromRow = (r) => ({
   id: r.id,
   name: r.name,
   place: [r.city, r.state].filter(Boolean).join(', '),
-  holes: r.holes,
+  // The open data's `holes` counts holes it has data for (16 on a card
+  // missing two), so only show real course sizes.
+  holes: [9, 18, 27, 36].includes(r.holes) ? r.holes : null,
   par: r.par,
   lat: typeof r.lat === 'number' ? r.lat : null,
   lng: typeof r.lng === 'number' ? r.lng : null,

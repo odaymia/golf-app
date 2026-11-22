@@ -99,4 +99,31 @@ describe('courseFromApi', () => {
     expect(courseProblems(course, course.tees[0])).toEqual([]);
     expect(warnings.length).toBeGreaterThan(0);
   });
+
+  it('keeps the holes it knows when a few are missing (open data gaps)', () => {
+    // Steele Canyon Canyon Ranch in the open data: holes 10 and 18 missing
+    const card = [[1, 4, 7], [2, 5, 3], [3, 3, 11], [4, 5, 1], [5, 3, 17], [6, 4, 13], [7, 3, 15], [8, 4, 5], [9, 4, 9], [11, 4, 10], [12, 4, 8], [13, 3, 16], [14, 5, 2], [15, 4, 6], [16, 4, 12], [17, 3, 14]];
+    const { course, warnings } = courseFromApi({
+      id: 'sc',
+      course_name: 'Steele Canyon',
+      holes: 16,
+      tees: [],
+      holes_data: card.map(([number, par, handicap_index]) => ({ number, par, handicap_index })),
+    });
+    expect(course.holes).toHaveLength(18);
+    expect(course.holes[0]).toEqual({ par: 4, hcp: 7 });
+    expect(course.holes[16]).toEqual({ par: 3, hcp: 14 });
+    // holes 10 and 18 get par 4 and the unused stroke indexes 4 and 18
+    expect(course.holes[9]).toEqual({ par: 4, hcp: 4 });
+    expect(course.holes[17]).toEqual({ par: 4, hcp: 18 });
+    expect(courseProblems(course, course.tees[0])).toEqual([]);
+    expect(warnings.join(' ')).toMatch(/Holes 10 and 18 had no par/);
+    expect(warnings.join(' ')).toMatch(/Holes 10 and 18 had no hole handicap/);
+  });
+
+  it('a short card numbered past 9 is still an 18-hole course', () => {
+    const holes_data = [1, 2, 3, 10, 11, 12, 13, 14].map((number, i) => ({ number, par: 4, handicap_index: i * 2 + 1 }));
+    const { course } = courseFromApi({ id: 'x', course_name: 'Gappy', holes: 8, tees: [], holes_data });
+    expect(course.holes).toHaveLength(18);
+  });
 });

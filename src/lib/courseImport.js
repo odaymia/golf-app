@@ -24,13 +24,22 @@ export function courseFromApi(detail) {
   const raw = (detail.holes_data ?? [])
     .filter((h) => Number.isInteger(h.number) && h.number >= 1 && h.number <= 18)
     .sort((a, b) => a.number - b.number);
-  const nineHoles = detail.holes === 9 || (raw.length > 0 && raw.length <= 9);
+  // A card with a hole numbered 10+ is an 18-hole course even if some holes
+  // are missing from the data.
+  const nineHoles = detail.holes === 9 || (raw.length > 0 && raw.length <= 9 && raw.every((h) => h.number <= 9));
   const count = nineHoles ? 9 : 18;
   const byNumber = new Map(raw.map((h) => [h.number, h]));
 
+  const holeList = (nums) => (nums.length === 1 ? `Hole ${nums[0]}` : `Holes ${nums.slice(0, -1).join(', ')} and ${nums.at(-1)}`);
+
   let pars = Array.from({ length: count }, (_, i) => byNumber.get(i + 1)?.par);
-  if (pars.some((p) => !validPar(p))) {
-    warnings.push('Some pars were missing. Check them under Edit pars & hole handicaps.');
+  const noPar = pars.map((p, i) => (validPar(p) ? null : i + 1)).filter(Boolean);
+  if (noPar.length) {
+    warnings.push(
+      noPar.length === count
+        ? 'Pars were missing. Check them under Edit pars & hole handicaps.'
+        : `${holeList(noPar)} had no par, so ${noPar.length === 1 ? 'it is' : 'they are'} set to 4. Check under Edit pars & hole handicaps.`,
+    );
     pars = pars.map((p) => (validPar(p) ? p : 4));
   }
 
@@ -38,9 +47,19 @@ export function courseFromApi(detail) {
   if (!isPermutation(hcps, count)) {
     // Some cards list 18-hole stroke indexes on a 9-hole course; rank them.
     const ranked = hcps.every((x) => Number.isInteger(x)) && new Set(hcps).size === count;
+    // Most holes known (no repeats): keep them and give the missing holes the
+    // unused stroke indexes, in order.
+    const known = hcps.filter((x) => Number.isInteger(x) && x >= 1 && x <= count);
+    const gaps = hcps.map((x, i) => (Number.isInteger(x) && x >= 1 && x <= count ? null : i + 1)).filter(Boolean);
+    const mostKnown = new Set(known).size === known.length && known.length >= Math.ceil(count / 2);
     if (ranked) {
       const order = [...hcps].sort((a, b) => a - b);
       hcps = hcps.map((x) => order.indexOf(x) + 1);
+    } else if (mostKnown) {
+      const unused = Array.from({ length: count }, (_, i) => i + 1).filter((n) => !known.includes(n));
+      let k = 0;
+      hcps = hcps.map((x) => (Number.isInteger(x) && x >= 1 && x <= count ? x : unused[k++]));
+      warnings.push(`${holeList(gaps)} had no hole handicap, so ${gaps.length === 1 ? 'it got' : 'they got'} the one${gaps.length === 1 ? '' : 's'} left over. Check before you tee off.`);
     } else {
       warnings.push('Hole handicaps were missing or incomplete. Check them before you tee off.');
       hcps = nineHoles ? [5, 8, 2, 7, 1, 9, 3, 6, 4] : DEFAULT_HCPS.slice();
