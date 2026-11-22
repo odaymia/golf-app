@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSession, onAuthChange, signOut } from '../lib/account.js';
-import { amIAdmin, loadAdminStats } from '../lib/adminStats.js';
+import { amIAdmin, loadAdminStats, loadAdminUsers } from '../lib/adminStats.js';
 import SignIn from '../components/SignIn.jsx';
 import { BarChart, LineChart, Sparkline } from './charts.jsx';
-import { cumulative, fillDays, fillWeeks, retentionPct, shortDate, statsCsv, stickiness, weekOf, weekOverWeek } from './metrics.js';
+import { cumulative, fillDays, fillWeeks, filterUsers, retentionPct, shortDate, sortUsers, statsCsv, stickiness, usersCsv, weekOf, weekOverWeek } from './metrics.js';
 
 const fmt = (n) => (n == null ? '–' : Number(n).toLocaleString());
 
@@ -78,18 +78,21 @@ export default function Admin() {
         </div>
       )}
       {stats && <Dashboard stats={stats} />}
+      {stats && <UsersTable key={stats.generated_at} />}
     </div>
   );
 }
 
-function download(stats) {
-  const blob = new Blob([statsCsv(stats)], { type: 'text/csv' });
+function saveCsv(text, filename) {
+  const blob = new Blob([text], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `scribble-stats-${stats.today}.csv`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+const download = (stats) => saveCsv(statsCsv(stats), `scribble-stats-${stats.today}.csv`);
 
 function Tile({ label, value, sub, trend }) {
   return (
@@ -286,5 +289,92 @@ function Retention({ cohorts }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Every account: name, username, email, joined, last opened, activity.
+// Search, click a column to sort, download as CSV. Owners only.
+const USER_COLS = [
+  ['name', 'Name', 'asc'],
+  ['email', 'Email', 'asc'],
+  ['joined', 'Joined', 'desc'],
+  ['last_seen', 'Last opened', 'desc'],
+  ['active_days_30', 'Active days (30)', 'desc'],
+  ['leagues', 'Leagues', 'desc'],
+];
+
+export function UsersTable({ load = loadAdminUsers }) {
+  const [users, setUsers] = useState(null);
+  const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState({ key: 'joined', dir: 'desc' });
+
+  useEffect(() => {
+    load()
+      .then(setUsers)
+      .catch((e) => setError(e.message));
+  }, [load]);
+
+  const shown = users ? sortUsers(filterUsers(users, q), sort.key, sort.dir) : [];
+  const sortBy = (key, firstDir) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir }));
+  return (
+    <section className="ad-card">
+      <div className="ad-users-head">
+        <div>
+          <h2>Users{users ? ` · ${users.length.toLocaleString()}` : ''}</h2>
+          <p className="ad-muted">Everyone with an account. Private: only owners can see this.</p>
+        </div>
+        <div className="ad-users-tools">
+          <input className="ad-search" placeholder="Search name, username or email" value={q} onChange={(e) => setQ(e.target.value)} />
+          {users && (
+            <button className="ad-btn" onClick={() => saveCsv(usersCsv(shown), `scribble-users-${new Date().toISOString().slice(0, 10)}.csv`)}>
+              Download CSV
+            </button>
+          )}
+        </div>
+      </div>
+      {error && <p className="ad-muted">{error}</p>}
+      {!users && !error && <p className="ad-muted">Loading users…</p>}
+      {users && (
+        <div className="ad-scroll ad-users">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                {USER_COLS.map(([key, label, firstDir]) => (
+                  <th key={key} className={key === 'name' || key === 'email' ? '' : 'num'}>
+                    <button className="ad-sort" onClick={() => sortBy(key, firstDir)}>
+                      {label}
+                      {sort.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((u) => (
+                <tr key={u.user_id}>
+                  <td>
+                    {u.name || <span className="ad-muted">No name yet</span>}
+                    {u.username && <span className="ad-muted"> @{u.username}</span>}
+                  </td>
+                  <td>{u.email}</td>
+                  <td className="num">{u.joined ? shortDate(u.joined.slice(0, 10)) : ''}</td>
+                  <td className="num">{u.last_seen ? shortDate(u.last_seen) : '–'}</td>
+                  <td className="num">{u.active_days_30 ?? 0}</td>
+                  <td className="num">{u.leagues ?? 0}</td>
+                </tr>
+              ))}
+              {!shown.length && (
+                <tr>
+                  <td colSpan={6} className="ad-muted">
+                    No one matches “{q}”.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

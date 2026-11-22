@@ -96,3 +96,38 @@ export function statsCsv(stats) {
   };
   return rows.map((r) => r.map(cell).join(',')).join('\n');
 }
+
+// --- Users table ---------------------------------------------------------------
+
+// Search by name, username or email (case-insensitive).
+export function filterUsers(list, q) {
+  const s = q.trim().toLowerCase();
+  if (!s) return list;
+  return list.filter((u) => [u.name, u.username, u.email].some((v) => (v ?? '').toLowerCase().includes(s)));
+}
+
+// Sort by a column; empty values always go last.
+export function sortUsers(list, key, dir = 'desc') {
+  const val = (u) => {
+    const v = u[key];
+    if (v == null || v === '') return null;
+    return typeof v === 'number' ? v : String(v).toLowerCase();
+  };
+  return [...list].sort((a, b) => {
+    const [x, y] = [val(a), val(b)];
+    if (x === y) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return (x < y ? -1 : 1) * (dir === 'asc' ? 1 : -1);
+  });
+}
+
+export function usersCsv(list) {
+  const cell = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [['Name', 'Username', 'Email', 'Joined', 'Last opened', 'Active days (30)', 'Leagues/tournaments']];
+  for (const u of list) rows.push([u.name, u.username, u.email, (u.joined ?? '').slice(0, 10), u.last_seen ?? '', u.active_days_30 ?? 0, u.leagues ?? 0]);
+  return rows.map((r) => r.map(cell).join(',')).join('\n');
+}

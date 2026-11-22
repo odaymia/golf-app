@@ -187,3 +187,40 @@ end;
 $$;
 revoke all on function public.admin_stats() from public, anon;
 grant execute on function public.admin_stats() to authenticated;
+
+-- Every account, for the dashboard's Users table. Owners only.
+-- name/username from the profiles; last_seen/active_days from app_visits.
+create or replace function public.admin_users()
+returns table (
+  user_id uuid,
+  email text,
+  name text,
+  username text,
+  joined timestamptz,
+  last_seen date,
+  active_days_30 bigint,
+  leagues bigint
+)
+language plpgsql stable security definer set search_path = public, auth as $$
+declare today date := (now() at time zone 'America/Los_Angeles')::date;
+begin
+  if not exists (select 1 from app_admins a where a.user_id = auth.uid()) then
+    raise exception 'Not an owner account';
+  end if;
+  return query
+    select u.id,
+           u.email::text,
+           coalesce(nullif(p.name, ''), nullif(pp.display_name, ''), '')::text,
+           coalesce(pp.username, '')::text,
+           u.created_at,
+           (select max(v.day) from app_visits v where v.user_id = u.id),
+           (select count(*) from app_visits v where v.user_id = u.id and v.day > today - 30),
+           (select count(distinct m.league_id) from league_members m where m.user_id = u.id)
+    from auth.users u
+    left join profiles p on p.id = u.id
+    left join public_profiles pp on pp.id = u.id
+    order by u.created_at desc;
+end;
+$$;
+revoke all on function public.admin_users() from public, anon;
+grant execute on function public.admin_users() to authenticated;

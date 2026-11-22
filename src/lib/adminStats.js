@@ -13,3 +13,11 @@ export async function loadAdminStats() {
   if (error) throw new Error(error.message);
   return data;
 }
+
+// Every account (owners only): [{ user_id, email, name, username, joined,
+// last_seen, active_days_30, leagues }], newest first.
+export async function loadAdminUsers() {
+  const { data, error } = await supabase.rpc('admin_users');
+  if (error) throw new Error(/admin_users/.test(error.message) ? 'Run the latest supabase/admin_stats.sql to see the user list.' : error.message);
+  return data ?? [];
+}

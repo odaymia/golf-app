@@ -194,7 +194,8 @@ supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
 supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
-                    log_event(), am_i_admin(), admin_stats() (owner dashboard)
+                    log_event(), am_i_admin(), admin_stats(), admin_users()
+                    (owner dashboard)
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -245,7 +246,9 @@ league score cards, posts, likes, comments, messages), totals, most active
 players, top courses. Usage tracking is minimal: `log_visit()` once a day
 per person (lib/usage.js, called at sign-in) into `app_visits`, and
 `log_event('round_started')` for casual rounds (they live on the phone).
-Download CSV for decks. Days are Pacific time.
+Download CSV for decks. Days are Pacific time. Users table
+(`admin_users()`, owners only): every account's name, username, email,
+joined, last opened, active days in 30, leagues; search, sort, CSV.
 
 ## Accounts
 

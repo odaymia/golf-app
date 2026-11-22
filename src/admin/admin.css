@@ -50,3 +50,9 @@ section.ad-card { margin-bottom: 16px; }
   .ad-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ad-grid2 { grid-template-columns: 1fr; }
 }
+.ad-users-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ad-users-tools { display: flex; gap: 10px; align-items: center; }
+.ad-search { width: 280px; padding: 9px 12px; border: 1px solid #e3dccb; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.ad-users { max-height: 560px; overflow-y: auto; }
+.ad-users thead th { position: sticky; top: 0; background: #fffdf7; z-index: 1; }
+.ad-sort { border: none; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
