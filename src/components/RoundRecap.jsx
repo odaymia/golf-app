@@ -228,7 +228,7 @@ export function RateCourse({ course, rated, onRated }) {
       </ul>
       {status === 'error' && <p className="search-error">{error}</p>}
       <button className="btn btn-primary btn-xl" disabled={!complete || status === 'saving'} onClick={save}>
-        {status === 'saving' ? 'Saving…' : complete ? 'Submit rating' : 'Tap stars for all 4'}
+        {status === 'saving' ? 'Saving…' : complete ? 'Submit rating' : `Tap stars for all ${RATING_CATEGORIES.length}`}
       </button>
     </section>
   );

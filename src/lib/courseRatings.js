@@ -55,7 +55,7 @@ export async function myCourseRating(courseKey) {
   if (!u?.user) return null;
   const { data, error } = await supabase
     .from('course_ratings')
-    .select('conditions, layout, price, difficulty')
+    .select('conditions, layout, price, difficulty, pace')
     .eq('course_key', courseKey)
     .eq('user_id', u.user.id)
     .maybeSingle();
@@ -107,6 +107,7 @@ export async function courseRatingSummaries(keys) {
         layout: Number(r.layout),
         price: Number(r.price),
         difficulty: Number(r.difficulty),
+        pace: r.pace == null ? null : Number(r.pace),
       });
     }
   }

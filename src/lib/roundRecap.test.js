@@ -48,6 +48,7 @@ describe('round recap facts', () => {
     expect(rateableKey('sc-steele-canyon-ranch')).toBe('sc-steele-canyon-ranch');
     expect(rateableKey('k3j2h')).toBe(null);
     expect(overallStars({ conditions: 4, layout: 5, price: 3, difficulty: 1 })).toBe(4);
+    expect(overallStars({ conditions: 4, layout: 5, price: 3, difficulty: 1, pace: 2 })).toBe(3.5);
     expect(overallStars(null)).toBe(null);
   });
 

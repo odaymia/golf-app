@@ -199,7 +199,7 @@ supabase/invites.sql  league_members.invite_status, league_events.rsvp,
 supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
                     log_event(), am_i_admin(), admin_stats(), admin_users()
                     (owner dashboard)
-supabase/course_ratings.sql  course_ratings (4 categories, 1-5), course_rating_summary(),
+supabase/course_ratings.sql  course_ratings (5 categories, 1-5), course_rating_summary(),
                     ai_recaps + claim_recap() (20 recaps/day per person),
                     round_recaps (shared league recaps)
 supabase/functions/round-recap/index.ts  Edge Function: AI round recap via Claude
@@ -249,7 +249,8 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   hype and ribbing across the group (good and bad holes, nines, money, not
   just first and last), one per round (no rewrites; Try again only after an
   error), then "Rate <course>": 1-5 stars for
-  Conditions, Layout, Price (5 = great value), Difficulty (5 = tough).
+  Conditions, Layout, Price (5 = great value), Difficulty (5 = tough),
+  Pace of play (5 = no waiting; column added later, older ratings have none).
 - Recap: `recapFacts` (lib/roundRecap.js) sends only names, scores, results,
   best/worst holes and money as text; the `round-recap` Edge Function checks
   sign-in, calls `claim_recap()` (20/day per person), and asks Claude
@@ -271,7 +272,7 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   a single exact match counts); with no exact match the card asks "Which
   course did you play?" from close matches (`courseCandidates`).
   Members read only their own rows; averages come from
-  `course_rating_summary(keys)`. Overall stars = conditions/layout/price
+  `course_rating_summary(keys)`. Overall stars = conditions/layout/price/pace
   (difficulty shown, not averaged in). Shown as "★ 4.3 (12)" in course
   search (round setup and social Search) and as a block on the course page
   above its recent photos.

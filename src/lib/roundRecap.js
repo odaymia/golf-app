@@ -110,11 +110,13 @@ export const RATING_CATEGORIES = [
   { key: 'layout', label: 'Layout', hint: 'Fun, variety, scenery' },
   { key: 'price', label: 'Price', hint: '5 = great value' },
   { key: 'difficulty', label: 'Difficulty', hint: '5 = really tough' },
+  { key: 'pace', label: 'Pace of play', hint: '5 = no waiting' },
 ];
 
-// Overall stars = conditions, layout and price (difficulty isn't good or bad).
+// Overall stars = conditions, layout, price and pace (difficulty isn't good
+// or bad; older ratings have no pace and are averaged without it).
 export function overallStars(r) {
   if (!r) return null;
-  const v = [r.conditions, r.layout, r.price].map(Number).filter((x) => x > 0);
+  const v = [r.conditions, r.layout, r.price, r.pace].map(Number).filter((x) => x > 0);
   return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
 }

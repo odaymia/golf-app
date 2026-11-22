@@ -43,7 +43,7 @@ export function RatingSummary({ summary }) {
         </span>
       </div>
       <ul className="rating-cats">
-        {RATING_CATEGORIES.map((c) => (
+        {RATING_CATEGORIES.filter((c) => summary[c.key] != null).map((c) => (
           <li key={c.key}>
             <span>{c.label}</span>
             <span className="rating-bar" aria-hidden="true">

@@ -1,4 +1,5 @@
--- Course ratings (1-5 stars: conditions, layout, price, difficulty) and the
+-- Course ratings (1-5 stars: conditions, layout, price, difficulty, pace of
+-- play) and the
 -- daily cap on AI round recaps. Paste into Supabase: SQL Editor -> New query
 -- -> Run. Safe to run again.
 
@@ -17,6 +18,8 @@ create table if not exists public.course_ratings (
   updated_at timestamptz not null default now(),
   primary key (user_id, course_key)
 );
+-- Pace of play (5 = quick round). Added later, so older ratings have none.
+alter table public.course_ratings add column if not exists pace smallint check (pace between 1 and 5);
 create index if not exists course_ratings_key_idx on public.course_ratings (course_key);
 alter table public.course_ratings enable row level security;
 
@@ -47,12 +50,13 @@ create trigger course_ratings_touch before update on public.course_ratings
   for each row execute function public.touch_course_rating();
 
 -- Averages per course (one decimal) for a list of course keys.
+drop function if exists public.course_rating_summary(text[]);
 create or replace function public.course_rating_summary(p_keys text[])
-returns table (course_key text, ratings bigint, conditions numeric, layout numeric, price numeric, difficulty numeric)
+returns table (course_key text, ratings bigint, conditions numeric, layout numeric, price numeric, difficulty numeric, pace numeric)
 language sql stable security definer set search_path = public as $$
   select r.course_key, count(*),
          round(avg(r.conditions), 1), round(avg(r.layout), 1),
-         round(avg(r.price), 1), round(avg(r.difficulty), 1)
+         round(avg(r.price), 1), round(avg(r.difficulty), 1), round(avg(r.pace), 1)
   from course_ratings r
   where r.course_key = any (p_keys[1:100])
   group by r.course_key;
