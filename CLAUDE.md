@@ -427,7 +427,7 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   entry and `settle()` gives the fewest payments (individuals only; teams
   just see amounts); a fixed purse has no settle-up. Every format except
   match play (so not Ryder Cups or match-play leagues). Set when creating or
-  editing a tournament/league (LeagueBuilder "5. Payouts" ->
+  editing a tournament/league (LeagueBuilder step "3. Payouts", right after scoring ->
   `leagues.settings.payouts`), or later by the commissioner on the
   tournament leaderboard / league Standings (`SavedPayoutsEditor`).
   Tournament: from overall standings, "If it ended now" until every planned

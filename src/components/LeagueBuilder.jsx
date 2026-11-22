@@ -34,6 +34,8 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
   const [error, setError] = useState('');
 
   const set = (patch) => setS((prev) => normalizeSettings({ ...prev, ...patch }));
+  // Payouts (step 3) only for formats with a finishing order, not match play.
+  const step = (n) => (s.scoring !== 'match' ? n + 1 : n);
   const setH = (patch) => setS((prev) => ({ ...prev, handicap: { ...prev.handicap, ...patch } }));
 
   async function save() {
@@ -157,9 +159,26 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
         )}
       </section>
 
+      {s.scoring !== 'match' && (
+        <section className="card side-games-edit">
+          <h2>3. Payouts</h2>
+          <p className="hint">
+            {isTournament
+              ? 'Pay the top places on the final leaderboard, e.g. top 3 of 8. You can change it later on the leaderboard.'
+              : 'Pay the top places in the season standings. You can change it later on Standings. Each round can also have its own payouts (round → Manage).'}
+          </p>
+          <PayoutsEditor
+            title="Payouts by place"
+            cfg={normalizePayouts(s.payouts)}
+            entrants={s.fieldSize && s.season === 'points' ? s.fieldSize : 0}
+            onChange={(payouts) => setS((prev) => ({ ...prev, payouts }))}
+          />
+        </section>
+      )}
+
       {isTournament ? (
         <section className="card">
-          <h2>3. Rounds</h2>
+          <h2>{step(3)}. Rounds</h2>
           <div className="count-row first">
             <div>
               <strong>How many rounds?</strong>
@@ -184,7 +203,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
         </section>
       ) : (
       <section className="card">
-        <h2>3. Season</h2>
+        <h2>{step(3)}. Season</h2>
         <OptionCards
           value={s.season}
           options={SEASONS}
@@ -223,7 +242,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
       )}
 
       <section className="card">
-        <h2>4. Handicaps</h2>
+        <h2>{step(4)}. Handicaps</h2>
         {!s.net && <p className="hint">Gross scoring ignores handicaps, but they&apos;re kept for later.</p>}
         <OptionCards
           value={s.handicap.mode}
@@ -286,23 +305,6 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
           />
         )}
       </section>
-
-      {s.scoring !== 'match' && (
-        <section className="card side-games-edit">
-          <h2>5. Payouts</h2>
-          <p className="hint">
-            {isTournament
-              ? 'Pay the top places on the final leaderboard, e.g. top 3 of 8. You can change it later on the leaderboard.'
-              : 'Pay the top places in the season standings. You can change it later on Standings. Each round can also have its own payouts (round → Manage).'}
-          </p>
-          <PayoutsEditor
-            title="Payouts by place"
-            cfg={normalizePayouts(s.payouts)}
-            entrants={s.fieldSize && s.season === 'points' ? s.fieldSize : 0}
-            onChange={(payouts) => setS((prev) => ({ ...prev, payouts }))}
-          />
-        </section>
-      )}
 
       {error && <div className="card error-box">{error}</div>}
       <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
