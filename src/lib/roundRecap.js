@@ -94,6 +94,17 @@ export function casualRecapFacts(round, computed, gameTitle) {
 // "oga-<id>" and built-in "sc-…"); hand-typed courses have phone-only ids.
 export const rateableKey = (key) => (typeof key === 'string' && /^(oga|sc)-/.test(key) ? key : null);
 
+// Rounds saved without a course id (league rounds made before ratings):
+// find the shared id by exact name. candidates: [{ key, name }]. Only a
+// single exact match counts, so two courses with the same name stay unrated.
+export function matchCourseKey(name, candidates) {
+  const norm = (x) => String(x ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const n = norm(name);
+  if (!n) return null;
+  const hits = candidates.filter((c) => rateableKey(c.key) && norm(c.name) === n);
+  return hits.length === 1 ? hits[0].key : null;
+}
+
 export const RATING_CATEGORIES = [
   { key: 'conditions', label: 'Conditions', hint: 'Greens, fairways, bunkers' },
   { key: 'layout', label: 'Layout', hint: 'Fun, variety, scenery' },

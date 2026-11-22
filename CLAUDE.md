@@ -266,7 +266,9 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   file), Secrets -> ANTHROPIC_API_KEY.
 - Ratings (`course_ratings`, one per golfer per course, re-rating replaces)
   only for shared course ids (`oga-<id>`, built-in `sc-…`); league round
-  snapshots now keep `course.key` (older rounds have none, so no prompt).
+  snapshots now keep `course.key`; older rounds without one find it by
+  exact name (`resolveCourseKey`: built-in courses, then course search; only
+  a single exact match counts).
   Members read only their own rows; averages come from
   `course_rating_summary(keys)`. Overall stars = conditions/layout/price
   (difficulty shown, not averaged in). Shown as "★ 4.3 (12)" in course

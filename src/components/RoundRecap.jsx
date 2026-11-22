@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { requestRecap, rateCourse, myCourseRating } from '../lib/courseRatings.js';
+import { requestRecap, rateCourse, myCourseRating, resolveCourseKey } from '../lib/courseRatings.js';
 import { RATING_CATEGORIES, rateableKey } from '../lib/roundRecap.js';
 
 // The AI round recap card. Writes itself once when shown (if there's no saved
@@ -131,11 +131,23 @@ export function Stars({ value, onChange, label, size = 'big' }) {
 
 // "Rate the course": 1-5 stars on conditions, layout, price, difficulty.
 // course: { key, name }. Shows nothing for hand-typed courses (no shared id).
+// Rounds saved without a key find it by exact name (built-in, then search).
 export function RateCourse({ course, rated, onRated }) {
-  const key = rateableKey(course?.key);
+  // Rounds saved without a course id look it up by name.
+  const [key, setKey] = useState(() => rateableKey(course?.key));
   const [stars, setStars] = useState({});
   const [status, setStatus] = useState(rated ? 'done' : 'idle'); // idle | saving | done | error
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (key || !course?.name) return;
+    let live = true;
+    resolveCourseKey(course).then((k) => live && k && setKey(k));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.key, course?.name]);
 
   useEffect(() => {
     if (!key) return;

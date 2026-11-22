@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { playerStats, recapFacts, casualRecapFacts, rateableKey, overallStars } from './roundRecap.js';
+import { playerStats, recapFacts, casualRecapFacts, rateableKey, overallStars, matchCourseKey } from './roundRecap.js';
 import { PARS, HCPS, parCard } from './games/test-helpers.js';
 import { computeRound } from './games/round.js';
 
@@ -49,5 +49,18 @@ describe('round recap facts', () => {
     expect(rateableKey('k3j2h')).toBe(null);
     expect(overallStars({ conditions: 4, layout: 5, price: 3, difficulty: 1 })).toBe(4);
     expect(overallStars(null)).toBe(null);
+  });
+
+  it('finds a course id by exact name for rounds saved without one', () => {
+    const list = [
+      { key: 'sc-steele-canyon-ranch', name: 'Steele Canyon Golf Club Canyon/Ranch' },
+      { key: 'oga-7', name: 'Oak Hills' },
+      { key: 'oga-8', name: 'Oak Hills' },
+      { key: 'local1', name: 'Backyard' },
+    ];
+    expect(matchCourseKey('steele canyon golf club canyon / ranch', list)).toBe('sc-steele-canyon-ranch');
+    expect(matchCourseKey('Oak Hills', list)).toBe(null); // two matches: unsure
+    expect(matchCourseKey('Backyard', list)).toBe(null); // not a shared id
+    expect(matchCourseKey('', list)).toBe(null);
   });
 });

@@ -1,7 +1,24 @@
 // The only code touching course ratings and the AI round recap
 // (supabase/course_ratings.sql, supabase/functions/round-recap).
 import { supabase } from './supabase.js';
-import { rateableKey } from './roundRecap.js';
+import { rateableKey, matchCourseKey } from './roundRecap.js';
+import { BUILTIN_COURSES } from './builtinCourses.js';
+import { searchCourses } from './courseSearch.js';
+
+// A course's shared id for ratings: its own key, else an exact name match in
+// the built-in courses, else in the course search. null when unsure.
+export async function resolveCourseKey(course) {
+  if (rateableKey(course?.key)) return course.key;
+  if (!course?.name) return null;
+  const builtin = matchCourseKey(course.name, BUILTIN_COURSES.map((c) => ({ key: c.id, name: c.name })));
+  if (builtin) return builtin;
+  try {
+    const found = await searchCourses(course.name);
+    return matchCourseKey(course.name, found.filter((c) => !c.similar).map((c) => ({ key: `oga-${c.id}`, name: c.name })));
+  } catch {
+    return null;
+  }
+}
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
