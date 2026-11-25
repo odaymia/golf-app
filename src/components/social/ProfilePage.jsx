@@ -131,7 +131,7 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
         )}
         <h1>
           {profile?.isPrivate && <span className="lock-mark" aria-label="Private account">🔒 </span>}
-          {profile?.username ? `@${profile.username}` : 'Profile'}
+          {profile?.username ? `@${profile.username}` : mine ? 'Profile' : profile?.displayName || 'Profile'}
         </h1>
         {mine ? (
           <span className="topbar-actions">
@@ -160,7 +160,7 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
       {profile && !mine && blocks.iBlocked && (
         <section className="card center">
           <p>
-            You blocked <strong>@{profile.username}</strong>.
+            You blocked <strong>{profile.username ? `@${profile.username}` : profile.displayName}</strong>.
           </p>
           <button className="btn btn-ghost outline" onClick={toggleBlock}>
             Unblock

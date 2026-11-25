@@ -77,7 +77,7 @@ export async function searchProfiles(q, meId, { withHomeCourse = false, limit = 
     supabase
       .from('public_profiles')
       .select('*')
-      .not('username', 'is', null)
+      // Everyone with a name is findable, username or not (supabase/profile_search.sql).
       .or(cols.map((c) => like(c, term)).join(','))
       .limit(limit),
   );
@@ -85,7 +85,7 @@ export async function searchProfiles(q, meId, { withHomeCourse = false, limit = 
   const t = term.toLowerCase();
   const byName = (r) => `${r.username ?? ''} ${r.display_name ?? ''}`.toLowerCase().includes(t);
   return rows
-    .filter((r) => r.id !== meId && !hidden.has(r.id))
+    .filter((r) => r.id !== meId && !hidden.has(r.id) && (r.username || r.display_name))
     .sort((a, b) => Number(byName(b)) - Number(byName(a)))
     .map((r) => ({ ...toProfile(r), matchedBy: byName(r) ? 'name' : 'home course' }));
 }

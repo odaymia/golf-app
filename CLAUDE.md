@@ -196,6 +196,7 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
+supabase/profile_search.sql  public_profiles row for every named member (+ name sync trigger)
 supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
                     log_event(), am_i_admin(), admin_stats(), admin_users()
                     (owner dashboard)
@@ -654,6 +655,11 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Location pages: posts tagged with a searched course share its
   `oga-<id>` key, so `CoursePage` gathers everyone's photos of that course.
 - A username is required before using social; the profile page asks.
+  Everyone with a name is still findable without one: supabase/profile_search.sql
+  gives every golf profile a `public_profiles` row (display name only, kept
+  filled by a trigger on `profiles.name`), and `searchProfiles` no longer
+  requires a username (so search, Add player and Add Scribble members find
+  golf-only members; @mentions still need a username).
 - Home course (golf profile and account Settings) uses `HomeCoursePicker`:
   the same course search as rounds/tags, saved with its course key
   (`public_profiles.home_course_key/place`, supabase/home_course.sql) so it

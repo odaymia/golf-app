@@ -211,7 +211,7 @@ function ProfileResults({ q, meId, go }) {
                   {p.teaches && <span className="mini-badge">{p.teaches.verified ? '✓ Instructor' : 'Instructor'}</span>}
                 </strong>
                 <em>
-                  {p.displayName}
+                  {p.username ? p.displayName : ''}
                   {p.matchedBy === 'home course' && p.homeCourse ? ` · ⛳ ${p.homeCourse}` : ''}
                 </em>
               </span>
