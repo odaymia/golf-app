@@ -46,9 +46,24 @@ export function buildContext(round) {
   };
 }
 
+// Only holes from..to (1-based) of a round, keeping each player's strokes
+// from the full-round allocation (a 6-hole stretch still gets the strokes
+// those holes get over 18).
+export function sliceContext(ctx, from, to) {
+  const cut = (arr) => (arr ?? []).slice(from - 1, to);
+  return {
+    ...ctx,
+    holes: cut(ctx.holes),
+    gross: Object.fromEntries(Object.entries(ctx.gross).map(([id, g]) => [id, cut(g)])),
+    strokes: Object.fromEntries(Object.entries(ctx.strokes).map(([id, st]) => [id, cut(st)])),
+  };
+}
+
 // Everything the UI needs: strokes, each game's result, totals, payments.
-export function computeRound(round) {
-  const ctx = buildContext(round);
+// range (optional): { from, to } to play the games on those holes only.
+export function computeRound(round, range = null) {
+  const full = buildContext(round);
+  const ctx = range ? sliceContext(full, range.from, range.to) : full;
   const ids = round.players.map((p) => p.id);
   const totals = emptyBalances(ids);
   const games = round.games.map((game) => {
@@ -61,9 +76,7 @@ export function computeRound(round) {
     addBalances(totals, result.balances);
     return { game, ...result };
   });
-  const holesComplete = round.course.holes.filter((_, h) =>
-    ids.every((id) => round.scores[id]?.[h] != null),
-  ).length;
+  const holesComplete = ctx.holes.filter((_, h) => ids.every((id) => ctx.gross[id]?.[h] != null)).length;
   return {
     playing: ctx.playing,
     strokes: ctx.strokes,
@@ -71,6 +84,6 @@ export function computeRound(round) {
     totals,
     payments: settle(totals, ids),
     holesComplete,
-    finished: holesComplete === round.course.holes.length,
+    finished: holesComplete === ctx.holes.length,
   };
 }

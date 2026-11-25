@@ -41,7 +41,7 @@ export function SideGamesEditor({ event, members, busy, onSave, payouts = false 
   return (
     <section className="card side-games-edit">
       <h3>{payouts ? 'Side games & payouts' : 'Side games'}</h3>
-      <p className="hint">Bets across the whole field, settled automatically. Each group still scores on its own phone.</p>
+      <p className="hint">Side games across the whole field, settled automatically. Each group still scores on its own phone.</p>
       {['skins', 'stableford', 'stroke'].map((type) => {
         const g = sg[type];
         return (

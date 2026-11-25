@@ -83,7 +83,7 @@ export const GAME_INFO = {
   nassau: {
     name: 'Nassau',
     rules:
-      'Three match-play bets: front 9, back 9, and all 18. Win more holes than the other side to win each bet. A press is a new bet that starts mid-nine; auto-press starts one whenever the latest bet goes 2 down.',
+      'Three matches: front 9, back 9, and all 18. Win more holes than the other side to win each one. A press is a new match that starts mid-nine; auto-press starts one whenever the latest match goes 2 down.',
   },
   skins: {
     name: 'Skins',

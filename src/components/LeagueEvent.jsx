@@ -18,6 +18,7 @@ import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
 import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
+import FoursomeGames from './FoursomeGames.jsx';
 import { matchSummary } from '../lib/games/match.js';
 import { recapFacts } from '../lib/roundRecap.js';
 import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
@@ -279,6 +280,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   });
   const [status, setStatus] = useState('');
   const [review, setReview] = useState(false); // end-of-round scorecard
+  const [sideGames, setSideGames] = useState(false); // the foursome's own side games
   const keypad = useKeypad(hole); // the score box the keypad types into
   // This hole's scores as they were when it opened, for Undo changes.
   const snap = useRef({ hole: null, values: {} });
@@ -530,6 +532,19 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     else setReview(true);
   };
 
+  if (sideGames) {
+    return (
+      <FoursomeGames
+        event={event}
+        players={people.map((p) => ({ id: p.id, name: p.name, index: indexes?.[p.id] ?? p.index ?? 0 }))}
+        scores={Object.fromEntries(people.map((p) => [p.id, holes.map((_, i) => cards[p.id]?.[i] ?? scored[p.id]?.[i] ?? null)]))}
+        indexes={indexes ?? {}}
+        handicap={settings.handicap ?? {}}
+        onBack={() => setSideGames(false)}
+      />
+    );
+  }
+
   if (review) {
     return (
       <RoundReview
@@ -646,6 +661,16 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
         )}
         <button className="btn btn-ghost" onClick={() => setReview(true)}>
           Card
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={async () => {
+            kp.close();
+            await flush();
+            setSideGames(true);
+          }}
+        >
+          Side games
         </button>
         {!kp.open && (
           <button className="btn btn-primary" onClick={save} disabled={!holeDone}>

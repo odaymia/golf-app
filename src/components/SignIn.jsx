@@ -59,7 +59,7 @@ export default function SignIn() {
         <h1 className="brand">
           <img className="brand-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
         </h1>
-        <p>Score the round. Settle the bets.</p>
+        <p>Score the round. Settle up.</p>
       </header>
 
       {step === 'password' ? (

@@ -205,6 +205,7 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
+supabase/foursome_games.sql  group_side_games (each foursome's own side games) + can_edit_group_games()
 supabase/watchers.sql  league_members.plays, role 'viewer', watch_league(), stop_watching(),
                     join_league upgrade, can_score refuses viewers/non-players
 supabase/profile_search.sql  public_profiles row for every named member (+ name sync trigger)
@@ -526,6 +527,19 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   so the same zero-sum, integer-cents rules apply; a hole counts once
   everyone in has finished it.
 
+- Foursome side games (league/tournament rounds; `lib/league/foursomeGames.js`,
+  tested; UI `FoursomeGames.jsx` from the **Side games** button next to Card
+  on Enter scores; supabase/foursome_games.sql `group_side_games`, one row
+  per round + foursome key = sorted member ids; anyone in the group or a
+  commissioner can edit, viewers can't, league members can read): the
+  group adds sets of casual games, each with its own holes (all, a split
+  stretch like "1–6 Scramble", "7–18" after a one-ball stretch, or any
+  from/to) and players, picked with the shared `GamePicker` (casual setup's
+  games list, extracted from Setup). Played off the round's scores via
+  `computeRound(round, { from, to })` (strokes from the full 18;
+  `sliceContext`), money summed across sets with fewest payments; Nassau
+  only on all 18; casual split matches off inside a stretch. Not part of
+  the leaderboard. Words: "side games", never "bet"/"wager" (App Store).
 - Payouts by place (`league/payouts.js`, tested; UI `Payouts.jsx`): purse =
   entry x entrants, or a fixed purse; percent per place (presets winner /
   60-40 / 50-30-20 / 40-30-20-10 / 35-25-18-13-9, or custom; scaled to pay

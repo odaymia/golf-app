@@ -495,3 +495,19 @@ export function respondLeagueInvite(leagueId, accept) {
 export function respondRound(eventId, playing) {
   return call(supabase.rpc('respond_round', { p_event: eventId, p_in: playing }));
 }
+
+// --- Foursome side games (supabase/foursome_games.sql) -------------------------
+
+// { sets } for one group in a round, or [] when none / not set up yet.
+export async function loadGroupGames(eventId, groupKey) {
+  const { data, error } = await supabase.from('group_side_games').select('sets, updated_at').eq('event_id', eventId).eq('group_key', groupKey).maybeSingle();
+  if (error) {
+    if (/group_side_games/.test(error.message)) throw new Error('Side games aren’t set up yet (run supabase/foursome_games.sql).');
+    throw new Error(error.message);
+  }
+  return data?.sets ?? [];
+}
+
+export function saveGroupGames(eventId, groupKey, sets) {
+  return call(supabase.from('group_side_games').upsert({ event_id: eventId, group_key: groupKey, sets }, { onConflict: 'event_id,group_key' }));
+}

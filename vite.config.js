@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
       manifest: {
         name: 'Scribble Golf Club',
         short_name: 'Scribble',
-        description: 'Score your round and settle your bets.',
+        description: 'Score your round and settle up your side games.',
         theme_color: '#065025',
         background_color: '#f6f7f2',
         display: 'standalone',
