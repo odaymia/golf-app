@@ -7,6 +7,8 @@
 -- read everything members can, can't score or change anything.
 
 alter table public.league_members add column if not exists plays boolean not null default true;
+-- Members may read it (league_pro.sql only allows reading listed columns).
+grant select (plays) on public.league_members to authenticated;
 
 alter table public.league_members drop constraint if exists league_members_role_check;
 alter table public.league_members add constraint league_members_role_check
