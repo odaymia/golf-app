@@ -187,11 +187,17 @@ export async function loadLeague(id) {
       supabase.from('score_entries').select('event_id, member_id, scorer_id, gross').eq('league_id', id),
     ).catch(() => []);
     const everyone = members.map(toMember);
+    // Anyone already in a match or with a score card is playing, whatever
+    // their switch says (so the scoring never loses a player).
+    const inPlay = new Set([
+      ...events.flatMap((e) => (e.matchups ?? []).flatMap((mu) => (mu.sides ?? []).flat())),
+      ...scores.map((s) => s.member_id),
+    ]);
     const data = {
       league: toLeague(league),
       // members = players only (standings, groups, matches, cards); people =
       // everyone in it, including organizers not playing and viewers.
-      members: everyone.filter((m) => m.plays),
+      members: everyone.filter((m) => m.plays || inPlay.has(m.id)),
       people: everyone,
       events: events.map(toEvent),
       scores: {},

@@ -299,6 +299,9 @@ describe('match play events', () => {
     const worth = (event) => computeEvent({ settings: settings({ unit: 'ryder', scoring: 'match' }), event: { course, ...event }, members, scores: { a: card({ 1: 3 }), b: card(), c: card(), d: card({ 2: 3 }) } }).cup;
     expect(worth({ matchPoints: 2, matchups: [{ sides: [['a'], ['c']] }, { sides: [['a', 'b'], ['c', 'd']] }] })).toEqual({ USA: 3, Europe: 1 });
     expect(worth({ matchups: [{ sides: [['a'], ['c']], points: 3 }, { sides: [['b'], ['d']] }] })).toEqual({ USA: 3, Europe: 1 });
+
+    // A match naming someone not in the field is skipped, not a crash.
+    expect(worth({ matchups: [{ sides: [['a'], ['zz']] }, { sides: [['b'], ['d']] }] })).toEqual({ USA: 0, Europe: 1 });
   });
 });
 

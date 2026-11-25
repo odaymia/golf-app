@@ -83,7 +83,11 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
   const result = { players, board: [], matches: [], points: {}, values: {}, records: {}, cup: {} };
 
   if (settings.scoring === 'match') {
-    result.matches = (event.matchups ?? []).map((mu) => ({ ...scoreMatch(settings, members, players, holes, mu), points: matchPoints(mu, event) }));
+    // A match naming someone who isn't in the field (removed, or not
+    // playing) is skipped rather than breaking the whole round.
+    result.matches = (event.matchups ?? [])
+      .filter((mu) => (mu.sides ?? []).length === 2 && mu.sides.every((side) => side.length && side.every((id) => players[id])))
+      .map((mu) => ({ ...scoreMatch(settings, members, players, holes, mu), points: matchPoints(mu, event) }));
     for (const m of result.matches) {
       if (settings.unit === 'ryder') {
         // Each match is worth m.points (1 unless the round says more); a halve splits it.

@@ -638,7 +638,13 @@ function NotPlaying({ data, me, isAdmin, reload }) {
             aria-label="I'm playing in this"
             disabled={busy}
             className={`switch ${me.plays ? 'on' : ''}`}
-            onClick={() => act(() => setPlaying(data.league.id, me.userId, !me.plays))}
+            onClick={() => {
+              const inMatch = data.events.some((e) => (e.matchups ?? []).some((mu) => (mu.sides ?? []).flat().includes(me.id)));
+              const scored = data.events.some((e) => data.scores[e.id]?.[me.id]);
+              if (me.plays && (inMatch || scored))
+                return setError(inMatch ? 'You’re in a match. Take yourself out of the matches first, then turn this off.' : 'You already have scores in this, so you stay in the field.');
+              act(() => setPlaying(data.league.id, me.userId, !me.plays));
+            }}
           >
             <span />
           </button>

@@ -87,6 +87,8 @@ Actions). A failing test blocks the deploy.
   `structuredClone` when missing. CSS: don't put `:has()` in a selector list
   with other selectors (an unsupported selector drops the whole rule); give
   container-query units (`cqw`) a fallback.
+- Crashes: `ErrorBoundary` (main.jsx) shows Reload / Go to home screen
+  (which clears the reopen place) instead of a blank page.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
   version whenever the app returns to the foreground (iPhone home-screen apps
   resume rather than relaunch) and every 30 min. An update reloads the page;
@@ -341,7 +343,9 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   Enter scores tab; "Stop watching" (`stop_watching()`); joining as a
   player later upgrades the spot. `loadLeague` gives `data.members` =
   players only (standings, groups, cards) and `data.people` = everyone; `me`
-  comes from people. A non-playing commissioner's Enter scores opens the
+  comes from people; anyone in a match or with a score card counts as a
+  player whatever their switch says (and the switch won't turn off then);
+  computeEvent skips a match naming someone not in the field. A non-playing commissioner's Enter scores opens the
   any-group picker. Home leagues list shows Watching / Organizer badges;
   home Tee off/RSVP cards skip non-playing spots.
 - Every player needs a Scribble account (supabase/league_pro.sql). The
