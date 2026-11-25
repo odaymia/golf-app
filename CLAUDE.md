@@ -471,7 +471,9 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   Results): green hole bar (‹ prev / Hole n, par, stroke index,
   tee / next ›), slim hole dots, then one row per player: name (playing
   handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
-  and the running total (points, or to par). Tapping a score box opens a
+  and the running total (points, or to par). Rows keep teammates together
+  (Ryder Cup: first side then second; else by side in their match, then
+  team), in paired order. Tapping a score box opens a
   keypad fixed at the bottom (1–9, Clear, 0, ✕ to hide; Undo changes /
   Save scores) and scrolls that row above it; the
   active score box shows a cursor, a digit enters it and moves to the next

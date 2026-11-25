@@ -435,7 +435,22 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   }
 
   const info = holes[hole - 1];
-  const people = data.members.filter((m) => picked.includes(m.id));
+  // Teammates together: first team's players, then the other team's (Ryder
+  // Cup by side, else by side in their match, then team name), keeping the
+  // order they were paired in.
+  const sidePos = new Map();
+  result.matches.forEach((m) => m.sides.forEach((side, s) => side.forEach((id, k) => sidePos.has(id) || sidePos.set(id, [s, k]))));
+  const teamList = settings.unit === 'ryder' ? settings.sides : [...new Set(data.members.map((m) => m.team).filter(Boolean))].sort();
+  const teamRank = (p) => {
+    const t = teamList.indexOf(p.team);
+    if (settings.unit === 'ryder' && t >= 0) return t;
+    return sidePos.get(p.id)?.[0] ?? (t >= 0 ? t : teamList.length);
+  };
+  const people = data.members
+    .filter((m) => picked.includes(m.id))
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => teamRank(a.m) - teamRank(b.m) || (sidePos.get(a.m.id)?.[1] ?? 9) - (sidePos.get(b.m.id)?.[1] ?? 9) || a.i - b.i)
+    .map((x) => x.m);
   // Rows to score: one per player, or one per team in one-ball formats.
   const rows = [];
   const seen = new Set();
