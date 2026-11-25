@@ -2,6 +2,7 @@
 // The last copy of each league is cached on the phone, and scores entered
 // with no signal wait in a queue until they can be sent.
 import { supabase } from './supabase.js';
+import { formatPoints, formatWithPoints } from './league/ryder.js';
 
 const CACHE = 'golf-app:league:';
 const QUEUE = 'golf-app:score-queue';
@@ -76,7 +77,9 @@ const toEvent = (r) => ({
   groups: r.groups ?? [],
   teeSheet: r.tee_sheet ?? null,
   sideGames: r.side_games ?? null,
-  matchFormat: r.match_format ?? null,
+  // "fourball@2" = 2 points per match (league/ryder.js formatPoints).
+  matchFormat: formatPoints(r.match_format).format,
+  matchPoints: formatPoints(r.match_format).points,
   status: r.status,
   tier: r.tier ?? 'regular',
   rsvp: r.rsvp ?? {}, // { memberId: true (in) | false (can't make it) }
@@ -283,7 +286,7 @@ export function updateEvent(id, patch) {
   if ('groups' in patch) row.groups = patch.groups;
   if ('teeSheet' in patch) row.tee_sheet = patch.teeSheet;
   if ('sideGames' in patch) row.side_games = patch.sideGames;
-  if ('matchFormat' in patch) row.match_format = patch.matchFormat;
+  if ('matchFormat' in patch) row.match_format = formatWithPoints(patch.matchFormat, patch.matchPoints);
   return call(supabase.from('league_events').update(row).eq('id', id));
 }
 

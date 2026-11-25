@@ -294,6 +294,11 @@ describe('match play events', () => {
     });
     // a beats c, d beats b, four-ball: a's birdie on 1 vs d's on 2 -> halved
     expect(r.cup).toEqual({ USA: 1.5, Europe: 1.5 });
+
+    // Worth more: the round's points per match, or a match's own points.
+    const worth = (event) => computeEvent({ settings: settings({ unit: 'ryder', scoring: 'match' }), event: { course, ...event }, members, scores: { a: card({ 1: 3 }), b: card(), c: card(), d: card({ 2: 3 }) } }).cup;
+    expect(worth({ matchPoints: 2, matchups: [{ sides: [['a'], ['c']] }, { sides: [['a', 'b'], ['c', 'd']] }] })).toEqual({ USA: 3, Europe: 1 });
+    expect(worth({ matchups: [{ sides: [['a'], ['c']], points: 3 }, { sides: [['b'], ['d']] }] })).toEqual({ USA: 3, Europe: 1 });
   });
 });
 

@@ -65,7 +65,7 @@ describe('scorekeeper discrepancies', () => {
   });
 });
 
-import { defaultSplit, isSplit, parseSplit, resplitMatchups, splitMatchups, splitProblem, splitText } from './ryder.js';
+import { defaultSplit, formatPoints, formatWithPoints, isSplit, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from './ryder.js';
 
 describe('split rounds', () => {
   it('saves and reads the plan', () => {
@@ -79,7 +79,7 @@ describe('split rounds', () => {
     expect(text).toBe('split:1-6:scramble|7-12:fourball|13-18:singles');
     expect(isSplit(text)).toBe(true);
     expect(isSplit('fourball')).toBe(false);
-    expect(parseSplit(text)).toEqual(segs);
+    expect(parseSplit(text)).toEqual(segs.map((x) => ({ ...x, points: 1 })));
     expect(parseSplit('split:', 9)).toEqual(defaultSplit(9));
   });
 
@@ -93,10 +93,10 @@ describe('split rounds', () => {
   it('makes one match per stretch, two for singles, all in one foursome', () => {
     const mus = splitMatchups(['a1', 'a2'], ['b1', 'b2'], defaultSplit(18), 7);
     expect(mus).toEqual([
-      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'scramble', holes: [1, 6], set: 7 },
-      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'fourball', holes: [7, 12], set: 7 },
-      { sides: [['a1'], ['b1']], format: 'singles', holes: [13, 18], set: 7 },
-      { sides: [['a2'], ['b2']], format: 'singles', holes: [13, 18], set: 7 },
+      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'scramble', holes: [1, 6], set: 7, points: 1 },
+      { sides: [['a1', 'a2'], ['b1', 'b2']], format: 'fourball', holes: [7, 12], set: 7, points: 1 },
+      { sides: [['a1'], ['b1']], format: 'singles', holes: [13, 18], set: 7, points: 1 },
+      { sides: [['a2'], ['b2']], format: 'singles', holes: [13, 18], set: 7, points: 1 },
     ]);
     expect(foursomesForMatches(mus)).toEqual([['a1', 'a2', 'b1', 'b2']]);
     // a split foursome next to ordinary singles matches
@@ -131,5 +131,31 @@ describe('changing a split round with matches', () => {
     const old = splitMatchups(['a1', 'a2'], ['b1', 'b2'], [{ from: 1, to: 9, format: 'scramble' }, { from: 10, to: 18, format: 'fourball' }], 'x');
     const out = resplitMatchups(old, defaultSplit(18));
     expect(out.filter((mu) => mu.format === 'singles').map((mu) => mu.sides)).toEqual([[['a1'], ['b1']], [['a2'], ['b2']]]);
+  });
+});
+
+describe('points per match', () => {
+  it('saves points per stretch in the split text', () => {
+    const segs = [
+      { from: 1, to: 6, format: 'scramble', points: 1 },
+      { from: 7, to: 12, format: 'fourball', points: 2 },
+      { from: 13, to: 18, format: 'singles', points: 3 },
+    ];
+    const text = splitText(segs);
+    expect(text).toBe('split:1-6:scramble|7-12:fourball:2|13-18:singles:3');
+    expect(parseSplit(text)).toEqual(segs);
+    expect(roundFormatText(text)).toBe('1–6 Scramble · 7–12 Four-ball (2 pts) · 13–18 Singles (3 pts)');
+    const mus = splitMatchups(['a1', 'a2'], ['b1', 'b2'], segs, 1);
+    expect(mus.map((mu) => mu.points)).toEqual([1, 2, 3, 3]);
+  });
+
+  it('saves points per match for a whole round on its format', () => {
+    expect(formatWithPoints('fourball', 2)).toBe('fourball@2');
+    expect(formatWithPoints('fourball', 1)).toBe('fourball');
+    expect(formatWithPoints('split:1-9:fourball|10-18:singles', 2)).toBe('split:1-9:fourball|10-18:singles');
+    expect(formatPoints('fourball@2')).toEqual({ format: 'fourball', points: 2 });
+    expect(formatPoints('singles')).toEqual({ format: 'singles', points: 1 });
+    expect(formatPoints(null)).toEqual({ format: null, points: 1 });
+    expect(formatPoints('split:1-9:fourball:2|10-18:singles')).toEqual({ format: 'split:1-9:fourball:2|10-18:singles', points: 1 });
   });
 });

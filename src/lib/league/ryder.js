@@ -43,6 +43,7 @@ export const sideSize = (format) => (format === 'singles' ? 1 : 2);
 // Split round: one foursome plays different formats over different holes,
 // each stretch its own match and point. Saved as the round's format text:
 //   "split:1-6:scramble|7-12:fourball|13-18:singles"
+// A stretch worth more than 1 point adds it: "13-18:singles:2".
 export const isSplit = (format) => typeof format === 'string' && format.startsWith('split');
 
 export function defaultSplit(n = 18) {
@@ -62,9 +63,9 @@ export function parseSplit(text, n = 18) {
     .slice('split:'.length)
     .split('|')
     .map((part) => {
-      const [range, format] = part.split(':');
+      const [range, format, pts] = part.split(':');
       const [from, to] = range.split('-').map(Number);
-      return { from, to, format };
+      return { from, to, format, points: Number(pts) > 0 ? Number(pts) : 1 };
     })
     .filter((x) => Number.isInteger(x.from) && Number.isInteger(x.to) && x.format);
   return segs.length ? segs : defaultSplit(n);
@@ -74,7 +75,7 @@ export function parseSplit(text, n = 18) {
 export const roundFormatText = (format, n = 18) =>
   isSplit(format)
     ? parseSplit(format, n)
-        .map((x) => `${x.from}–${x.to} ${MATCH_FORMATS[x.format]?.short ?? x.format}`)
+        .map((x) => `${x.from}–${x.to} ${MATCH_FORMATS[x.format]?.short ?? x.format}${x.points > 1 ? ` (${x.points} pts)` : ''}`)
         .join(' · ')
     : (MATCH_FORMATS[format]?.short ?? '');
 
@@ -85,7 +86,17 @@ export const matchLabel = (m, long = false) => {
   return m.range ? `Holes ${m.range[0] + 1}–${m.range[1] + 1} · ${f?.short}` : word;
 };
 
-export const splitText = (segs) => `split:${segs.map((x) => `${x.from}-${x.to}:${x.format}`).join('|')}`;
+export const splitText = (segs) =>
+  `split:${segs.map((x) => `${x.from}-${x.to}:${x.format}${x.points > 1 ? `:${x.points}` : ''}`).join('|')}`;
+
+// Points per match for a whole (not split) round ride on its format text:
+// "fourball@2". Split rounds keep points per stretch instead.
+export function formatPoints(text) {
+  if (typeof text !== 'string' || isSplit(text) || !text.includes('@')) return { format: text ?? null, points: 1 };
+  const [format, p] = text.split('@');
+  return { format, points: Number(p) > 0 ? Number(p) : 1 };
+}
+export const formatWithPoints = (format, points) => (format && !isSplit(format) && points > 1 ? `${format}@${points}` : format);
 
 // Problems with a plan, or null: stretches in order, no gaps or overlaps,
 // covering holes 1..n.
@@ -106,8 +117,8 @@ export function splitProblem(segs, n = 18) {
 export function splitMatchups(a, b, segs, set) {
   return segs.flatMap((x) =>
     x.format === 'singles'
-      ? [0, 1].map((k) => ({ sides: [[a[k]], [b[k]]], format: 'singles', holes: [x.from, x.to], set }))
-      : [{ sides: [a, b], format: x.format, holes: [x.from, x.to], set }],
+      ? [0, 1].map((k) => ({ sides: [[a[k]], [b[k]]], format: 'singles', holes: [x.from, x.to], set, points: x.points ?? 1 }))
+      : [{ sides: [a, b], format: x.format, holes: [x.from, x.to], set, points: x.points ?? 1 }],
   );
 }
 

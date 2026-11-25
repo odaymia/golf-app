@@ -80,8 +80,9 @@ function ryderStandings(settings, events, results) {
         if (m.result || m.status.played === 0) continue;
         const i = m.keys.indexOf(side);
         if (i < 0) continue;
-        if (m.status.up === 0) onCourse += 0.5;
-        else if ((m.status.up > 0 ? 0 : 1) === i) onCourse += 1;
+        const worth = m.points ?? 1;
+        if (m.status.up === 0) onCourse += worth / 2;
+        else if ((m.status.up > 0 ? 0 : 1) === i) onCourse += worth;
       }
     }
     const total = rounds.reduce((s, x) => s + x, 0);

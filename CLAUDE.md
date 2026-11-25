@@ -320,7 +320,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   `majorMultiplier`x; `fieldSize` = players in the league sets one points
   row per place, from a preset (fedex/even) or custom) /
   cumulative (Stableford total, stroke lowest average) / record (W-L-T,
-  win 2 tie 1 by default) / ryder (win 1, halve ½).
+  win 2 tie 1 by default) / ryder (win 1, halve ½; or the round's / stretch's
+  points per match).
 - Stableford (`settings.stableford`, rules in `games/stableford.js`, UI in
   `components/StablefordScoring.jsx`, shared with casual rounds): points per result from a preset
   (standard 5/4/3/2/1/0, modified 8/5/2/0/-1/-3) or custom, applied to net or
@@ -405,7 +406,15 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   player per hole), in Ryder Cup setup → Rounds and in a team league
   round's Manage; switching between split and a single format still needs
   the matches cleared. Ryder Cup: Manage shows the plan and sends you to
-  Ryder Cup setup (Matches has a "Change formats" link to Rounds). Team leagues: Manage's format list has "Split round" with the
+  Ryder Cup setup (Matches has a "Change formats" link to Rounds).
+- Ryder Cup points per match (1-5, a halve splits it; `matchPoints` in
+  league/event.js): a split stretch's points live in the split text
+  ("13-18:singles:2", copied onto its matches as `mu.points`); a whole
+  round's "Points per match" rides on its format text ("fourball@2",
+  `formatPoints`/`formatWithPoints` in league/ryder.js, applied in
+  leagueApi toEvent/updateEvent, so `event.matchFormat` stays a clean
+  key and `event.matchPoints` holds the number). Cup totals, projections
+  and the match board's Pts use them. No schema change. Team leagues: Manage's format list has "Split round" with the
   same `SplitEditor` (shared component); Add match / Auto-pair make the
   stretches' matches, ✕ removes a foursome's whole set, and `teeGroups`
   keeps a set as one group. The editor has one-tap presets: Front 9 / back 9

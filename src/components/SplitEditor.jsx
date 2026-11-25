@@ -3,7 +3,10 @@ import { MATCH_FORMATS } from '../lib/league/event.js';
 // Stretches of holes for a split round: each one's last hole and format
 // (the next stretch starts on the following hole; the last ends on hole n).
 // formats: which formats a stretch may use (default: all match formats).
-// points: show what each stretch is worth (Ryder Cup).
+// Points a Ryder Cup match can be worth (a halve splits it).
+export const POINT_CHOICES = [1, 2, 3, 4, 5];
+
+// points: show and set what each stretch is worth (Ryder Cup).
 export default function SplitEditor({ segs, n, onChange, formats = Object.keys(MATCH_FORMATS), hint, points = false }) {
   const set = (i, patch) => {
     const next = segs.map((x, j) => (j === i ? { ...x, ...patch } : { ...x }));
@@ -16,7 +19,7 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
     const last = segs[segs.length - 1];
     if (last.to - last.from < 1) return;
     const mid = Math.floor((last.from + last.to) / 2);
-    onChange([...segs.slice(0, -1), { ...last, to: mid }, { from: mid + 1, to: n, format: 'singles' }]);
+    onChange([...segs.slice(0, -1), { ...last, to: mid }, { from: mid + 1, to: n, format: 'singles', points: 1 }]);
   };
   const remove = (i) => {
     const next = segs.filter((_, j) => j !== i).map((x) => ({ ...x }));
@@ -34,13 +37,14 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
         from: i * size + 1,
         to: i === parts - 1 ? n : (i + 1) * size,
         format: segs[i]?.format ?? segs[segs.length - 1].format,
+        points: segs[i]?.points ?? 1,
       })),
     );
   };
   const shape = (parts) => segs.length === parts && segs.every((x, i) => x.from === i * Math.floor(n / parts) + 1);
   return (
     <div className="split-editor">
-      <p className="hint">{hint ?? (points ? 'Pick a format for each stretch of holes. Each stretch is its own match worth 1 point; a singles stretch is two matches (first vs first, second vs second), 1 point each.' : 'Pick a format for each stretch of holes. Each stretch is its own match; a singles stretch is two matches (first vs first, second vs second).')}</p>
+      <p className="hint">{hint ?? (points ? 'Pick a format and points for each stretch of holes. Each stretch is its own match; a singles stretch is two matches (first vs first, second vs second). A halved match splits its points.' : 'Pick a format for each stretch of holes. Each stretch is its own match; a singles stretch is two matches (first vs first, second vs second).')}</p>
       {n >= 6 && (
         <div className="chips split-presets">
           <button className={`chip ${shape(2) ? 'on' : ''}`} onClick={() => preset(2)}>
@@ -68,7 +72,17 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
                 </select>
               )}
             </span>
-            <span className="split-points">{points ? (x.format === 'singles' ? '2 matches · 1 pt each' : '1 point') : ''}</span>
+            <span className="split-points">
+              {points && (
+                <select value={x.points ?? 1} onChange={(e) => set(i, { points: Number(e.target.value) })} aria-label={`Holes ${x.from}–${x.to} points`}>
+                  {POINT_CHOICES.map((p) => (
+                    <option key={p} value={p}>
+                      {x.format === 'singles' ? `${p} pt${p === 1 ? '' : 's'} per match` : `${p} point${p === 1 ? '' : 's'}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </span>
             {segs.length > 2 && (
               <button className="btn btn-ghost btn-small" onClick={() => remove(i)} aria-label={`Remove stretch ${i + 1}`}>
                 ✕

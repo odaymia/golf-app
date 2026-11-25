@@ -83,15 +83,16 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
   const result = { players, board: [], matches: [], points: {}, values: {}, records: {}, cup: {} };
 
   if (settings.scoring === 'match') {
-    result.matches = (event.matchups ?? []).map((mu) => scoreMatch(settings, members, players, holes, mu));
+    result.matches = (event.matchups ?? []).map((mu) => ({ ...scoreMatch(settings, members, players, holes, mu), points: matchPoints(mu, event) }));
     for (const m of result.matches) {
       if (settings.unit === 'ryder') {
+        // Each match is worth m.points (1 unless the round says more); a halve splits it.
         for (const k of m.keys) result.cup[k] = result.cup[k] ?? 0;
-        if (m.result === 'A') result.cup[m.keys[0]] += 1;
-        if (m.result === 'B') result.cup[m.keys[1]] += 1;
+        if (m.result === 'A') result.cup[m.keys[0]] += m.points;
+        if (m.result === 'B') result.cup[m.keys[1]] += m.points;
         if (m.result === 'halved') {
-          result.cup[m.keys[0]] += 0.5;
-          result.cup[m.keys[1]] += 0.5;
+          result.cup[m.keys[0]] += m.points / 2;
+          result.cup[m.keys[1]] += m.points / 2;
         }
       } else if (m.result) {
         const [a, b] = m.keys;
@@ -192,6 +193,10 @@ export function computeEvent({ settings, event, members, scores, indexes }) {
 //             (shown to players as "Combined score")
 //   scramble  2 vs 2, one team ball (one score per hole for the pair)
 //   foursomes 2 vs 2, alternate shot (one score per hole for the pair)
+// What a match is worth in a Ryder Cup: its own points (split stretches),
+// else the round's points per match, else 1.
+export const matchPoints = (mu, event) => (mu?.points > 0 ? mu.points : event?.matchPoints > 0 ? event.matchPoints : 1);
+
 export const MATCH_FORMATS = {
   fourball: { label: 'Four-ball (best ball)', short: 'Four-ball', size: 2 },
   shamble: { label: 'Combined score (both balls)', short: 'Combined score', size: 2 },

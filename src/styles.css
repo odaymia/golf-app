@@ -3974,3 +3974,5 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .player-recap-btn span { color: var(--green); font-weight: 600; font-size: 14px; }
 .player-recap-btn.on { background: #cfdcc6; }
 .player-recap-list .recap-body { padding: 10px 4px 4px; }
+.split-points select { width: auto; padding: 4px 8px; font-size: 13px; font-weight: 600; color: var(--green); }
+.points-field { margin-top: 8px; }

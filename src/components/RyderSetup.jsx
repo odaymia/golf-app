@@ -7,7 +7,7 @@ import { courseProblems } from '../lib/roundSetup.js';
 import { saveCourse } from '../lib/storage.js';
 import AddMembers from './AddMembers.jsx';
 import CoursePicker from './CoursePicker.jsx';
-import SplitEditor from './SplitEditor.jsx';
+import SplitEditor, { POINT_CHOICES } from './SplitEditor.jsx';
 import { NumberField } from './controls.jsx';
 
 const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'No date');
@@ -162,6 +162,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
             date: e.date ?? today,
             format: isSplit(e.matchFormat) ? 'split' : (e.matchFormat ?? (e.matchups[0] ? matchFormat(e.matchups[0]) : 'fourball')),
             split: isSplit(e.matchFormat) ? parseSplit(e.matchFormat, e.course?.holes?.length ?? 18) : null,
+            points: e.matchPoints ?? 1,
             matches: e.matchups.length,
             scored: Object.keys(data.scores[e.id] ?? {}).length > 0,
             saved: e.course,
@@ -173,6 +174,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
             date: addDays(events.at(-1)?.date ?? today, events.length ? i - events.length + 1 : i),
             format: lastFormat,
             split: null,
+            points: 1,
             matches: 0,
             scored: false,
             saved: null,
@@ -236,7 +238,10 @@ function RoundsStep({ data, computed, events, reload, next }) {
         if (e) {
           const patch = {};
           if ((e.date ?? '') !== r.date) patch.date = r.date;
-          if ((e.matchFormat ?? '') !== format) patch.matchFormat = format;
+          if ((e.matchFormat ?? '') !== format || (r.format !== 'split' && (e.matchPoints ?? 1) !== (r.points ?? 1))) {
+            patch.matchFormat = format;
+            patch.matchPoints = r.points ?? 1;
+          }
           if (r.format === 'split' && isSplit(e.matchFormat) && e.matchFormat !== format && e.matchups.length) {
             patch.matchups = resplitMatchups(e.matchups, r.split ?? defaultSplit(holeCount(r)));
             patch.groups = foursomesForMatches(patch.matchups);
@@ -246,7 +251,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
           if (Object.keys(patch).length) await updateEvent(e.id, patch);
         } else {
           const ev = await createEvent(data.league.id, { name: `Round ${i + 1}`, date: r.date, course: snapshot(r.pick.course, r.pick.teeIdx) });
-          await updateEvent(ev.id, { matchFormat: format });
+          await updateEvent(ev.id, { matchFormat: format, matchPoints: r.points ?? 1 });
         }
       }
       await reload();
@@ -304,6 +309,18 @@ function RoundsStep({ data, computed, events, reload, next }) {
               </select>
             </label>
           </div>
+          {r.format !== 'split' && (
+            <label className="field points-field">
+              <span>Points per match</span>
+              <select value={r.points ?? 1} onChange={(e) => setRow(i, { points: Number(e.target.value) })}>
+                {POINT_CHOICES.map((p) => (
+                  <option key={p} value={p}>
+                    {p} point{p === 1 ? '' : 's'} (halve = {p / 2})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {r.format === 'split' && <SplitEditor points segs={r.split ?? defaultSplit(holeCount(r))} n={holeCount(r)} onChange={(split) => setRow(i, { split })} />}
           <p className="muted small">{fmtDate(r.date)}</p>
           <div className="field">
@@ -371,7 +388,7 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent, toRounds }) {
     setBusy(true);
     setError('');
     try {
-      await updateEvent(event.id, { matchups, groups: foursomesForMatches(matchups), matchFormat: format });
+      await updateEvent(event.id, { matchups, groups: foursomesForMatches(matchups), matchFormat: format, matchPoints: event.matchPoints ?? 1 });
       await reload();
     } catch (e) {
       setError(e.message);

@@ -144,7 +144,8 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
   const rows = matches.map((m) => {
     const sum = matchSummary(m.status);
     const final = m.result != null;
-    const p = m.result === 'A' ? [1, 0] : m.result === 'B' ? [0, 1] : m.result === 'halved' ? [0.5, 0.5] : null;
+    const w = m.points ?? 1;
+    const p = m.result === 'A' ? [w, 0] : m.result === 'B' ? [0, w] : m.result === 'halved' ? [w / 2, w / 2] : null;
     if (p) (total[0] += p[0]), (total[1] += p[1]);
     return { m, sum, final, p, lead: m.status.played === 0 ? null : sum.leader };
   });
