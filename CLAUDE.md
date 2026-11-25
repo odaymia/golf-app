@@ -557,6 +557,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   from the round's board. Casual rounds: a payout option of stroke play and
   Stableford (below), not a game of its own. Shared split picker:
   `PlacesPicker`.
+- Builder: the Handicaps step only shows for net scoring (gross hides it
+  and says why); saved handicap settings are kept either way.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,

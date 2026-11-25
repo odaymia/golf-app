@@ -142,6 +142,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
         <h2>2. How each round is scored</h2>
         <OptionCards value={s.scoring} options={SCORING} only={scoringOptions(s.unit, s.kind)} onChange={(scoring) => set({ scoring })} />
         <Seg value={s.net} options={[[true, 'Net (handicaps)'], [false, 'Gross']]} onChange={(net) => set({ net })} />
+        {!s.net && <p className="hint">Gross: everyone plays off their real score, so there are no handicap settings.</p>}
         {s.scoring === 'stableford' && (
           <StablefordScoring value={s.stableford} net={s.net} onChange={(stableford) => set({ stableford })} />
         )}
@@ -249,70 +250,72 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
       </section>
       )}
 
-      <section className="card">
-        <h2>{step(4)}. Handicaps</h2>
-        {!s.net && <p className="hint">Gross scoring ignores handicaps, but they&apos;re kept for later.</p>}
-        <OptionCards
-          value={s.handicap.mode}
-          options={{
-            index: { label: "Each player's own index", help: 'Uses the index on their profile (GHIN once connected).' },
-            league: {
-              label: 'League handicap',
-              help: 'Worked out from league rounds: average of the best scores of their recent rounds. New players use their own index until they have enough rounds.',
-            },
-          }}
-          only={isTournament ? ['index'] : undefined}
-          onChange={(mode) => setH({ mode })}
-        />
-        {s.handicap.mode === 'league' && (
-          <div className="row3">
+      {/* Gross scoring doesn't use handicaps, so the step only shows for net. */}
+      {s.net && (
+        <section className="card">
+          <h2>{step(4)}. Handicaps</h2>
+          <OptionCards
+            value={s.handicap.mode}
+            options={{
+              index: { label: "Each player's own index", help: 'Uses the index on their profile (GHIN once connected).' },
+              league: {
+                label: 'League handicap',
+                help: 'Worked out from league rounds: average of the best scores of their recent rounds. New players use their own index until they have enough rounds.',
+              },
+            }}
+            only={isTournament ? ['index'] : undefined}
+            onChange={(mode) => setH({ mode })}
+          />
+          {s.handicap.mode === 'league' && (
+            <div className="row3">
+              <label className="field">
+                <span>Best</span>
+                <input inputMode="numeric" value={s.handicap.best} onChange={(e) => setH({ best: numberOrNull(e.target.value) ?? 1 })} />
+              </label>
+              <label className="field">
+                <span>of last</span>
+                <input inputMode="numeric" value={s.handicap.of} onChange={(e) => setH({ of: numberOrNull(e.target.value) ?? 1 })} />
+              </label>
+              <label className="field">
+                <span>Rounds needed</span>
+                <input
+                  inputMode="numeric"
+                  value={s.handicap.minRounds}
+                  onChange={(e) => setH({ minRounds: numberOrNull(e.target.value) ?? 1 })}
+                />
+              </label>
+            </div>
+          )}
+          <div className="row2">
             <label className="field">
-              <span>Best</span>
-              <input inputMode="numeric" value={s.handicap.best} onChange={(e) => setH({ best: numberOrNull(e.target.value) ?? 1 })} />
+              <span>Allowance</span>
+              <select value={s.handicap.allowance} onChange={(e) => setH({ allowance: Number(e.target.value) })}>
+                {[100, 95, 90, 85, 80, 75].map((a) => (
+                  <option key={a} value={a}>
+                    {a}%
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
-              <span>of last</span>
-              <input inputMode="numeric" value={s.handicap.of} onChange={(e) => setH({ of: numberOrNull(e.target.value) ?? 1 })} />
-            </label>
-            <label className="field">
-              <span>Rounds needed</span>
+              <span>Max handicap</span>
               <input
                 inputMode="numeric"
-                value={s.handicap.minRounds}
-                onChange={(e) => setH({ minRounds: numberOrNull(e.target.value) ?? 1 })}
+                placeholder="No max"
+                value={s.handicap.maxHandicap ?? ''}
+                onChange={(e) => setH({ maxHandicap: numberOrNull(e.target.value) })}
               />
             </label>
           </div>
-        )}
-        <div className="row2">
-          <label className="field">
-            <span>Allowance</span>
-            <select value={s.handicap.allowance} onChange={(e) => setH({ allowance: Number(e.target.value) })}>
-              {[100, 95, 90, 85, 80, 75].map((a) => (
-                <option key={a} value={a}>
-                  {a}%
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Max handicap</span>
-            <input
-              inputMode="numeric"
-              placeholder="No max"
-              value={s.handicap.maxHandicap ?? ''}
-              onChange={(e) => setH({ maxHandicap: numberOrNull(e.target.value) })}
+          {s.scoring === 'match' && (
+            <Toggle
+              label="Strokes off the low player in each match"
+              checked={s.handicap.offLow}
+              onChange={(offLow) => setH({ offLow })}
             />
-          </label>
-        </div>
-        {s.scoring === 'match' && (
-          <Toggle
-            label="Strokes off the low player in each match"
-            checked={s.handicap.offLow}
-            onChange={(offLow) => setH({ offLow })}
-          />
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       {error && <div className="card error-box">{error}</div>}
       <button className="btn btn-primary btn-xl" onClick={save} disabled={busy}>
