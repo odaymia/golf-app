@@ -356,7 +356,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   `?watch=CODE` links still work (same as join). `loadLeague` gives `data.members` =
   players only (standings, groups, cards) and `data.people` = everyone; `me`
   comes from people; anyone in a match or with a score card counts as a
-  player whatever their switch says (and the switch won't turn off then);
+  player whatever their switch says (and the switch won't turn off then:
+  it's disabled with the rounds named under it; empty cards don't count);
   computeEvent skips a match naming someone not in the field. A non-playing commissioner's Enter scores opens the
   any-group picker. Home leagues list shows Watching / Organizer badges;
   home Tee off/RSVP cards skip non-playing spots.

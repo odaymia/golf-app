@@ -185,7 +185,7 @@ export async function loadLeague(id) {
     // their switch says (so the scoring never loses a player).
     const inPlay = new Set([
       ...events.flatMap((e) => (e.matchups ?? []).flatMap((mu) => (mu.sides ?? []).flat())),
-      ...scores.map((s) => s.member_id),
+      ...scores.filter((s) => (s.gross ?? []).some((g) => g != null)).map((s) => s.member_id),
     ]);
     const data = {
       league: toLeague(league),

@@ -619,31 +619,48 @@ function NotPlaying({ data, me, isAdmin, reload }) {
     }
   };
   const meAdmin = isAdmin && me;
+  // Rounds that keep me in the field: I'm in one of its matches, or I have a
+  // real score there (an empty card doesn't count).
+  const stuck = me
+    ? data.events.flatMap((e) =>
+        (e.matchups ?? []).some((mu) => (mu.sides ?? []).flat().includes(me.id))
+          ? [{ name: e.name, why: 'match' }]
+          : (data.scores[e.id]?.[me.id] ?? []).some((g) => g != null)
+            ? [{ name: e.name, why: 'score' }]
+            : [],
+      )
+    : [];
   if (!meAdmin && !organizers.length && !watchers.length) return null;
   return (
     <section className="card">
       <h3>Not playing</h3>
       {meAdmin && (
-        <div className="toggle">
-          <span>I’m playing in this</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={me.plays}
-            aria-label="I'm playing in this"
-            disabled={busy}
-            className={`switch ${me.plays ? 'on' : ''}`}
-            onClick={() => {
-              const inMatch = data.events.some((e) => (e.matchups ?? []).some((mu) => (mu.sides ?? []).flat().includes(me.id)));
-              const scored = data.events.some((e) => data.scores[e.id]?.[me.id]);
-              if (me.plays && (inMatch || scored))
-                return setError(inMatch ? 'You’re in a match. Take yourself out of the matches first, then turn this off.' : 'You already have scores in this, so you stay in the field.');
-              act(() => setPlaying(data.league.id, me.userId, !me.plays));
-            }}
-          >
-            <span />
-          </button>
-        </div>
+        <>
+          <div className="toggle">
+            <span>I’m playing in this</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={me.plays}
+              aria-label="I'm playing in this"
+              disabled={busy || (me.plays && stuck.length > 0)}
+              className={`switch ${me.plays ? 'on' : ''}`}
+              onClick={() => act(() => setPlaying(data.league.id, me.userId, !me.plays))}
+            >
+              <span />
+            </button>
+          </div>
+          {me.plays && stuck.length > 0 && (
+            <p className="hint fg-warn">
+              You can’t switch this off while you’re {stuck.some((x) => x.why === 'match') ? 'in a match' : 'scored'} in{' '}
+              {stuck.map((x) => x.name).join(', ')}.{' '}
+              {stuck.some((x) => x.why === 'match')
+                ? 'Take yourself out of those matches first (Set up → Matches for a Ryder Cup, or the round’s Manage), then turn this off.'
+                : 'Clear your scores in that round first, then turn this off.'}
+            </p>
+          )}
+          {!me.plays && <p className="hint">You’re running this without playing: no card, not on the leaderboard.</p>}
+        </>
       )}
       {organizers.length > 0 && (
         <p className="hint">
