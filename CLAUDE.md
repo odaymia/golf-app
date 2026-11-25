@@ -206,6 +206,7 @@ supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
 supabase/foursome_games.sql  group_side_games (each foursome's own side games) + can_edit_group_games()
+supabase/join_code.sql  join_league: reserved spot or else spectator (one Join button)
 supabase/watchers.sql  league_members.plays, role 'viewer', watch_league(), stop_watching(),
                     join_league upgrade, can_score refuses viewers/non-players
 supabase/profile_search.sql  public_profiles row for every named member (+ name sync trigger)
@@ -344,12 +345,15 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Not playing / watching (supabase/watchers.sql): `league_members.plays`
   (false = in the league but not a player) and role 'viewer'. Creating a
   league/tournament has "I'm playing in this" (off = organizer runs it
-  without a card; also a switch under Players → Not playing). Anyone with
-  the code can tap "Just watch" (or open `/app/?watch=CODE`, the "Watch
-  link"): `watch_league()` adds them as a viewer who reads everything but
-  can't score (`can_score()` refuses viewers and non-players) and sees no
-  Enter scores tab; "Stop watching" (`stop_watching()`); joining as a
-  player later upgrades the spot. `loadLeague` gives `data.members` =
+  without a card; also a switch under Players → Not playing). One Join
+  button and one invite link for everyone (supabase/join_code.sql):
+  `join_league` gives you the spot reserved for you (email, then name, or
+  your account already added); with no spot you join as a viewer who reads
+  everything but can't score (`can_score()` refuses viewers and
+  non-players) and sees no Enter scores tab. The commissioner moves a
+  viewer into the field with "Add as player" (`addToField`) under Players
+  → Not playing; viewers can "Stop watching" (`stop_watching()`). Old
+  `?watch=CODE` links still work (same as join). `loadLeague` gives `data.members` =
   players only (standings, groups, cards) and `data.people` = everyone; `me`
   comes from people; anyone in a match or with a score card counts as a
   player whatever their switch says (and the switch won't turn off then);

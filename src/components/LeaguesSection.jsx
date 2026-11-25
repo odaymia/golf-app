@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { joinLeague, listMyLeagues, watchLeague } from '../lib/leagueApi.js';
+import { joinLeague, listMyLeagues } from '../lib/leagueApi.js';
 import { describeLeague, leagueSettings } from '../lib/league/format.js';
 
 // Tournaments and leagues on the home screen: open, create, or join with a code.
@@ -15,13 +15,14 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
       .catch(() => setLeagues([]));
   }, []);
 
-  async function join(e, watch = false) {
+  async function join(e) {
     e.preventDefault();
     if (code.trim().length < 6) return setError('Codes are 6 letters and numbers.');
     setJoining(true);
     setError('');
     try {
-      const id = watch ? await watchLeague(code.trim(), profile.name) : await joinLeague(code.trim(), profile);
+      // Your reserved spot if you're playing; otherwise you follow along.
+      const id = await joinLeague(code.trim(), profile);
       onOpen(id);
     } catch (err) {
       setError(err.message);
@@ -77,9 +78,6 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
           {joining ? 'Joining…' : 'Join'}
         </button>
       </form>
-      <button className="btn btn-ghost full watch-btn" disabled={joining} onClick={(e) => join(e, true)}>
-        👀 Just watch (follow the leaderboard, no scoring)
-      </button>
       {error && <p className="search-error">{error}</p>}
     </>
   );

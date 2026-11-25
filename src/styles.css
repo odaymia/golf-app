@@ -3998,3 +3998,4 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .fg-set-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .fg-who { margin: 2px 0 0; }
 .fg-warn { color: #8a5a12; }
+.watcher-actions { display: inline-flex; gap: 4px; align-items: center; }

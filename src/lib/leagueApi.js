@@ -138,15 +138,9 @@ export function setPlaying(leagueId, userId, plays) {
   });
 }
 
-// Follow a league/tournament with its code without playing (read only).
-export async function watchLeague(code, name) {
-  try {
-    return await call(supabase.rpc('watch_league', { p_code: code, p_name: name }));
-  } catch (e) {
-    if (/No league/i.test(e.message)) throw new Error('No tournament or league with that code.');
-    if (/watch_league/.test(e.message)) throw new Error('Watching isn’t set up yet.');
-    throw e;
-  }
+// Commissioner: move a spectator into the field as a player.
+export function addToField(memberId) {
+  return call(supabase.from('league_members').update({ role: 'member', plays: true }).eq('id', memberId));
 }
 
 export function stopWatching(leagueId) {
@@ -305,8 +299,6 @@ export async function claimMyInvites() {
 }
 
 export const inviteLink = (code) => `https://scribblegolfclub.com/app/?join=${code}`;
-// Follow along without playing (read only).
-export const watchLink = (code) => `https://scribblegolfclub.com/app/?watch=${code}`;
 
 export function setMemberRole(id, role) {
   return call(supabase.from('league_members').update({ role }).eq('id', id));

@@ -6,7 +6,7 @@ import { myTeeTime } from '../lib/league/pairings.js';
 import { roundToPlay } from '../lib/league/groups.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
-import { addMember, createEvent, inviteLink, removeMember, setMemberRole, setPlaying, stopWatching, updateMember, watchLink } from '../lib/leagueApi.js';
+import { addMember, addToField, createEvent, inviteLink, removeMember, setMemberRole, setPlaying, stopWatching, updateMember } from '../lib/leagueApi.js';
 import { looksLikeEmail } from '../lib/account.js';
 import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
@@ -34,10 +34,9 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   const playTee = playRound ? (myTeeTime(playRound, me?.id)?.label ?? null) : null;
 
   const viewer = me?.role === 'viewer';
-  async function share(watch = false) {
-    const text = watch
-      ? `Follow "${league.name}" live on Scribble Golf Club: ${watchLink(league.code)} (or enter code ${league.code} in the app and tap Just watch)`
-      : `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
+  // One link for everyone: players get their spot, anyone else follows along.
+  async function share() {
+    const text = `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
     try {
       if (navigator.share) await navigator.share({ text });
       else {
@@ -90,11 +89,12 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
       {viewer ? (
         <div className="card watching">
           <p>
-            👀 <strong>You’re watching.</strong> Scores and standings update live as the players enter them.
+            👀 <strong>You’re following along.</strong> Scores and standings update live as the players enter them. Playing
+            in this? Ask the organizer to add you to the field.
           </p>
           <div className="watching-actions">
-            <button className="btn btn-ghost outline" onClick={() => share(true)}>
-              Share watch link
+            <button className="btn btn-ghost outline" onClick={() => share()}>
+              Share
             </button>
             <button
               className="btn btn-ghost"
@@ -114,14 +114,9 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
             <span className="muted">Invite code</span>
             <strong className="code">{league.code}</strong>
           </div>
-          <div className="invite-actions">
-            <button className="btn btn-primary" onClick={() => share()}>
-              Invite
-            </button>
-            <button className="btn btn-ghost small-link" onClick={() => share(true)}>
-              Watch link
-            </button>
-          </div>
+          <button className="btn btn-primary" onClick={() => share()}>
+            Invite
+          </button>
         </div>
       )}
 
@@ -656,7 +651,9 @@ function NotPlaying({ data, me, isAdmin, reload }) {
         </p>
       )}
       <p className="muted small">
-        {watchers.length ? `👀 Watching (${watchers.length})` : 'Nobody watching yet. Share the watch link so friends can follow along.'}
+        {watchers.length
+          ? `👀 Watching (${watchers.length})`
+          : 'Nobody watching yet. Anyone who enters the code without a spot in the field follows along here.'}
       </p>
       {watchers.length > 0 && (
         <ul className="lines watchers">
@@ -667,9 +664,14 @@ function NotPlaying({ data, me, isAdmin, reload }) {
                 {m.id === me?.id ? ' (you)' : ''}
               </span>
               {isAdmin && (
-                <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => act(() => removeMember(m.id))} aria-label={`Remove ${m.name}`}>
-                  ✕
-                </button>
+                <span className="watcher-actions">
+                  <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => act(() => addToField(m.id))}>
+                    Add as player
+                  </button>
+                  <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => act(() => removeMember(m.id))} aria-label={`Remove ${m.name}`}>
+                    ✕
+                  </button>
+                </span>
               )}
             </li>
           ))}
