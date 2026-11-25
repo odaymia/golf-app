@@ -65,7 +65,7 @@ describe('scorekeeper discrepancies', () => {
   });
 });
 
-import { defaultSplit, isSplit, parseSplit, splitMatchups, splitProblem, splitText } from './ryder.js';
+import { defaultSplit, isSplit, parseSplit, resplitMatchups, splitMatchups, splitProblem, splitText } from './ryder.js';
 
 describe('split rounds', () => {
   it('saves and reads the plan', () => {
@@ -102,5 +102,34 @@ describe('split rounds', () => {
     // a split foursome next to ordinary singles matches
     const more = [...mus, { sides: [['a3'], ['b3']] }, { sides: [['a4'], ['b4']] }];
     expect(foursomesForMatches(more)).toEqual([['a1', 'a2', 'b1', 'b2'], ['a3', 'b3', 'a4', 'b4']]);
+  });
+});
+
+describe('changing a split round with matches', () => {
+  it('rebuilds each foursome with the new stretches, keeping pairs and singles pairings', () => {
+    const old = splitMatchups(['a1', 'a2'], ['b1', 'b2'], defaultSplit(18), 1);
+    // swap singles: a1 vs b2, a2 vs b1
+    const swapped = old.map((mu) => (mu.format !== 'singles' ? mu : { ...mu, sides: [mu.sides[0], [mu.sides[1][0] === 'b1' ? 'b2' : 'b1']] }));
+    const segs = [
+      { from: 1, to: 6, format: 'fourball' },
+      { from: 7, to: 12, format: 'singles' },
+      { from: 13, to: 18, format: 'foursomes' },
+    ];
+    const out = resplitMatchups(swapped, segs);
+    expect(out.map((mu) => [mu.format, mu.holes.join('-')])).toEqual([
+      ['fourball', '1-6'],
+      ['singles', '7-12'],
+      ['singles', '7-12'],
+      ['foursomes', '13-18'],
+    ]);
+    expect(out[0].sides).toEqual([['a1', 'a2'], ['b2', 'b1']]);
+    expect(out[1].sides).toEqual([['a1'], ['b2']]);
+    expect(out.every((mu) => mu.set === 1)).toBe(true);
+  });
+
+  it('keeps pair order when the old plan had no singles', () => {
+    const old = splitMatchups(['a1', 'a2'], ['b1', 'b2'], [{ from: 1, to: 9, format: 'scramble' }, { from: 10, to: 18, format: 'fourball' }], 'x');
+    const out = resplitMatchups(old, defaultSplit(18));
+    expect(out.filter((mu) => mu.format === 'singles').map((mu) => mu.sides)).toEqual([[['a1'], ['b1']], [['a2'], ['b2']]]);
   });
 });

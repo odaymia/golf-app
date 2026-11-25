@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createEvent, setTeam, updateEvent } from '../lib/leagueApi.js';
 import { orderEvents } from '../lib/league/season.js';
 import { MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
-import { defaultSplit, foursomesForMatches, isSplit, matchProblem, parseSplit, roundFormatText, sideSize, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
+import { defaultSplit, foursomesForMatches, isSplit, matchProblem, parseSplit, resplitMatchups, roundFormatText, sideSize, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import { courseProblems } from '../lib/roundSetup.js';
 import { saveCourse } from '../lib/storage.js';
 import AddMembers from './AddMembers.jsx';
@@ -45,7 +45,7 @@ export default function RyderSetup({ data, computed, me, reload, onOpenEvent }) 
       </div>
       {step === 'teams' && <TeamsStep data={data} sides={sides} onTeams={onTeams} players={players} me={me} reload={reload} next={() => setStep('rounds')} />}
       {step === 'rounds' && <RoundsStep data={data} computed={computed} events={events} reload={reload} next={() => setStep('matches')} />}
-      {step === 'matches' && <MatchesStep data={data} sides={sides} events={events} reload={reload} onOpenEvent={onOpenEvent} />}
+      {step === 'matches' && <MatchesStep data={data} sides={sides} events={events} reload={reload} onOpenEvent={onOpenEvent} toRounds={() => setStep('rounds')} />}
     </div>
   );
 }
@@ -217,8 +217,10 @@ function RoundsStep({ data, computed, events, reload, next }) {
       }
       const was = e?.matchFormat ?? null;
       const now = r.format === 'split' ? splitText(r.split ?? defaultSplit(holesIn)) : r.format;
-      if (e?.matchups.length && (isSplit(was) || r.format === 'split') && was !== now)
-        return setError(`Round ${i + 1} already has matches. Remove them under Matches to change its split.`);
+      // Split -> split keeps the foursomes (rebuilt below); switching between
+      // a split and a single format still needs the matches cleared.
+      if (e?.matchups.length && isSplit(was) !== (r.format === 'split') && was !== now)
+        return setError(`Round ${i + 1} already has matches. Remove them under Matches to switch it ${r.format === 'split' ? 'to' : 'from'} a split round.`);
       if (e?.matchups.length && !isSplit(was) && r.format !== 'split' && sideSize(matchFormat(e.matchups[0])) !== sideSize(r.format))
         return setError(`Round ${i + 1} already has ${sideSize(matchFormat(e.matchups[0])) === 1 ? 'singles' : '2 vs 2'} matches. Remove them under Matches to change it.`);
     }
@@ -235,6 +237,10 @@ function RoundsStep({ data, computed, events, reload, next }) {
           const patch = {};
           if ((e.date ?? '') !== r.date) patch.date = r.date;
           if ((e.matchFormat ?? '') !== format) patch.matchFormat = format;
+          if (r.format === 'split' && isSplit(e.matchFormat) && e.matchFormat !== format && e.matchups.length) {
+            patch.matchups = resplitMatchups(e.matchups, r.split ?? defaultSplit(holeCount(r)));
+            patch.groups = foursomesForMatches(patch.matchups);
+          }
           if (r.format !== 'split' && e.matchups.length && matchFormat(e.matchups[0]) !== r.format) patch.matchups = e.matchups.map((mu) => ({ ...mu, format: r.format }));
           if (r.pick?.course && !r.scored) patch.course = snapshot(r.pick.course, r.pick.teeIdx);
           if (Object.keys(patch).length) await updateEvent(e.id, patch);
@@ -298,7 +304,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
               </select>
             </label>
           </div>
-          {r.format === 'split' && <SplitEditor segs={r.split ?? defaultSplit(holeCount(r))} n={holeCount(r)} onChange={(split) => setRow(i, { split })} />}
+          {r.format === 'split' && <SplitEditor points segs={r.split ?? defaultSplit(holeCount(r))} n={holeCount(r)} onChange={(split) => setRow(i, { split })} />}
           <p className="muted small">{fmtDate(r.date)}</p>
           <div className="field">
             <span>Course</span>
@@ -342,7 +348,7 @@ function RoundsStep({ data, computed, events, reload, next }) {
   );
 }
 
-function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
+function MatchesStep({ data, sides, events, reload, onOpenEvent, toRounds }) {
   const [eventId, setEventId] = useState(events.find((e) => !e.matchups.length)?.id ?? events[0]?.id);
   const event = events.find((e) => e.id === eventId);
   const [a, setA] = useState([]);
@@ -424,7 +430,14 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent }) {
         <h3>
           {event.name} · {split ? 'Split round' : MATCH_FORMATS[format].short}
         </h3>
-        {split && <p className="split-plan">{roundFormatText(format, event.course?.holes?.length ?? 18)}</p>}
+        {split && (
+          <p className="split-plan">
+            {roundFormatText(format, event.course?.holes?.length ?? 18)}{' '}
+            <button className="link small-link" onClick={toRounds}>
+              Change formats
+            </button>
+          </p>
+        )}
         <p className="hint">
           {split
             ? 'Pick 2 players from each team. They play the whole round as one foursome; each stretch of holes is its own match and point (singles: first vs first, second vs second).'

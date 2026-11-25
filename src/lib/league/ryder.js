@@ -111,6 +111,28 @@ export function splitMatchups(a, b, segs, set) {
   );
 }
 
+// A split round's stretches changed: rebuild each foursome's matches with
+// the same two pairs (scores are per player per hole, so none are lost).
+// Keeps who plays whom in singles (after a swap) when the old plan had
+// singles. Matches that aren't part of a foursome set are dropped.
+export function resplitMatchups(matchups, segs) {
+  const sets = [...new Set(matchups.filter((mu) => mu.set != null).map((mu) => mu.set))];
+  return sets.flatMap((set) => {
+    const mine = matchups.filter((mu) => mu.set === set);
+    const singles = mine.filter((mu) => mu.sides[0].length === 1).slice(0, 2);
+    const team = mine.find((mu) => mu.sides[0].length === 2);
+    let a;
+    let b;
+    if (singles.length === 2) {
+      a = singles.map((mu) => mu.sides[0][0]);
+      b = singles.map((mu) => mu.sides[1][0]);
+    } else if (team) {
+      [a, b] = team.sides;
+    } else return [];
+    return splitMatchups(a, b, segs, set);
+  });
+}
+
 // Can these two sides make a match? Returns an error message or null.
 // teamOf(memberId) -> side name; sides: [sideA, sideB]
 export function matchProblem({ a, b, format, sides, teamOf, used }) {

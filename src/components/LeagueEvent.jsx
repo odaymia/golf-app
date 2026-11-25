@@ -16,7 +16,7 @@ import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
-import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
+import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
 import { matchSummary } from '../lib/games/match.js';
 import { recapFacts } from '../lib/roundRecap.js';
@@ -828,7 +828,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         <section className="card">
           <h3>Split round</h3>
           <p className="split-plan">{roundFormatText(event.matchFormat, event.course.holes.length)}</p>
-          <p className="hint">Each stretch of holes is its own match and point. Set this round&apos;s foursomes under Ryder Cup setup → Matches.</p>
+          <p className="hint">Each stretch of holes is its own match and point. Change the formats under Ryder Cup setup → Rounds, and the foursomes under Matches.</p>
         </section>
       )}
       {settings.scoring === 'match' && !(settings.unit === 'ryder' && isSplit(event.matchFormat)) && (
@@ -848,19 +848,21 @@ function Manage({ data, event, computed, reload, onDeleted }) {
                   <span className="option-help">Different formats over different holes, e.g. 1–6 scramble, 7–12 best ball, 13–18 singles. Each stretch is its own match.</span>
                 </button>
               </div>
-              {split &&
-                (event.matchups.length ? (
-                  <p className="split-plan">{roundFormatText(event.matchFormat, nHoles)}</p>
-                ) : (
-                  <SplitEditor
-                    segs={segs}
-                    n={nHoles}
-                    onChange={(next) => {
-                      setSegs(next);
-                      if (!splitProblem(next, nHoles)) act(() => updateEvent(event.id, { matchFormat: splitText(next) }));
-                    }}
-                  />
-                ))}
+              {split && (
+                <SplitEditor
+                  segs={segs}
+                  n={nHoles}
+                  hint={event.matchups.length ? 'Change any stretch: the matches are rebuilt with the same pairs, and scores already in stay.' : undefined}
+                  onChange={(next) => {
+                    setSegs(next);
+                    if (splitProblem(next, nHoles)) return;
+                    // Matches already set: rebuild them with the same pairs.
+                    const patch = { matchFormat: splitText(next) };
+                    if (event.matchups.length) patch.matchups = resplitMatchups(event.matchups, next);
+                    act(() => updateEvent(event.id, patch));
+                  }}
+                />
+              )}
             </>
           )}
           <h3>Matches</h3>

@@ -398,8 +398,14 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   `range`. Every stretch is its own point. Score entry uses the match
   covering the current hole (team rows on one-ball stretches), and boards
   label each match "Holes 1–6 · Scramble"; its scorecard shows only those
-  holes. Ryder Cup: Manage shows the plan and sends you to Ryder Cup setup
-  for matches. Team leagues: Manage's format list has "Split round" with the
+  holes. SplitEditor: each stretch is a card with format buttons (Ryder Cup
+  shows "1 point" / "2 matches · 1 pt each"). Changing stretches after
+  matches exist rebuilds them with the same pairs (`resplitMatchups`,
+  tested; keeps swapped singles pairings; scores stay since they're per
+  player per hole), in Ryder Cup setup → Rounds and in a team league
+  round's Manage; switching between split and a single format still needs
+  the matches cleared. Ryder Cup: Manage shows the plan and sends you to
+  Ryder Cup setup (Matches has a "Change formats" link to Rounds). Team leagues: Manage's format list has "Split round" with the
   same `SplitEditor` (shared component); Add match / Auto-pair make the
   stretches' matches, ✕ removes a foursome's whole set, and `teeGroups`
   keeps a set as one group. The editor has one-tap presets: Front 9 / back 9

@@ -3,7 +3,8 @@ import { MATCH_FORMATS } from '../lib/league/event.js';
 // Stretches of holes for a split round: each one's last hole and format
 // (the next stretch starts on the following hole; the last ends on hole n).
 // formats: which formats a stretch may use (default: all match formats).
-export default function SplitEditor({ segs, n, onChange, formats = Object.keys(MATCH_FORMATS), hint }) {
+// points: show what each stretch is worth (Ryder Cup).
+export default function SplitEditor({ segs, n, onChange, formats = Object.keys(MATCH_FORMATS), hint, points = false }) {
   const set = (i, patch) => {
     const next = segs.map((x, j) => (j === i ? { ...x, ...patch } : { ...x }));
     // Keep the stretches joined up: each starts after the one before.
@@ -39,7 +40,7 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
   const shape = (parts) => segs.length === parts && segs.every((x, i) => x.from === i * Math.floor(n / parts) + 1);
   return (
     <div className="split-editor">
-      <p className="hint">{hint ?? 'Each stretch is its own match and point. A singles stretch is two matches (first vs first, second vs second).'}</p>
+      <p className="hint">{hint ?? (points ? 'Pick a format for each stretch of holes. Each stretch is its own match worth 1 point; a singles stretch is two matches (first vs first, second vs second), 1 point each.' : 'Pick a format for each stretch of holes. Each stretch is its own match; a singles stretch is two matches (first vs first, second vs second).')}</p>
       {n >= 6 && (
         <div className="chips split-presets">
           <button className={`chip ${shape(2) ? 'on' : ''}`} onClick={() => preset(2)}>
@@ -52,32 +53,35 @@ export default function SplitEditor({ segs, n, onChange, formats = Object.keys(M
       )}
       {segs.map((x, i) => (
         <div key={i} className="split-row">
-          <span className="split-holes">
-            Holes {x.from}–
-            {i === segs.length - 1 ? (
-              x.to
-            ) : (
-              <select value={x.to} onChange={(e) => set(i, { to: Number(e.target.value) })} aria-label={`Stretch ${i + 1} last hole`}>
-                {Array.from({ length: n - x.from - (segs.length - 1 - i) + 1 }, (_, k) => x.from + k).map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
+          <div className="split-row-head">
+            <span className="split-holes">
+              Holes {x.from}–
+              {i === segs.length - 1 ? (
+                x.to
+              ) : (
+                <select value={x.to} onChange={(e) => set(i, { to: Number(e.target.value) })} aria-label={`Stretch ${i + 1} last hole`}>
+                  {Array.from({ length: n - x.from - (segs.length - 1 - i) + 1 }, (_, k) => x.from + k).map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </span>
+            <span className="split-points">{points ? (x.format === 'singles' ? '2 matches · 1 pt each' : '1 point') : ''}</span>
+            {segs.length > 2 && (
+              <button className="btn btn-ghost btn-small" onClick={() => remove(i)} aria-label={`Remove stretch ${i + 1}`}>
+                ✕
+              </button>
             )}
-          </span>
-          <select value={x.format} onChange={(e) => set(i, { format: e.target.value })} aria-label={`Stretch ${i + 1} format`}>
-            {formats.map((k) => [k, MATCH_FORMATS[k]]).map(([k, f]) => (
-              <option key={k} value={k}>
-                {f.size === 1 ? 'Singles · 1 vs 1' : `${f.short} · 2 vs 2`}
-              </option>
+          </div>
+          <div className="chips split-formats" role="radiogroup" aria-label={`Holes ${x.from}–${x.to} format`}>
+            {formats.map((k) => (
+              <button key={k} role="radio" aria-checked={x.format === k} className={`chip ${x.format === k ? 'on' : ''}`} onClick={() => set(i, { format: k })}>
+                {MATCH_FORMATS[k].size === 1 ? 'Singles' : MATCH_FORMATS[k].short}
+              </button>
             ))}
-          </select>
-          {segs.length > 2 && (
-            <button className="btn btn-ghost btn-small" onClick={() => remove(i)} aria-label={`Remove stretch ${i + 1}`}>
-              ✕
-            </button>
-          )}
+          </div>
         </div>
       ))}
       {segs.length < 6 && segs[segs.length - 1].to - segs[segs.length - 1].from >= 1 && (
