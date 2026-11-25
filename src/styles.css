@@ -1715,6 +1715,8 @@ tr.clickable {
   -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--line);
   padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+  /* lib/viewportFix.js: corrects iOS 26 putting fixed bars mid-screen */
+  transform: translateY(var(--vv-shift, 0px));
 }
 
 .bn-tab {
@@ -3790,6 +3792,7 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0 auto; max-width: 640px;
   background: #fff; border-top: 1px solid #ddd6c5; box-shadow: 0 -6px 20px rgb(28 42 32 / 10%);
   padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(var(--vv-shift, 0px)); /* lib/viewportFix.js */
 }
 .keypad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e6e0d1; }
 .keypad-keys button {

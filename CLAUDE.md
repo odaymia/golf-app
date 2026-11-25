@@ -87,6 +87,11 @@ Actions). A failing test blocks the deploy.
   `structuredClone` when missing. CSS: don't put `:has()` in a selector list
   with other selectors (an unsupported selector drops the whole rule); give
   container-query units (`cqw`) a fallback.
+- iOS 26 fixed-bar bug (home-screen app keeps a wrong viewport height,
+  often after the keyboard, so `position: fixed; bottom: 0` bars float
+  mid-screen): `lib/viewportFix.js` (tested) measures where bottom: 0
+  lands against `visualViewport` and sets `--vv-shift`; `.bottom-nav` and
+  `.keypad` add it as translateY. 0 everywhere else and while typing.
 - Crashes: `ErrorBoundary` (main.jsx) shows Reload / Go to home screen
   (which clears the reopen place) instead of a blank page.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new
