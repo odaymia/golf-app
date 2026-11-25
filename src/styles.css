@@ -27,6 +27,13 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  /* No rubber-band bounce past the top/bottom: on iPhone it drags the fixed
+     bottom menu with it. */
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   background: var(--bg);

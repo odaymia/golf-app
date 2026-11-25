@@ -91,7 +91,9 @@ Actions). A failing test blocks the deploy.
   often after the keyboard, so `position: fixed; bottom: 0` bars float
   mid-screen): `lib/viewportFix.js` (tested) measures where bottom: 0
   lands against `visualViewport` and sets `--vv-shift`; `.bottom-nav` and
-  `.keypad` add it as translateY. 0 everywhere else and while typing.
+  `.keypad` add it as translateY. 0 everywhere else and while typing; held
+  still while the page bounces. `html, body { overscroll-behavior-y: none }`
+  turns off the rubber-band past the top/bottom (it dragged the menu).
 - Crashes: `ErrorBoundary` (main.jsx) shows Reload / Go to home screen
   (which clears the reopen place) instead of a blank page.
 - Updates: the service worker auto-updates, and `main.jsx` checks for a new

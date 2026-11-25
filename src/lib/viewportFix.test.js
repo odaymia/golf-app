@@ -12,6 +12,10 @@ describe('bottom bar viewport fix', () => {
   it('follows a scrolled visual viewport', () => {
     expect(bottomShift({ vvTop: 40, vvHeight: 760, probeBottom: 760 })).toBe(40);
   });
+  it('holds still while the page bounces past its top or bottom', () => {
+    expect(bottomShift({ vvTop: -60, vvHeight: 800, probeBottom: 800, bouncing: true, last: 0 })).toBe(0);
+    expect(bottomShift({ vvTop: 0, vvHeight: 800, probeBottom: 470, bouncing: true, last: 330 })).toBe(330);
+  });
   it('leaves things alone while typing (keyboard open)', () => {
     expect(bottomShift({ vvTop: 0, vvHeight: 400, probeBottom: 800, typing: true })).toBe(0);
   });

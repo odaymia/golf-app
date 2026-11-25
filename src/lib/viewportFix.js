@@ -7,7 +7,10 @@
 
 // How far a bottom-pinned bar must move down (+) or up (-) to sit on the
 // visible bottom edge. All values in the page's client coordinates.
-export function bottomShift({ vvTop, vvHeight, probeBottom, typing }) {
+// bouncing: the page is being pulled past its top or bottom (iOS
+// rubber-band); keep the last shift rather than chase the bounce.
+export function bottomShift({ vvTop, vvHeight, probeBottom, typing, bouncing = false, last = 0 }) {
+  if (bouncing) return last;
   if (typing || !Number.isFinite(vvHeight) || !Number.isFinite(probeBottom)) return 0;
   const shift = Math.round(vvTop + vvHeight - probeBottom);
   return Math.abs(shift) < 2 ? 0 : shift;
@@ -29,7 +32,9 @@ export function installViewportFix() {
   let last = 0;
   const update = () => {
     frame = 0;
-    const shift = bottomShift({ vvTop: vv.offsetTop, vvHeight: vv.height, probeBottom: probe.getBoundingClientRect().bottom, typing: isTyping() });
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const bouncing = window.scrollY < 0 || window.scrollY > max + 1 || vv.offsetTop < 0;
+    const shift = bottomShift({ vvTop: vv.offsetTop, vvHeight: vv.height, probeBottom: probe.getBoundingClientRect().bottom, typing: isTyping(), bouncing, last });
     if (shift !== last) {
       last = shift;
       document.documentElement.style.setProperty('--vv-shift', `${shift}px`);
