@@ -57,7 +57,8 @@ export default function League({ leagueId, user, onBack, start = null, onPlace =
     );
   if (!data) return <div className="screen"><p className="muted center">Loading league…</p></div>;
 
-  const me = data.members.find((m) => m.userId === user.id);
+  // Me: a player, an organizer who isn't playing, or a viewer.
+  const me = (data.people ?? data.members).find((m) => m.userId === user.id);
 
   if (wide)
     return (

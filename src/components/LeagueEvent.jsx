@@ -29,8 +29,9 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack, initial
   const computed = useLeagueComputed(data);
   const event = data.events.find((e) => e.id === eventId);
   const isAdmin = me?.role === 'commissioner';
+  const viewer = me?.role === 'viewer'; // watching only: Results, nothing to enter
   const [tab, setTabState] = useState(() =>
-    initialTab === 'score' && event?.status === 'final' && !isAdmin ? 'results' : initialTab === 'manage' && !isAdmin ? 'results' : initialTab,
+    (initialTab === 'score' && (viewer || (event?.status === 'final' && !isAdmin))) || (initialTab === 'manage' && !isAdmin) ? 'results' : initialTab,
   );
   const setTab = (t) => {
     setTabState(t);
@@ -65,7 +66,7 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack, initial
       <div className="tabs wide-tabs" role="tablist">
         {[
           ['results', 'Results'],
-          ['score', 'Enter scores'],
+          ...(viewer ? [] : [['score', 'Enter scores']]),
           ...(isAdmin ? [['manage', 'Manage']] : []),
         ].map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
@@ -254,7 +255,8 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     if (mine.length > 1) return mine;
     return me.role === 'commissioner' ? [] : [me.id];
   });
-  const [anyGroup, setAnyGroup] = useState(false); // commissioner: show every group
+  // Commissioner: show every group (straight away when not playing).
+  const [anyGroup, setAnyGroup] = useState(() => me?.role === 'commissioner' && me?.plays === false);
   const myUserId = me?.userId ?? null;
   const entries = useMemo(() => data.entries?.[event.id] ?? [], [data.entries, event.id]);
   // Each scorekeeper keeps their own card. It starts from what I entered
@@ -356,7 +358,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       ]),
     [entries, cards, myUserId],
   );
-  const scorerName = (uid) => (uid === myUserId ? 'You' : data.members.find((m) => m.userId === uid)?.name ?? 'Someone');
+  const scorerName = (uid) => (uid === myUserId ? 'You' : (data.people ?? data.members).find((m) => m.userId === uid)?.name ?? 'Someone');
   // A split round has several matches per player, each over some holes: use
   // the one being played on hole index h.
   const covers = (m, h) => !m.range || (h >= m.range[0] && h <= m.range[1]);
@@ -1035,7 +1037,7 @@ function ScoreChecks({ data, event }) {
   );
   if (!items.length) return null;
   const name = (id) => data.members.find((m) => m.id === id)?.name ?? '?';
-  const scorer = (uid) => data.members.find((m) => m.userId === uid)?.name ?? 'Someone';
+  const scorer = (uid) => (data.people ?? data.members).find((m) => m.userId === uid)?.name ?? 'Someone';
   return (
     <section className="card disc-list">
       <h3>⚠ Scores to check</h3>

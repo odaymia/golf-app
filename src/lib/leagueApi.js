@@ -65,7 +65,10 @@ const toMember = (r) => ({
   index: r.handicap_index == null ? null : Number(r.handicap_index),
   ghinNumber: r.ghin_number ?? '',
   team: r.team ?? '',
-  role: r.role,
+  role: r.role, // 'commissioner' | 'member' | 'viewer' (watching only)
+  // false = in the league but not playing: an organizer who isn't playing,
+  // or a viewer (supabase/watchers.sql).
+  plays: r.plays !== false && r.role !== 'viewer',
 });
 
 const toEvent = (r) => ({
@@ -92,7 +95,14 @@ const toLeague = (r) => ({ id: r.id, name: r.name, code: r.invite_code, settings
 export async function listMyLeagues() {
   try {
     const rows = await call(supabase.from('leagues').select('*').order('created_at', { ascending: false }));
-    const leagues = rows.map(toLeague);
+    // Which ones I only watch (or run without playing).
+    const { data: s } = await supabase.auth.getSession();
+    const uid = s?.session?.user?.id;
+    const mine = uid
+      ? await call(supabase.from('league_members').select('league_id, role, plays').eq('user_id', uid)).catch(() => [])
+      : [];
+    const roleOf = Object.fromEntries(mine.map((m) => [m.league_id, m.role === 'viewer' ? 'watching' : m.plays === false ? 'organizing' : 'playing']));
+    const leagues = rows.map((r) => ({ ...toLeague(r), myRole: roleOf[r.id] ?? 'playing' }));
     write(`${CACHE}list`, leagues);
     return leagues;
   } catch (e) {
@@ -101,8 +111,9 @@ export async function listMyLeagues() {
   }
 }
 
-export function createLeague({ name, settings, profile }) {
-  return call(
+// playing = false: the organizer runs it without playing (watchers.sql).
+export async function createLeague({ name, settings, profile, playing = true }) {
+  const id = await call(
     supabase.rpc('create_league', {
       p_name: name,
       p_settings: settings,
@@ -111,6 +122,35 @@ export function createLeague({ name, settings, profile }) {
       p_ghin: profile.ghinNumber || null,
     }),
   );
+  if (!playing) {
+    const { data: s } = await supabase.auth.getSession();
+    const uid = s?.session?.user?.id;
+    if (uid) await setPlaying(id, uid, false).catch(() => {});
+  }
+  return id;
+}
+
+// An organizer in or out of the field (my own spot; commissioners only).
+export function setPlaying(leagueId, userId, plays) {
+  return call(supabase.from('league_members').update({ plays }).eq('league_id', leagueId).eq('user_id', userId)).catch((e) => {
+    if (/plays/.test(e.message)) throw new Error('Run supabase/watchers.sql in Supabase first.');
+    throw e;
+  });
+}
+
+// Follow a league/tournament with its code without playing (read only).
+export async function watchLeague(code, name) {
+  try {
+    return await call(supabase.rpc('watch_league', { p_code: code, p_name: name }));
+  } catch (e) {
+    if (/No league/i.test(e.message)) throw new Error('No tournament or league with that code.');
+    if (/watch_league/.test(e.message)) throw new Error('Watching isn’t set up yet.');
+    throw e;
+  }
+}
+
+export function stopWatching(leagueId) {
+  return call(supabase.rpc('stop_watching', { p_league: leagueId }));
 }
 
 export async function joinLeague(code, profile) {
@@ -135,9 +175,10 @@ export async function loadLeague(id) {
   try {
     const [league, members, events, scores] = await Promise.all([
       call(supabase.from('leagues').select('*').eq('id', id).single()),
-      call(supabase.from('league_members').select(`${MEMBER_COLUMNS}, invite_status`).eq('league_id', id).order('created_at')).catch(() =>
-        call(supabase.from('league_members').select(MEMBER_COLUMNS).eq('league_id', id).order('created_at')),
-      ),
+      // Newest columns first; older databases fall back (watchers.sql, invites.sql).
+      call(supabase.from('league_members').select(`${MEMBER_COLUMNS}, invite_status, plays`).eq('league_id', id).order('created_at'))
+        .catch(() => call(supabase.from('league_members').select(`${MEMBER_COLUMNS}, invite_status`).eq('league_id', id).order('created_at')))
+        .catch(() => call(supabase.from('league_members').select(MEMBER_COLUMNS).eq('league_id', id).order('created_at'))),
       call(supabase.from('league_events').select('*').eq('league_id', id).order('event_date')),
       call(supabase.from('event_scores').select('event_id, member_id, gross').eq('league_id', id)),
     ]);
@@ -145,9 +186,13 @@ export async function loadLeague(id) {
     const entryRows = await call(
       supabase.from('score_entries').select('event_id, member_id, scorer_id, gross').eq('league_id', id),
     ).catch(() => []);
+    const everyone = members.map(toMember);
     const data = {
       league: toLeague(league),
-      members: members.map(toMember),
+      // members = players only (standings, groups, matches, cards); people =
+      // everyone in it, including organizers not playing and viewers.
+      members: everyone.filter((m) => m.plays),
+      people: everyone,
       events: events.map(toEvent),
       scores: {},
       entries: {},
@@ -164,6 +209,7 @@ export async function loadLeague(id) {
     if (!invites.error) {
       const byId = Object.fromEntries((invites.data ?? []).map((r) => [r.member_id, r.email]));
       data.members = data.members.map((m) => (byId[m.id] ? { ...m, inviteEmail: byId[m.id] } : m));
+      data.people = data.people.map((m) => (byId[m.id] ? { ...m, inviteEmail: byId[m.id] } : m));
     }
     write(`${CACHE}${id}`, data);
     return withQueued(data);
@@ -253,6 +299,8 @@ export async function claimMyInvites() {
 }
 
 export const inviteLink = (code) => `https://scribblegolfclub.com/app/?join=${code}`;
+// Follow along without playing (read only).
+export const watchLink = (code) => `https://scribblegolfclub.com/app/?watch=${code}`;
 
 export function setMemberRole(id, role) {
   return call(supabase.from('league_members').update({ role }).eq('id', id));
@@ -393,9 +441,11 @@ export async function homeLeagueStatus(userId, today) {
   const empty = { invites: [], rounds: [], today: [] };
   if (!userId) return empty;
   try {
-    let mine = await call(supabase.from('league_members').select('id, league_id, invite_status').eq('user_id', userId)).catch(() =>
-      call(supabase.from('league_members').select('id, league_id').eq('user_id', userId)),
-    );
+    let mine = await call(supabase.from('league_members').select('id, league_id, invite_status, role, plays').eq('user_id', userId))
+      .catch(() => call(supabase.from('league_members').select('id, league_id, invite_status').eq('user_id', userId)))
+      .catch(() => call(supabase.from('league_members').select('id, league_id').eq('user_id', userId)));
+    // Rounds and Tee off only where I play (not watching or organizing).
+    mine = mine.filter((m) => m.role !== 'viewer' && m.plays !== false);
     if (!mine.length) return empty;
     const leagueIds = [...new Set(mine.map((m) => m.league_id))];
     const leagues = await call(supabase.from('leagues').select('id, name, settings').in('id', leagueIds));

@@ -32,6 +32,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
   const noun = isTournament ? 'tournament' : 'league';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [playing, setPlaying] = useState(true); // creating: am I in the field?
 
   const set = (patch) => setS((prev) => normalizeSettings({ ...prev, ...patch }));
   // Payouts (step 3) only for formats with a finishing order, not match play.
@@ -49,6 +50,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
       await onSave({
         name: name.trim(),
         settings: { ...s, sides: s.sides.map((x) => x.trim()) },
+        playing,
       });
     } catch (e) {
       setError(e.message);
@@ -76,6 +78,12 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
           />
         </label>
         <p className="hint">{describeLeague(s)}</p>
+        {!league && (
+          <>
+            <Toggle label={`I’m playing in this ${noun}`} checked={playing} onChange={setPlaying} />
+            {!playing && <p className="hint">You’ll run it (rounds, groups, scores) without being in the {isTournament ? 'leaderboard' : 'standings'}.</p>}
+          </>
+        )}
       </section>
 
       <section className="card">

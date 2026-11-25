@@ -3976,3 +3976,8 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .player-recap-list .recap-body { padding: 10px 4px 4px; }
 .split-points select { width: auto; padding: 4px 8px; font-size: 13px; font-weight: 600; color: var(--green); }
 .points-field { margin-top: 8px; }
+.watch-btn { margin-top: 6px; }
+.watching p { margin: 0 0 10px; }
+.watching-actions, .invite-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.invite-actions { flex-direction: column; align-items: stretch; gap: 4px; }
+.watchers li { display: flex; justify-content: space-between; align-items: center; }

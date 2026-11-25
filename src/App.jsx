@@ -7,7 +7,7 @@ import SignIn from './components/SignIn.jsx';
 import Profile from './components/Profile.jsx';
 import League from './components/League.jsx';
 import LeagueBuilder from './components/LeagueBuilder.jsx';
-import { claimMyInvites, createLeague, joinLeague } from './lib/leagueApi.js';
+import { claimMyInvites, createLeague, joinLeague, watchLeague } from './lib/leagueApi.js';
 import BottomNav from './components/BottomNav.jsx';
 import Settings from './components/settings/Settings.jsx';
 import { useUnreadNotifications } from './components/useUnreadNotifications.js';
@@ -60,12 +60,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the account changes
   }, [userId]);
 
-  // Invite links (/app/?join=CODE): remember the code through sign-in.
+  // Invite links (/app/?join=CODE, or ?watch=CODE to follow along without
+  // playing): remember the code through sign-in.
   useEffect(() => {
-    const code = new URLSearchParams(location.search).get('join');
+    const q = new URLSearchParams(location.search);
+    const watch = q.get('watch');
+    const code = q.get('join') ?? watch;
     if (!code) return;
     try {
       sessionStorage.setItem('golf-app:join', code.toUpperCase());
+      if (watch) sessionStorage.setItem('golf-app:watch', '1');
     } catch {
       // storage blocked: the code is still in the URL this visit
     }
@@ -81,14 +85,17 @@ export default function App() {
     claimMyInvites().catch(() => {});
     logVisit(userId);
     let code = null;
+    let watching = false;
     try {
       code = sessionStorage.getItem('golf-app:join');
+      watching = sessionStorage.getItem('golf-app:watch') === '1';
       sessionStorage.removeItem('golf-app:join');
+      sessionStorage.removeItem('golf-app:watch');
     } catch {
       // nothing saved
     }
     if (!code) return;
-    joinLeague(code, profile)
+    (watching ? watchLeague(code, profile.name) : joinLeague(code, profile))
       .then((id) => {
         setLeagueStart(null);
         setLeagueId(id);
@@ -208,8 +215,8 @@ export default function App() {
       <LeagueBuilder
         kind={newKind}
         onCancel={goHome}
-        onSave={async ({ name, settings }) => {
-          const id = await createLeague({ name, settings, profile });
+        onSave={async ({ name, settings, playing }) => {
+          const id = await createLeague({ name, settings, profile, playing });
           setLeagueStart(null);
           setLeagueId(id);
           setScreen('league');

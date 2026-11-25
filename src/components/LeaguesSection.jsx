@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { joinLeague, listMyLeagues } from '../lib/leagueApi.js';
+import { joinLeague, listMyLeagues, watchLeague } from '../lib/leagueApi.js';
 import { describeLeague, leagueSettings } from '../lib/league/format.js';
 
 // Tournaments and leagues on the home screen: open, create, or join with a code.
@@ -15,13 +15,13 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
       .catch(() => setLeagues([]));
   }, []);
 
-  async function join(e) {
+  async function join(e, watch = false) {
     e.preventDefault();
     if (code.trim().length < 6) return setError('Codes are 6 letters and numbers.');
     setJoining(true);
     setError('');
     try {
-      const id = await joinLeague(code.trim(), profile);
+      const id = watch ? await watchLeague(code.trim(), profile.name) : await joinLeague(code.trim(), profile);
       onOpen(id);
     } catch (err) {
       setError(err.message);
@@ -35,7 +35,11 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
       {items.map((l) => (
         <li key={l.id} className="card round-item">
           <button className="round-open" onClick={() => onOpen(l.id)}>
-            <strong>{l.name}</strong>
+            <strong>
+              {l.name}
+              {l.myRole === 'watching' && <span className="mini-badge">Watching</span>}
+              {l.myRole === 'organizing' && <span className="mini-badge">Organizer</span>}
+            </strong>
             <span className="muted">{describeLeague(l.s)}</span>
           </button>
         </li>
@@ -73,6 +77,9 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
           {joining ? 'Joining…' : 'Join'}
         </button>
       </form>
+      <button className="btn btn-ghost full watch-btn" disabled={joining} onClick={(e) => join(e, true)}>
+        👀 Just watch (follow the leaderboard, no scoring)
+      </button>
       {error && <p className="search-error">{error}</p>}
     </>
   );

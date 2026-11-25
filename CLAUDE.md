@@ -196,6 +196,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
+supabase/watchers.sql  league_members.plays, role 'viewer', watch_league(), stop_watching(),
+                    join_league upgrade, can_score refuses viewers/non-players
 supabase/profile_search.sql  public_profiles row for every named member (+ name sync trigger)
 supabase/admin_stats.sql  app_admins, app_visits, app_events, log_visit(),
                     log_event(), am_i_admin(), admin_stats(), admin_users()
@@ -329,6 +331,19 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   gross per `net`. Optional natural bonus (`bonusOn`) adds points for a gross
   birdie/eagle/albatross/ace regardless of strokes; an ace takes the ace bonus
   instead of eagle/albatross. Team best ball takes the higher points.
+- Not playing / watching (supabase/watchers.sql): `league_members.plays`
+  (false = in the league but not a player) and role 'viewer'. Creating a
+  league/tournament has "I'm playing in this" (off = organizer runs it
+  without a card; also a switch under Players → Not playing). Anyone with
+  the code can tap "Just watch" (or open `/app/?watch=CODE`, the "Watch
+  link"): `watch_league()` adds them as a viewer who reads everything but
+  can't score (`can_score()` refuses viewers and non-players) and sees no
+  Enter scores tab; "Stop watching" (`stop_watching()`); joining as a
+  player later upgrades the spot. `loadLeague` gives `data.members` =
+  players only (standings, groups, cards) and `data.people` = everyone; `me`
+  comes from people. A non-playing commissioner's Enter scores opens the
+  any-group picker. Home leagues list shows Watching / Organizer badges;
+  home Tee off/RSVP cards skip non-playing spots.
 - Every player needs a Scribble account (supabase/league_pro.sql). The
   commissioner invites by email (`league_members.invite_email`, readable only
   by commissioners via `league_invites()`; column grants hide it from

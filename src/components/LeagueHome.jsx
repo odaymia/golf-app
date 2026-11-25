@@ -6,7 +6,7 @@ import { myTeeTime } from '../lib/league/pairings.js';
 import { roundToPlay } from '../lib/league/groups.js';
 import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
-import { addMember, createEvent, inviteLink, removeMember, setMemberRole, updateMember } from '../lib/leagueApi.js';
+import { addMember, createEvent, inviteLink, removeMember, setMemberRole, setPlaying, stopWatching, updateMember, watchLink } from '../lib/leagueApi.js';
 import { looksLikeEmail } from '../lib/account.js';
 import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
@@ -33,8 +33,11 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
   const playRound = roundToPlay(events, me?.id, today);
   const playTee = playRound ? (myTeeTime(playRound, me?.id)?.label ?? null) : null;
 
-  async function share() {
-    const text = `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
+  const viewer = me?.role === 'viewer';
+  async function share(watch = false) {
+    const text = watch
+      ? `Follow "${league.name}" live on Scribble Golf Club: ${watchLink(league.code)} (or enter code ${league.code} in the app and tap Just watch)`
+      : `Join "${league.name}" on Scribble Golf Club: ${inviteLink(league.code)} (or enter code ${league.code} in the app)`;
     try {
       if (navigator.share) await navigator.share({ text });
       else {
@@ -84,15 +87,43 @@ export default function LeagueHome({ data, me, reload, onOpenEvent, onEditFormat
         </button>
       )}
 
-      <div className="card invite">
-        <div>
-          <span className="muted">Invite code</span>
-          <strong className="code">{league.code}</strong>
+      {viewer ? (
+        <div className="card watching">
+          <p>
+            👀 <strong>You’re watching.</strong> Scores and standings update live as the players enter them.
+          </p>
+          <div className="watching-actions">
+            <button className="btn btn-ghost outline" onClick={() => share(true)}>
+              Share watch link
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={async () => {
+                if (!confirm(`Stop watching ${league.name}?`)) return;
+                await stopWatching(league.id).catch(() => {});
+                onBack();
+              }}
+            >
+              Stop watching
+            </button>
+          </div>
         </div>
-        <button className="btn btn-primary" onClick={share}>
-          Invite
-        </button>
-      </div>
+      ) : (
+        <div className="card invite">
+          <div>
+            <span className="muted">Invite code</span>
+            <strong className="code">{league.code}</strong>
+          </div>
+          <div className="invite-actions">
+            <button className="btn btn-primary" onClick={() => share()}>
+              Invite
+            </button>
+            <button className="btn btn-ghost small-link" onClick={() => share(true)}>
+              Watch link
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="tabs wide-tabs" role="tablist">
         {[
@@ -441,6 +472,8 @@ function Members({ data, computed, me, isAdmin, reload }) {
           </section>
         ))}
 
+      <NotPlaying data={data} me={me} isAdmin={isAdmin} reload={reload} />
+
       {isAdmin &&
         (editing ? (
           <section className="card player-editor">
@@ -568,3 +601,76 @@ function Members({ data, computed, me, isAdmin, reload }) {
     </>
   );
 }
+
+// People in the league who aren't playing: organizers running it and
+// spectators watching with the code. A commissioner can put themself in or
+// out of the field, and remove watchers.
+function NotPlaying({ data, me, isAdmin, reload }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const people = data.people ?? data.members;
+  const organizers = people.filter((m) => m.role === 'commissioner' && !m.plays);
+  const watchers = people.filter((m) => m.role === 'viewer');
+  const act = async (fn) => {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+      await reload();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const meAdmin = isAdmin && me;
+  if (!meAdmin && !organizers.length && !watchers.length) return null;
+  return (
+    <section className="card">
+      <h3>Not playing</h3>
+      {meAdmin && (
+        <div className="toggle">
+          <span>I’m playing in this</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={me.plays}
+            aria-label="I'm playing in this"
+            disabled={busy}
+            className={`switch ${me.plays ? 'on' : ''}`}
+            onClick={() => act(() => setPlaying(data.league.id, me.userId, !me.plays))}
+          >
+            <span />
+          </button>
+        </div>
+      )}
+      {organizers.length > 0 && (
+        <p className="hint">
+          Running it without playing: {organizers.map((m) => (m.id === me?.id ? `${m.name} (you)` : m.name)).join(', ')}
+        </p>
+      )}
+      <p className="muted small">
+        {watchers.length ? `👀 Watching (${watchers.length})` : 'Nobody watching yet. Share the watch link so friends can follow along.'}
+      </p>
+      {watchers.length > 0 && (
+        <ul className="lines watchers">
+          {watchers.map((m) => (
+            <li key={m.id}>
+              <span>
+                {m.name}
+                {m.id === me?.id ? ' (you)' : ''}
+              </span>
+              {isAdmin && (
+                <button className="btn btn-ghost btn-small" disabled={busy} onClick={() => act(() => removeMember(m.id))} aria-label={`Remove ${m.name}`}>
+                  ✕
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className="search-error">{error}</p>}
+    </section>
+  );
+}
+
