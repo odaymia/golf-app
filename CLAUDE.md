@@ -805,7 +805,7 @@ Home screen (Home.jsx, first thing everyone sees): compact header (logo,
 your name/index + avatar), today's cards (HomeLeagueCards), a green hero
 card ("Good morning, Omar" / Score the round. Settle up. / + New round),
 one "Your golf" card with Tournaments, Leagues and Casual rounds as
-dropdown rows (`Dropdown.jsx`: icon, count, open/closed remembered on the
+dropdown rows (`Dropdown.jsx`: title and count, no icons; open/closed remembered on the
 phone; lists + "+ Create…" inside), then "Have an invite code?" (JoinCode
 in LeaguesSection.jsx, with `useMyLeagues` and `LeagueDropdowns`).
 

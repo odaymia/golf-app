@@ -58,7 +58,7 @@ export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpen
 
       <section className="home-group" aria-label="Your golf">
         <LeagueDropdowns leagues={leagues} onOpen={onOpenLeague} onCreate={onCreateLeague} />
-        <Dropdown id="casual" icon="⛳" title="Casual rounds" count={rounds === null ? null : rounds.length}>
+        <Dropdown id="casual" title="Casual rounds" count={rounds === null ? null : rounds.length}>
           {rounds === null && <p className="hg-empty">Loading…</p>}
           {rounds?.length === 0 && <p className="hg-empty">No rounds yet. Tap New round to tee it up.</p>}
           {rounds?.map((r) => {

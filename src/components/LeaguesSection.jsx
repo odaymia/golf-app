@@ -41,13 +41,13 @@ export function LeagueDropdowns({ leagues, onOpen, onCreate }) {
   );
   return (
     <>
-      <Dropdown id="tournaments" icon="🏆" title="Tournaments" count={leagues === null ? null : tournaments.length}>
+      <Dropdown id="tournaments" title="Tournaments" count={leagues === null ? null : tournaments.length}>
         {rows(tournaments, 'No tournaments yet.')}
         <button className="hg-add" onClick={() => onCreate('tournament')}>
           + Create a tournament
         </button>
       </Dropdown>
-      <Dropdown id="leagues" icon="📅" title="Leagues" count={leagues === null ? null : regular.length}>
+      <Dropdown id="leagues" title="Leagues" count={leagues === null ? null : regular.length}>
         {rows(regular, 'No leagues yet.')}
         <button className="hg-add" onClick={() => onCreate('league')}>
           + Create a league
