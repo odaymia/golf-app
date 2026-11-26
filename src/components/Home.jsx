@@ -46,11 +46,7 @@ export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpen
         <p className="home-hello">
           {greeting()}, {first}
         </p>
-        <h1>
-          Score the round.
-          <br />
-          Settle up.
-        </h1>
+        <h1>Play Now!</h1>
         <button className="btn home-new" onClick={onNew}>
           <span aria-hidden="true">＋</span> New round
         </button>
