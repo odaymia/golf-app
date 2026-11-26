@@ -14,6 +14,7 @@ import { listCourses, saveCourse } from '../lib/storage.js';
 import CourseSearch from './CourseSearch.jsx';
 import { NumberField, Toggle } from './controls.jsx';
 import GamePicker from './GamePicker.jsx';
+import { casualMaxPlayers } from '../lib/plans.js';
 
 import PlayerSearch from './PlayerSearch.jsx';
 import { listRecentGolfers, rememberGolfers } from '../lib/recentGolfers.js';
@@ -27,6 +28,8 @@ const newPlayer = (from) => ({
 });
 
 export default function Setup({ profile, meId, onStart, onCancel }) {
+  // Free casual rounds: one foursome once plans are live (lib/plans.js).
+  const maxPlayers = casualMaxPlayers(MAX_PLAYERS);
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(blankCourse);
   const [teeIdx, setTeeIdx] = useState(0);
@@ -277,7 +280,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
         <label className="field player-count">
           <span>How many players</span>
           <select value={players.length} onChange={(e) => setCount(Number(e.target.value))} aria-label="How many players">
-            {Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1).map((n) => (
+            {Array.from({ length: maxPlayers }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
                 {n} player{n === 1 ? '' : 's'}
               </option>
@@ -346,7 +349,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
             )}
           </div>
         ))}
-        {players.length < MAX_PLAYERS && (
+        {players.length < maxPlayers && (
           <button className="btn btn-ghost full" onClick={() => setPlayers((ps) => [...ps, newPlayer()])}>
             + Add player
           </button>

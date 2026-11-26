@@ -8,6 +8,7 @@ import { describeLeague } from '../lib/league/format.js';
 import { useLeagueComputed } from './useLeagueComputed.js';
 import { addMember, addToField, createEvent, inviteLink, removeMember, setMemberRole, setPlaying, stopWatching, updateMember } from '../lib/leagueApi.js';
 import { looksLikeEmail } from '../lib/account.js';
+import { addRoundProblem } from '../lib/plans.js';
 import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
 import { Seg } from './controls.jsx';
@@ -270,6 +271,7 @@ function Rounds({ data, computed, isAdmin, meId, reload, onOpenEvent }) {
       {isAdmin &&
         (adding ? (
           <AddRound
+            data={data}
             leagueId={data.league.id}
             usesTiers={computed.settings.season === 'points'}
             count={events.length}
@@ -289,7 +291,7 @@ function Rounds({ data, computed, isAdmin, meId, reload, onOpenEvent }) {
   );
 }
 
-function AddRound({ leagueId, usesTiers, count, label, onDone }) {
+function AddRound({ data, leagueId, usesTiers, count, label, onDone }) {
   const [name, setName] = useState(`${label} ${count + 1}`);
   const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA')); // local YYYY-MM-DD
   const [pick, setPick] = useState({ course: null, teeIdx: 0, notes: [] });
@@ -304,6 +306,8 @@ function AddRound({ leagueId, usesTiers, count, label, onDone }) {
     const tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
     const problems = courseProblems(course, tee);
     if (problems.length) return setError(`${problems[0]} Fix it in a casual round's course editor first.`);
+    const limit = addRoundProblem(data, date); // plan limits (off until payments go live)
+    if (limit) return setError(limit);
     setBusy(true);
     setError('');
     try {

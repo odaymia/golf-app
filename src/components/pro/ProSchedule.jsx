@@ -8,6 +8,7 @@ import { courseProblems } from '../../lib/roundSetup.js';
 import { saveCourse } from '../../lib/storage.js';
 import CoursePicker from '../CoursePicker.jsx';
 import { Seg } from '../controls.jsx';
+import { addRoundProblem } from '../../lib/plans.js';
 
 const fmtDate = (d) =>
   d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '–';
@@ -43,6 +44,7 @@ export default function ProSchedule({ data, computed, isAdmin, reload, openEvent
 
       {building && (
         <ScheduleBuilder
+          data={data}
           leagueId={data.league.id}
           count={events.length}
           label={tournament ? 'Round' : 'Week'}
@@ -110,7 +112,7 @@ export default function ProSchedule({ data, computed, isAdmin, reload, openEvent
   );
 }
 
-function ScheduleBuilder({ leagueId, count, label, usesTiers, defaultRounds, onDone }) {
+function ScheduleBuilder({ data, leagueId, count, label, usesTiers, defaultRounds, onDone }) {
   const [start, setStart] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [rounds, setRounds] = useState(defaultRounds);
   const [every, setEvery] = useState(7);
@@ -129,6 +131,11 @@ function ScheduleBuilder({ leagueId, count, label, usesTiers, defaultRounds, onD
     const tee = { ...raw, rating: Number(raw.rating), slope: Number(raw.slope) };
     const problems = courseProblems(course, tee);
     if (problems.length) return setError(problems[0]);
+    // Plan limits (off until payments go live): check every new date.
+    for (let i = 0; i < dates.length; i++) {
+      const limit = addRoundProblem({ ...data, events: [...data.events, ...dates.slice(0, i).map((date) => ({ date }))] }, dates[i]);
+      if (limit) return setError(limit);
+    }
     setError('');
     setProgress(0);
     try {

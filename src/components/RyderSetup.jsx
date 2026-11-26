@@ -9,6 +9,7 @@ import AddMembers from './AddMembers.jsx';
 import CoursePicker from './CoursePicker.jsx';
 import SplitEditor, { POINT_CHOICES } from './SplitEditor.jsx';
 import { NumberField } from './controls.jsx';
+import { addRoundProblem } from '../lib/plans.js';
 
 const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'No date');
 const addDays = (iso, n) => {
@@ -212,6 +213,11 @@ function RoundsStep({ data, computed, events, reload, next }) {
         if (problems.length) return setError(`Round ${i + 1}: ${problems[0]}`);
       }
       const e = events.find((x) => x.id === r.id);
+      if (!e) {
+        // Plan limits (off until payments go live).
+        const limit = addRoundProblem({ ...data, events: [...data.events, ...list.filter((x, k) => k < i && !x.id).map((x) => ({ date: x.date }))] }, r.date);
+        if (limit) return setError(`Round ${i + 1}: ${limit}`);
+      }
       const holesIn = holeCount(r);
       if (r.format === 'split') {
         const problem = splitProblem(r.split ?? defaultSplit(holesIn), holesIn);
