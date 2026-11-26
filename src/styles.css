@@ -4107,3 +4107,6 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .player-row { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
 .player-row .saved-player { flex: 1; min-width: 0; border-bottom: none; }
 .fl-btn.small { min-width: 96px; height: 32px; padding: 0 12px; font-size: 13px; }
+
+/* Score entry: Clear hole (wipes this hole for the group on every phone) */
+.clear-hole { display: block; margin: 4px auto 10px; }

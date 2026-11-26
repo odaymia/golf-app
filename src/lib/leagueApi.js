@@ -381,6 +381,21 @@ export async function saveScore(leagueId, eventId, memberId, gross, mine = null)
   }
 }
 
+// Clear one hole (1-based) for some players: the official card and every
+// scorekeeper's own card (supabase/clear_hole.sql). Cards still waiting in
+// this phone's queue lose that hole too, so they can't bring it back.
+export async function clearHole(eventId, memberIds, hole) {
+  const q = queue();
+  for (const id of memberIds) {
+    const r = q[`${eventId}:${id}`];
+    if (!r) continue;
+    r.gross = r.gross.map((g, i) => (i === hole - 1 ? null : g));
+    if (r.mine) r.mine = r.mine.map((g, i) => (i === hole - 1 ? null : g));
+  }
+  write(QUEUE, q);
+  await call(supabase.rpc('clear_hole', { p_event: eventId, p_members: memberIds, p_hole: hole }));
+}
+
 // Send queued cards one by one. No signal: stop and keep them. Refused by the
 // server (e.g. the round was marked final): drop that card so it can't block
 // the rest. Throws only when offline.

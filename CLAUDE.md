@@ -190,6 +190,8 @@ supabase/notifications.sql  notifications table + triggers (likes, comments,
                     follows, messages, swing reviews)
 supabase/ryder_scoring.sql  league_events.match_format, score_entries (each
                     scorekeeper's own card)
+supabase/clear_hole.sql  clear_hole(): wipes one hole for players on the official card and
+                    every scorekeeper's card (Clear hole on Enter scores)
 supabase/side_games.sql  league_events.side_games (bets for league/tournament rounds)
 supabase/read_receipts.sql  read_receipts setting, conversation_read_times()
 supabase/comment_replies.sql  post_comments.parent_id (one level), reply +
@@ -514,7 +516,12 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   active score box shows a cursor, a digit enters it and moves to the next
   player (a 1 waits for 0–5 to make 10–15, with a hint above the keypad; the last player keeps the
   cursor). With the keypad closed, Next hole / Review round shows. Undo changes puts the hole
-  back as it was when opened; Save scores sends now and, once everyone
+  back as it was when opened. Keypad Clear really blanks a box (sent as
+  blank, not refilled from the official card). **Clear hole n** (under the
+  rows when the hole has a score) wipes that hole for the group on every
+  phone via `clearHole` -> `clear_hole()`; other phones drop a number they
+  last sent once the server has none (Enter scores refreshes every 20 s).
+  Save scores sends now and, once everyone
   has a score, goes to the next hole (last hole: the round review).
 - Leaderboards (round Results and stroke/Stableford `TournamentBoard`)
   use `Leaderboard.jsx`: home club under each name (`homeCourses` in

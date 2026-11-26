@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { deleteEvent, saveScore, updateEvent } from '../lib/leagueApi.js';
+import { clearHole, deleteEvent, saveScore, updateEvent } from '../lib/leagueApi.js';
 import { roundRobinWeek } from '../lib/league/season.js';
 import { computeEvent, entityKey, holeStableford, MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
 import { formatIndex } from '../lib/roundSetup.js';
@@ -283,8 +283,14 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       }),
     ),
   );
+  // Holes cleared on this phone ("id:holeIndex"): blank even if the
+  // official card still has a number, and sent as blank.
+  const [wiped, setWiped] = useState({});
+  // What I last sent for each player, so a hole someone cleared on another
+  // phone can be cleared here too (see the sync below).
+  const lastSent = useRef(Object.fromEntries(Object.entries(cards).map(([id, g]) => [id, [...g]])));
   // The official card with my numbers on top (never wipes holes I left blank).
-  const merged = (id) => holes.map((_, i) => cards[id]?.[i] ?? scored[id]?.[i] ?? null);
+  const merged = (id) => holes.map((_, i) => (wiped[`${id}:${i}`] ? null : cards[id]?.[i] ?? scored[id]?.[i] ?? null));
   // Start on the first hole my group hasn't finished.
   const [hole, setHole] = useState(() => {
     if (!picked.length) return 1;
@@ -310,6 +316,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       for (const id of ids) {
         const r = await saveScore(data.league.id, event.id, id, merged(id), cards[id]);
         if (!r.sent) allSent = false;
+        else lastSent.current[id] = [...cards[id]];
       }
       setStatus(allSent ? 'Saved' : 'Saved on this phone. Will send when you have signal.');
       reload({ quiet: true });
@@ -324,6 +331,31 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     timer.current = setTimeout(flush, 1200);
     return () => clearTimeout(timer.current);
   }, [cards, flush]);
+
+  // Keep everyone's scores fresh while scoring (every 20 s).
+  useLiveRefresh(event.status !== 'final', reload);
+
+  // A hole cleared on another phone (Clear hole) comes back blank on my own
+  // card too: drop my number if it's what I last sent and the server now
+  // has nothing there. Numbers I typed since then stay.
+  useEffect(() => {
+    const drop = [];
+    for (const [id, card] of Object.entries(cards)) {
+      const server = entries.find((e) => e.memberId === id && e.scorerId === myUserId);
+      if (!server) continue;
+      card.forEach((g, i) => {
+        if (g != null && server.gross?.[i] == null && scored[id]?.[i] == null && lastSent.current[id]?.[i] === g) drop.push([id, i]);
+      });
+    }
+    if (!drop.length) return;
+    setCards((c) => {
+      const next = { ...c };
+      for (const [id, i] of drop) next[id] = next[id].map((g, j) => (j === i ? null : g));
+      return next;
+    });
+    for (const [id, i] of drop) lastSent.current[id][i] = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the server's cards change
+  }, [entries, scored]);
 
   // Send anything unsaved when leaving the screen.
   const flushRef = useRef(flush);
@@ -342,6 +374,14 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     const v = value == null ? null : Math.max(1, Math.min(15, value));
     row.ids.forEach((id) => dirty.current.add(id));
     setStatus('');
+    setWiped((w) => {
+      const next = { ...w };
+      for (const id of row.ids) {
+        if (v == null) next[`${id}:${hole - 1}`] = true;
+        else delete next[`${id}:${hole - 1}`];
+      }
+      return next;
+    });
     setCards((c) => {
       const next = { ...c };
       for (const id of row.ids) next[id] = c[id].map((g, i) => (i === hole - 1 ? v : g));
@@ -502,7 +542,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       format: m?.teamBall ? MATCH_FORMATS[m.format].short : side ? MATCH_FORMATS[holeFormat]?.short ?? null : null,
     });
   }
-  const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
+  const rowScore = (row, i) => (wiped[`${row.ids[0]}:${i}`] ? null : cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null);
   // Split rounds change between team and individual rows by hole, so the
   // card and "hole done" use each player's own card.
   const split = isSplit(event.matchFormat);
@@ -544,6 +584,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     if (snap.current.hole !== hole) return;
     const vals = snap.current.values;
     Object.keys(vals).forEach((id) => dirty.current.add(id));
+    setWiped((w) => {
+      const next = { ...w };
+      for (const id of Object.keys(vals)) delete next[`${id}:${hole - 1}`];
+      return next;
+    });
     setCards((c) => {
       const next = { ...c };
       for (const id of Object.keys(vals)) next[id] = c[id].map((g, i) => (i === hole - 1 ? vals[id] : g));
@@ -553,6 +598,30 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
     setStatus('Changes undone');
   };
   const holeDone = rows.every((r) => rowScore(r, hole - 1) != null);
+  const holeHasScore = rows.some((r) => rowScore(r, hole - 1) != null);
+  // Clear this hole for the whole group, on every phone (a score typed on
+  // the wrong hole). Needs signal.
+  const clearThisHole = async () => {
+    const ids = rows.flatMap((r) => r.ids).filter((id) => canScore(event, me, id));
+    if (!ids.length) return;
+    if (!confirm(`Clear hole ${hole} for this group? Every score on hole ${hole} is removed, on every phone.`)) return;
+    kp.close();
+    const h = hole - 1;
+    try {
+      await clearHole(event.id, ids, hole);
+    } catch (e) {
+      return setStatus(e.offline ? 'No signal. Try Clear hole again when you have signal.' : `Couldn’t clear: ${e.message}`);
+    }
+    setCards((c) => {
+      const next = { ...c };
+      for (const id of ids) next[id] = c[id].map((g, i) => (i === h ? null : g));
+      return next;
+    });
+    setWiped((w) => ({ ...w, ...Object.fromEntries(ids.map((id) => [`${id}:${h}`, true])) }));
+    for (const id of ids) if (lastSent.current[id]) lastSent.current[id][h] = null;
+    setStatus(`Hole ${hole} cleared`);
+    reload({ quiet: true });
+  };
   const goHole = (h) => {
     setHole(h);
     kp.close();
@@ -678,6 +747,11 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
         })}
       </div>
       <p className="hint center">{status || 'Scores save automatically.'}</p>
+      {holeHasScore && !kp.open && (
+        <button className="btn btn-ghost btn-small outline clear-hole" onClick={clearThisHole}>
+          Clear hole {hole}
+        </button>
+      )}
       <div className="row2">
         {/* Players score only their own foursome; commissioners can switch. */}
         {isAdmin && (
