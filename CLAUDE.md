@@ -440,7 +440,9 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   first vs first, second vs second; ⇄ swaps), all sharing a `set` so they
   are one foursome. Each match has `holes: [from, to]`; `scoreMatch` counts
   only those holes (strokes from the full-round allocation) and returns
-  `range`. Every stretch is its own point. Score entry uses the match
+  `range`. Every stretch is its own point; boards list matches in stretch order
+  (`byStretch` in league/ryder.js, tested: all 1–6 under one heading, then
+  7–12, …). Score entry uses the match
   covering the current hole (team rows on one-ball stretches), and boards
   label each match "Holes 1–6 · Scramble"; its scorecard shows only those
   holes. SplitEditor: each stretch is a card with format buttons (Ryder Cup
