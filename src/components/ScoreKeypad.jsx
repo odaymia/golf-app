@@ -1,7 +1,7 @@
 // Shared score entry pieces: hole bar, hole dots, score box and the keypad
 // fixed at the bottom. Typing logic lives in useKeypad.js.
 
-export function HoleBar({ hole, count, info, tee, onGo }) {
+export function HoleBar({ hole, count, info, tee, course, onGo }) {
   return (
     <div className="gg-holebar">
       <button className="gg-nav" onClick={() => onGo(Math.max(1, hole - 1))} disabled={hole === 1} aria-label="Previous hole">
@@ -9,6 +9,7 @@ export function HoleBar({ hole, count, info, tee, onGo }) {
       </button>
       <div className="gg-hole">
         <strong>Hole {hole}</strong>
+        {course && <em className="gg-course">{course}</em>}
         <span>
           Par {info.par} · Hcp {info.hcp}
           {tee ? ` · ${tee} tees` : ''}
@@ -24,7 +25,7 @@ export function HoleBar({ hole, count, info, tee, onGo }) {
 // done(i) / bad(i): hole i is fully scored / has a problem.
 export function HoleDots({ count, hole, done, bad = () => false, onGo }) {
   return (
-    <div className="hole-dots slim">
+    <div className="hole-dots slim grid" style={{ gridTemplateColumns: `repeat(${Math.min(count, 9)}, 1fr)` }}>
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}

@@ -609,7 +609,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
           ⚠ Scores don’t match on hole{badHoles.length === 1 ? '' : 's'} {badHoles.map((h) => h + 1).join(', ')}. Tap to check.
         </button>
       )}
-      <HoleBar hole={hole} count={holes.length} info={info} tee={event.course.tee.name} onGo={goHole} />
+      <HoleBar hole={hole} count={holes.length} info={info} tee={event.course.tee.name} course={event.course.name} onGo={goHole} />
       <HoleDots
         count={holes.length}
         hole={hole}

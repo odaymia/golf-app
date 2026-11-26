@@ -502,8 +502,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   tournament round's Enter scores (`League` `start`/`onPlace`). A
   remembered round that's gone falls back to the league page.
 - Score entry layout (no date line, tee time or team board; those are on
-  Results): green hole bar (‹ prev / Hole n, par, stroke index,
-  tee / next ›), slim hole dots, then one row per player: name (playing
+  Results): green hole bar (‹ prev / Hole n, course name, par, stroke index,
+  tee / next ›), hole buttons (big rounded squares, 9 per row), then one row per player: name (playing
   handicap), score box (stroke dots), this hole's Pts (Stableford) or net,
   and the running total (points, or to par). Rows keep teammates together
   (Ryder Cup: first side then second; else by side in their match, then

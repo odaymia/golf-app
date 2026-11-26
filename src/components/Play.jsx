@@ -120,7 +120,7 @@ export default function Play({ round, setRound, onSettle, onHome }) {
 
       {tab === 'score' && (
         <>
-          <HoleBar hole={hole} count={last} info={info} tee={round.tee?.name} onGo={go} />
+          <HoleBar hole={hole} count={last} info={info} tee={round.tee?.name} course={round.course.name} onGo={go} />
           <HoleDots
             count={last}
             hole={hole}
