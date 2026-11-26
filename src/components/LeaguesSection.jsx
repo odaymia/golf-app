@@ -1,19 +1,68 @@
 import { useEffect, useState } from 'react';
 import { joinLeague, listMyLeagues } from '../lib/leagueApi.js';
 import { describeLeague, leagueSettings } from '../lib/league/format.js';
+import Dropdown from './Dropdown.jsx';
 
-// Tournaments and leagues on the home screen: open, create, or join with a code.
-export default function LeaguesSection({ profile, onOpen, onCreate }) {
+// My leagues and tournaments (null while loading), with their settings.
+export function useMyLeagues() {
   const [leagues, setLeagues] = useState(null);
+  useEffect(() => {
+    listMyLeagues()
+      .then((list) => setLeagues(list.map((l) => ({ ...l, s: leagueSettings(l.settings) }))))
+      .catch(() => setLeagues([]));
+  }, []);
+  return leagues;
+}
+
+// Tournaments and Leagues rows for the home screen's "Your golf" card.
+export function LeagueDropdowns({ leagues, onOpen, onCreate }) {
+  const tournaments = (leagues ?? []).filter((l) => l.s.kind === 'tournament');
+  const regular = (leagues ?? []).filter((l) => l.s.kind !== 'tournament');
+  const rows = (items, empty) => (
+    <>
+      {leagues === null && <p className="hg-empty">Loading…</p>}
+      {leagues !== null && items.length === 0 && <p className="hg-empty">{empty}</p>}
+      {items.map((l) => (
+        <button key={l.id} className="hg-item" onClick={() => onOpen(l.id)}>
+          <span className="hg-item-text">
+            <strong>
+              {l.name}
+              {l.myRole === 'watching' && <span className="mini-badge">Watching</span>}
+              {l.myRole === 'organizing' && <span className="mini-badge">Organizer</span>}
+            </strong>
+            <span>{describeLeague(l.s)}</span>
+          </span>
+          <span className="hg-go" aria-hidden="true">
+            ›
+          </span>
+        </button>
+      ))}
+    </>
+  );
+  return (
+    <>
+      <Dropdown id="tournaments" icon="🏆" title="Tournaments" count={leagues === null ? null : tournaments.length}>
+        {rows(tournaments, 'No tournaments yet.')}
+        <button className="hg-add" onClick={() => onCreate('tournament')}>
+          + Create a tournament
+        </button>
+      </Dropdown>
+      <Dropdown id="leagues" icon="📅" title="Leagues" count={leagues === null ? null : regular.length}>
+        {rows(regular, 'No leagues yet.')}
+        <button className="hg-add" onClick={() => onCreate('league')}>
+          + Create a league
+        </button>
+      </Dropdown>
+    </>
+  );
+}
+
+// Join a league or tournament with its code: your reserved spot if you're
+// playing, otherwise you follow along (supabase/join_code.sql).
+export function JoinCode({ profile, onOpen }) {
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    listMyLeagues()
-      .then(setLeagues)
-      .catch(() => setLeagues([]));
-  }, []);
 
   async function join(e) {
     e.preventDefault();
@@ -21,55 +70,20 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
     setJoining(true);
     setError('');
     try {
-      // Your reserved spot if you're playing; otherwise you follow along.
-      const id = await joinLeague(code.trim(), profile);
-      onOpen(id);
+      onOpen(await joinLeague(code.trim(), profile));
     } catch (err) {
       setError(err.message);
       setJoining(false);
     }
   }
 
-  const withSettings = (leagues ?? []).map((l) => ({ ...l, s: leagueSettings(l.settings) }));
-  const list = (items) => (
-    <ul className="round-list">
-      {items.map((l) => (
-        <li key={l.id} className="card round-item">
-          <button className="round-open" onClick={() => onOpen(l.id)}>
-            <strong>
-              {l.name}
-              {l.myRole === 'watching' && <span className="mini-badge">Watching</span>}
-              {l.myRole === 'organizing' && <span className="mini-badge">Organizer</span>}
-            </strong>
-            <span className="muted">{describeLeague(l.s)}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-  const tournaments = withSettings.filter((l) => l.s.kind === 'tournament');
-  const regular = withSettings.filter((l) => l.s.kind !== 'tournament');
-
   return (
-    <>
-      <h2 className="section-title">Tournaments</h2>
-      {leagues === null && <p className="muted">Loading…</p>}
-      {list(tournaments)}
-      <button className="btn btn-ghost btn-xl" onClick={() => onCreate('tournament')}>
-        + Create a tournament
-      </button>
-
-      <h2 className="section-title">Leagues</h2>
-      {list(regular)}
-      <button className="btn btn-ghost btn-xl" onClick={() => onCreate('league')}>
-        + Create a league
-      </button>
-
-      <p className="hint">Got an invite code for a league or tournament?</p>
-      <form className="card join-row" onSubmit={join}>
+    <section className="home-join">
+      <p>Have an invite code?</p>
+      <form className="join-row" onSubmit={join}>
         <input
           value={code}
-          placeholder="Invite code"
+          placeholder="ABC123"
           autoCapitalize="characters"
           aria-label="Invite code"
           onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
@@ -79,6 +93,6 @@ export default function LeaguesSection({ profile, onOpen, onCreate }) {
         </button>
       </form>
       {error && <p className="search-error">{error}</p>}
-    </>
+    </section>
   );
 }

@@ -801,6 +801,14 @@ slopes. Turning it back on would mean searching it in courseSearch.js.
 
 ## Look and feel
 
+Home screen (Home.jsx, first thing everyone sees): compact header (logo,
+your name/index + avatar), today's cards (HomeLeagueCards), a green hero
+card ("Good morning, Omar" / Score the round. Settle up. / + New round),
+one "Your golf" card with Tournaments, Leagues and Casual rounds as
+dropdown rows (`Dropdown.jsx`: icon, count, open/closed remembered on the
+phone; lists + "+ Create…" inside), then "Have an invite code?" (JoinCode
+in LeaguesSection.jsx, with `useMyLeagues` and `LeagueDropdowns`).
+
 Modern refresh (Nov 2026): the "Modern refresh" block at the end of
 src/styles.css layers on top of the vintage styles: pinned translucent top
 bars, borderless cards with soft shadows, flat rounded buttons, soft-fill
