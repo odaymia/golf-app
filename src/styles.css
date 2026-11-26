@@ -4102,3 +4102,8 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .hole-dots.slim.grid { display: grid; gap: 5px; }
 .hole-dots.slim.grid .dot { width: 100%; max-width: 44px; height: 38px; border-radius: 10px; justify-self: center; }
 .gg-holebar { grid-template-columns: minmax(70px, 1fr) minmax(0, 2.2fr) minmax(70px, 1fr); }
+
+/* League/tournament Players: Follow button beside each golfer */
+.player-row { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+.player-row .saved-player { flex: 1; min-width: 0; border-bottom: none; }
+.fl-btn.small { min-width: 96px; height: 32px; padding: 0 12px; font-size: 13px; }

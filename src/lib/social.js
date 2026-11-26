@@ -180,6 +180,29 @@ export async function follow(followee) {
   return row?.status === 'pending' ? 'pending' : 'following';
 }
 
+// My follow state with each of these golfers, and whether they follow me:
+// Map(userId -> { state: 'following' | 'pending' | 'none', followsMe }).
+// Blocked people (either way) are left out.
+export async function followStates(meId, userIds) {
+  const ids = [...new Set(userIds.filter((id) => id && id !== meId))];
+  if (!meId || !ids.length) return new Map();
+  const [mine, theirs, hidden] = await Promise.all([
+    call(supabase.from('follows').select('followee, status').eq('follower', meId).in('followee', ids)),
+    call(supabase.from('follows').select('follower').eq('followee', meId).eq('status', 'accepted').in('follower', ids)),
+    hiddenUserIds(meId).catch(() => new Set()),
+  ]);
+  const map = new Map();
+  for (const id of ids) {
+    if (hidden.has(id)) continue;
+    const row = mine.find((r) => r.followee === id);
+    map.set(id, {
+      state: row?.status === 'accepted' ? 'following' : row?.status === 'pending' ? 'pending' : 'none',
+      followsMe: theirs.some((r) => r.follower === id),
+    });
+  }
+  return map;
+}
+
 // Unfollow, or take back a follow request.
 export function unfollow(meId, followee) {
   return call(supabase.from('follows').delete().eq('follower', meId).eq('followee', followee));

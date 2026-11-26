@@ -694,6 +694,9 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   insert policy; the app hides the box), notify {like, comment, follow,
   message, review} muting (checked by the notification triggers; follow
   requests always notify). `hide_like_counts` hides counts from others.
+- League/tournament Players list: each golfer with an account has a
+  Follow / Follow back (they follow you) / Requested / Following button
+  (`FollowButton.jsx`, `followStates` in social.js; blocked people get none).
 - Followers / Following: tapping the counts on a profile opens `FollowList`
   (`listFollows` in social.js): both tabs, a search box, Follow /
   Requested / Following buttons, and Remove on your own followers. Accepted

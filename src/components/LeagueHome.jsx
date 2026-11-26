@@ -12,6 +12,7 @@ import { addRoundProblem } from '../lib/plans.js';
 import { saveCourse } from '../lib/storage.js';
 import { courseProblems, formatIndex, parseIndex } from '../lib/roundSetup.js';
 import { Seg } from './controls.jsx';
+import FollowButton, { useFollowStates } from './FollowButton.jsx';
 import TournamentBoard from './TournamentBoard.jsx';
 import { PayoutsBoard, SavedPayoutsEditor } from './Payouts.jsx';
 
@@ -377,6 +378,8 @@ function Members({ data, computed, me, isAdmin, reload }) {
   const { settings } = computed;
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
+  const meUser = me?.userId ?? null;
+  const [follows, setFollow] = useFollowStates(meUser, members.map((m) => m.userId));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const usesTeams = settings.unit !== 'individual';
@@ -439,7 +442,7 @@ function Members({ data, computed, me, isAdmin, reload }) {
             {list.length === 0 && <p className="muted">Nobody yet.</p>}
             <ul className="saved-players">
               {list.map((m) => (
-                <li key={m.id}>
+                <li key={m.id} className="player-row">
                   <button
                     className="saved-player"
                     disabled={!isAdmin}
@@ -465,6 +468,15 @@ function Members({ data, computed, me, isAdmin, reload }) {
                       {m.userId ? (m.pending ? ' · waiting to accept' : '') : m.inviteEmail ? ' · invited, waiting to join' : ' · needs an account'}
                     </span>
                   </button>
+                  {m.userId && (
+                    <FollowButton
+                      meId={meUser}
+                      userId={m.userId}
+                      name={m.name}
+                      info={follows.get(m.userId)}
+                      onChange={(state) => setFollow(m.userId, state)}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
