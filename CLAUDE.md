@@ -430,7 +430,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   per round; picking a course fills later new rounds; a round's course can
   change until scores are in; format saved in `league_events.match_format`),
   3 Matches (pick 2 per side for 2 vs 2 or 1 per side for singles, reorder,
-  remove). Foursomes are automatic (`foursomesForMatches`): each 2 vs 2
+  remove; ⇄ swaps opponents inside a singles foursome, `swapSingles` in
+  league/ryder.js, tested, works mid-round since scores are per player). Foursomes are automatic (`foursomesForMatches`): each 2 vs 2
   match is a foursome; singles pair up 1+2, 3+4, … and are saved as the
   round's groups, so anyone in the foursome can score it.
 - Split rounds (Ryder Cup): a round's format can be "Split round" (Rounds

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { foursomesForMatches, matchProblem, discrepancies, discrepancyHoles, othersValue, sideSize } from './ryder.js';
+import { foursomesForMatches, singlesPartner, swapSingles, matchProblem, discrepancies, discrepancyHoles, othersValue, sideSize } from './ryder.js';
 
 describe('foursomes from matches', () => {
   it('2 vs 2: each match is its own foursome', () => {
@@ -173,5 +173,25 @@ describe('byStretch', () => {
     ];
     expect(byStretch(ms).map((x) => `${x.m.id}:${x.i}`)).toEqual(['a1:0', 'b1:3', 'a2:1', 'b2:4', 'a3:2', 'b3:5']);
     expect(byStretch([{ id: 'x' }, { id: 'y' }]).map((x) => x.i)).toEqual([0, 1]);
+  });
+});
+
+describe('swapSingles', () => {
+  const s = (a, b) => ({ sides: [[a], [b]], format: 'singles' });
+  const list = [s('a1', 'b1'), s('a2', 'b2'), { sides: [['a3', 'a4'], ['b3', 'b4']] }, s('a5', 'b5'), s('a6', 'b6'), s('a7', 'b7')];
+  it('pairs singles the way foursomes do', () => {
+    expect(singlesPartner(list, 0)).toBe(1);
+    expect(singlesPartner(list, 1)).toBe(0);
+    expect(singlesPartner(list, 2)).toBe(-1);
+    expect(singlesPartner(list, 3)).toBe(4);
+    expect(singlesPartner(list, 5)).toBe(-1);
+  });
+  it('swaps opponents inside the foursome and keeps the foursome', () => {
+    const out = swapSingles(list, 3);
+    expect(out[3].sides).toEqual([['a5'], ['b6']]);
+    expect(out[4].sides).toEqual([['a6'], ['b5']]);
+    expect(out[0]).toBe(list[0]);
+    expect(foursomesForMatches(out)).toEqual(foursomesForMatches(list).map((g) => (g.includes('a5') ? ['a5', 'b6', 'a6', 'b5'] : g)));
+    expect(swapSingles(list, 5)).toBe(list);
   });
 });

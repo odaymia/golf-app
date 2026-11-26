@@ -36,6 +36,34 @@ export function foursomesForMatches(matchups) {
   return groups;
 }
 
+// Plain singles matches (no split set) play in pairs as foursomes: 1+2,
+// 3+4, ... (same walk as foursomesForMatches). The index of the match that
+// shares a foursome with match i, or -1.
+export function singlesPartner(matchups, i) {
+  let pending = -1;
+  for (let j = 0; j < matchups.length; j++) {
+    const mu = matchups[j];
+    if (mu.set != null || mu.sides[0].length !== 1 || mu.sides[1].length !== 1) continue;
+    if (pending < 0) pending = j;
+    else {
+      if (j === i) return pending;
+      if (pending === i) return j;
+      pending = -1;
+    }
+  }
+  return -1;
+}
+
+// Swap opponents inside a singles foursome: A1 v B1 + A2 v B2 becomes
+// A1 v B2 + A2 v B1. Scores are per player per hole, so nothing is lost.
+export function swapSingles(matchups, i) {
+  const j = singlesPartner(matchups, i);
+  if (j < 0) return matchups;
+  return matchups.map((mu, k) =>
+    k === i ? { ...mu, sides: [mu.sides[0], matchups[j].sides[1]] } : k === j ? { ...mu, sides: [mu.sides[0], matchups[i].sides[1]] } : mu,
+  );
+}
+
 // Players per side for a format: one-ball and best-ball formats are 2 vs 2
 // (a split round is set up pair vs pair).
 export const sideSize = (format) => (format === 'singles' ? 1 : 2);

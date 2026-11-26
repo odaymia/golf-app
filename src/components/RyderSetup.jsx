@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createEvent, setTeam, updateEvent } from '../lib/leagueApi.js';
 import { orderEvents } from '../lib/league/season.js';
 import { MATCH_FORMATS, matchFormat } from '../lib/league/event.js';
-import { defaultSplit, foursomesForMatches, isSplit, matchProblem, parseSplit, resplitMatchups, roundFormatText, sideSize, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
+import { defaultSplit, foursomesForMatches, isSplit, matchProblem, parseSplit, resplitMatchups, roundFormatText, sideSize, singlesPartner, splitMatchups, splitProblem, splitText, swapSingles } from '../lib/league/ryder.js';
 import { courseProblems } from '../lib/roundSetup.js';
 import { saveCourse } from '../lib/storage.js';
 import AddMembers from './AddMembers.jsx';
@@ -490,6 +490,22 @@ function MatchesStep({ data, sides, events, reload, onOpenEvent, toRounds }) {
                 <span className="muted small"> · Foursome {foursomeOf(mu)}</span>
               </span>
               <span className="ryder-match-actions">
+                {singlesPartner(event.matchups, i) === i + 1 && (
+                  <button
+                    className="btn btn-ghost btn-small"
+                    disabled={busy}
+                    onClick={() => {
+                      const next = event.matchups[i + 1];
+                      const [a1, b1, a2, b2] = [mu.sides[0][0], mu.sides[1][0], next.sides[0][0], next.sides[1][0]].map(name);
+                      if (confirm(`Swap opponents?\n\n${a1} vs ${b2}\n${a2} vs ${b1}\n\nScores already entered stay; both matches are scored again from hole 1.`))
+                        saveMatches(swapSingles(event.matchups, i));
+                    }}
+                    aria-label={`Swap opponents in foursome ${foursomeOf(mu)}`}
+                    title="Swap opponents with the next match"
+                  >
+                    ⇄
+                  </button>
+                )}
                 <button className="btn btn-ghost btn-small" disabled={busy || i === 0} onClick={() => moveMatch(i, -1)} aria-label="Move up">
                   ↑
                 </button>
