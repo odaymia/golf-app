@@ -470,7 +470,7 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   scores); a league/tournament that added you asks **Accept / Decline**
   (`league_members.invite_status` 'pending' when someone else links your
   account, set by a trigger; `respond_league_invite()`; declining deletes
-  your spot); upcoming rounds you're grouped in ask **I'm in / Can't make
+  your spot); upcoming rounds you're grouped in (within 7 days) ask **I'm in / Can't make
   it** (`respond_round()` -> `league_events.rsvp` {memberId: bool}; the
   commissioner sees "Who's playing" in the round's Manage). Triggers also
   write `league_invite` / `round_added` notifications (notifications.league_id

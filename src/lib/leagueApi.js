@@ -459,6 +459,12 @@ export async function homeLeagueStatus(userId, today) {
     const pendingLeagues = new Set(invites.map((i) => i.leagueId));
     const rows = events.map(toEvent).map((e, i) => ({ ...e, leagueId: events[i].league_id }));
     const inGroup = (e, memberId) => (e.groups ?? []).some((g) => g.includes(memberId)) || (e.matchups ?? []).some((mu) => mu.sides.flat().includes(memberId));
+    // "I'm in / Can't make it" only shows within 7 days of the round.
+    const weekOut = (() => {
+      const d = new Date(`${today}T12:00:00`);
+      d.setDate(d.getDate() + 7);
+      return d.toLocaleDateString('en-CA');
+    })();
     const todayRounds = [];
     const rounds = [];
     for (const e of rows) {
@@ -468,7 +474,7 @@ export async function homeLeagueStatus(userId, today) {
       const grouped = (e.groups ?? []).length || (e.matchups ?? []).length;
       if (e.date === today && (!grouped || inGroup(e, m.id))) {
         if (!todayRounds.some((t) => t.leagueId === e.leagueId)) todayRounds.push({ leagueId: e.leagueId, leagueName: league.name, event: e, memberId: m.id });
-      } else if (e.date > today && inGroup(e, m.id) && e.rsvp?.[m.id] === undefined) {
+      } else if (e.date > today && e.date <= weekOut && inGroup(e, m.id) && e.rsvp?.[m.id] === undefined) {
         rounds.push({ leagueId: e.leagueId, leagueName: league.name, event: e, memberId: m.id });
       }
     }
