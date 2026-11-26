@@ -159,3 +159,19 @@ describe('points per match', () => {
     expect(formatPoints('split:1-9:fourball:2|10-18:singles')).toEqual({ format: 'split:1-9:fourball:2|10-18:singles', points: 1 });
   });
 });
+
+describe('byStretch', () => {
+  it('orders split matches by stretch, keeping set order and indexes', async () => {
+    const { byStretch } = await import('./ryder.js');
+    const ms = [
+      { id: 'a1', range: [0, 5] },
+      { id: 'a2', range: [6, 11] },
+      { id: 'a3', range: [12, 17] },
+      { id: 'b1', range: [0, 5] },
+      { id: 'b2', range: [6, 11] },
+      { id: 'b3', range: [12, 17] },
+    ];
+    expect(byStretch(ms).map((x) => `${x.m.id}:${x.i}`)).toEqual(['a1:0', 'b1:3', 'a2:1', 'b2:4', 'a3:2', 'b3:5']);
+    expect(byStretch([{ id: 'x' }, { id: 'y' }]).map((x) => x.i)).toEqual([0, 1]);
+  });
+});

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import MatchCard from './MatchCard.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { MatchDetail } from './ScoreTable.jsx';
-import { matchLabel } from '../lib/league/ryder.js';
+import { byStretch, matchLabel } from '../lib/league/ryder.js';
 import { useLiveRefresh } from './useLiveRefresh.js';
 import { PayoutsBoard, SavedPayoutsEditor } from './Payouts.jsx';
 
@@ -167,7 +167,7 @@ function RyderBoard({ settings, standings, events, results, members, open, onOpe
       {live && (
         <section>
           <p className="section-title">On the course · {live.name}</p>
-          {results[live.id].matches.map((m, i) => (
+          {byStretch(results[live.id].matches).map(({ m, i }) => (
             <div key={i} className="match-open">
               <MatchCard
                 names={m.names}

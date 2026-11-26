@@ -86,6 +86,13 @@ export const matchLabel = (m, long = false) => {
   return m.range ? `Holes ${m.range[0] + 1}–${m.range[1] + 1} · ${f?.short}` : word;
 };
 
+// Matches in stretch order (all of holes 1–6, then 7–12, …), keeping the
+// set order inside a stretch. Each entry keeps its index in `matches`.
+export const byStretch = (matches = []) =>
+  matches
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => (a.m.range?.[0] ?? -1) - (b.m.range?.[0] ?? -1) || a.i - b.i);
+
 export const splitText = (segs) =>
   `split:${segs.map((x) => `${x.from}-${x.to}:${x.format}${x.points > 1 ? `:${x.points}` : ''}`).join('|')}`;
 

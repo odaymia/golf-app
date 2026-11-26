@@ -16,7 +16,7 @@ import RyderLive from './RyderLive.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
-import { defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
+import { byStretch, defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
 import FoursomeGames from './FoursomeGames.jsx';
 import { matchSummary } from '../lib/games/match.js';
@@ -173,7 +173,7 @@ function Results({ settings, result, members, holes, live, reload, standings = [
             )}
           </section>
         )}
-        {result.matches.map((m, i) => (
+        {byStretch(result.matches).map(({ m, i }) => (
           <div key={i} className="match-open">
             <MatchCard
               names={m.names}

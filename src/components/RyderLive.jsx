@@ -3,7 +3,7 @@ import { matchSummary } from '../lib/games/match.js';
 import { MATCH_FORMATS } from '../lib/league/event.js';
 import { homeCourses } from '../lib/social.js';
 import { MatchDetail } from './ScoreTable.jsx';
-import { matchLabel } from '../lib/league/ryder.js';
+import { byStretch, matchLabel } from '../lib/league/ryder.js';
 
 const pts = (x) => {
   const whole = Math.floor(x);
@@ -52,7 +52,7 @@ export default function RyderLive({ sides, standings, result, myIds = [], onOpen
       </div>
       {matches.length > 0 && (
         <ul className="ryder-live-matches">
-          {matches.map((m, i) => {
+          {byStretch(matches).map(({ m, i }) => {
             const sum = matchSummary(m.status);
             const leader = sum.leader;
             const final = sum.small === 'final';
@@ -141,7 +141,7 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
     [...new Set(ids.map((id) => clubs.get(members.find((m) => m.id === id)?.userId)).filter(Boolean))].join(', ');
   const formats = [...new Set(matches.map((m) => MATCH_FORMATS[m.format].short))].join(' / ');
   const total = [0, 0];
-  const rows = matches.map((m) => {
+  const rows = byStretch(matches).map(({ m }) => {
     const sum = matchSummary(m.status);
     const final = m.result != null;
     const w = m.points ?? 1;
@@ -182,12 +182,14 @@ function MatchBoard({ sides, result, members, title, myIds, holes, net }) {
         <span>Pts</span>
       </div>
       {rows.map((r, i) => {
+        const label = r.m.range ? matchLabel(r.m) : null;
+        const newStretch = label && (i === 0 || matchLabel(rows[i - 1].m) !== label);
         const mine = r.m.sides.flat().some((id) => myIds.includes(id));
         const status = r.m.status.played === 0 ? '–' : r.final && r.lead === null ? 'tied' : r.sum.big;
         const sub = r.m.status.played === 0 ? 'not started' : r.final ? 'F' : r.sum.small;
         return (
           <div key={i}>
-          {r.m.range && <div className="mb-seg">{matchLabel(r.m)}</div>}
+          {newStretch && <div className="mb-seg">{label}</div>}
           <button
             className={`mb-grid mb-row ${mine ? 'mine' : ''} ${open.has(i) ? 'open' : ''}`}
             onClick={() => toggle(i)}
