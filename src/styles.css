@@ -3663,25 +3663,25 @@ button.lm-row:active { background: var(--fill); }
 .hole-dots.slim { margin-bottom: 8px; }
 .hole-dots.slim .dot { width: 22px; height: 22px; font-size: 10px; }
 .gg-table { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.gg-head, .gg-row { display: grid; grid-template-columns: 1fr 56px 44px 60px; align-items: center; gap: 6px; padding: 0 12px; }
+.gg-head, .gg-row { display: grid; grid-template-columns: 1fr 70px 44px 60px; align-items: center; gap: 6px; padding: 0 12px; }
 .gg-head { padding-top: 8px; padding-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--hairline); }
 .gg-head span:not(:first-child) { text-align: center; }
-.gg-row { min-height: 66px; border-bottom: 1px solid var(--hairline); padding-top: 6px; padding-bottom: 6px; }
+.gg-row { min-height: 78px; border-bottom: 1px solid var(--hairline); padding-top: 6px; padding-bottom: 6px; }
 .gg-row:last-child { border-bottom: none; }
 .gg-row.conflict { background: #fdf0ef; }
 .gg-name { min-width: 0; display: flex; flex-direction: column; }
-.gg-name strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gg-name strong { font-size: 15px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .gg-hcp { font-weight: 500; color: var(--muted); }
 .gg-name em { font-style: normal; font-size: 12px; color: var(--muted); }
 .gg-score {
-  position: relative; width: 52px; height: 52px; justify-self: center; border: 1.5px solid #c9c2ae; border-radius: 8px;
-  background: #fff; font: inherit; font-size: 24px; font-weight: 700; color: var(--text);
+  position: relative; width: 66px; height: 66px; justify-self: center; border: 1.5px solid #c9c2ae; border-radius: 10px;
+  background: #fff; font: inherit; font-size: 30px; font-weight: 700; color: var(--text);
 }
 .gg-score.empty { color: var(--muted); font-weight: 500; }
 .gg-score.under { color: var(--birdie); border-color: var(--birdie); }
 .gg-score.over { color: var(--bogey); }
 .gg-score.unconfirmed { opacity: 0.5; border-style: dashed; }
-.gg-dots { position: absolute; top: 2px; right: 4px; font-style: normal; font-size: 12px; line-height: 1; letter-spacing: -1px; color: var(--text); }
+.gg-dots { position: absolute; top: 3px; right: 5px; font-style: normal; font-size: 13px; line-height: 1; letter-spacing: -1px; color: var(--text); }
 .gg-pts { justify-self: center; min-width: 30px; padding: 4px 6px; border-radius: 6px; background: var(--fill); text-align: center; font-weight: 700; font-size: 14px; }
 .gg-pts:empty { background: none; }
 .gg-total { text-align: center; font-weight: 800; font-size: 18px; color: #c2410c; line-height: 1.1; display: flex; flex-direction: column; }
@@ -3792,7 +3792,7 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 
 /* Score keypad (fixed at the bottom while entering scores) */
 .gg-score.active { border: 2px solid var(--green); box-shadow: 0 0 0 3px rgb(6 80 37 / 15%); }
-.gg-score .caret { display: inline-block; width: 2px; height: 26px; margin-left: 2px; vertical-align: -4px; background: var(--green); animation: caret-blink 1s steps(1) infinite; }
+.gg-score .caret { display: inline-block; width: 2px; height: 32px; margin-left: 2px; vertical-align: -4px; background: var(--green); animation: caret-blink 1s steps(1) infinite; }
 @keyframes caret-blink { 50% { opacity: 0; } }
 .keypad-space { height: calc(4 * 54px + 58px + env(safe-area-inset-bottom) + 12px); }
 .keypad {
@@ -3814,8 +3814,9 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .kp-undo { background: #fff; color: var(--down, #b91c1c); }
 .kp-save { background: var(--green); color: #fff; }
 .kp-save:active { background: var(--green-deep); }
-.gg-row { min-height: 56px; padding-top: 4px; padding-bottom: 4px; }
-.gg-score { width: 48px; height: 48px; }
+/* Score boxes: big enough to tap with a glove on. */
+.gg-row { min-height: 74px; padding-top: 5px; padding-bottom: 5px; }
+.gg-score { width: 62px; height: 62px; font-size: 29px; }
 .keypad-keys button { height: 50px; }
 .keypad-actions button { height: 52px; }
 .keypad-space { height: calc(4 * 50px + 52px + env(safe-area-inset-bottom) + 12px); }
