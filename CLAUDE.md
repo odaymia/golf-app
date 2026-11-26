@@ -205,6 +205,8 @@ supabase/league_pro.sql  invite_email, league_invites(), claim_my_invites(),
 supabase/invites.sql  league_members.invite_status, league_events.rsvp,
                     respond_league_invite(), respond_round(), league_invite /
                     round_added notifications
+supabase/league_chat.sql  league_chat (one chat room per league/tournament) +
+                    league_chat_reports
 supabase/foursome_games.sql  group_side_games (each foursome's own side games) + can_edit_group_games()
 supabase/join_code.sql  join_league: reserved spot or else spectator (one Join button)
 supabase/watchers.sql  league_members.plays, role 'viewer', watch_league(), stop_watching(),
@@ -564,6 +566,16 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   `sliceContext`), money summed across sets with fewest payments; Nassau
   only on all 18; casual split matches off inside a stretch. Not part of
   the leaderboard. Words: "side games", never "bet"/"wager" (App Store).
+- Chat (`LeagueChat.jsx`, `lib/leagueChat.js` the only code touching it;
+  supabase/league_chat.sql): one chat room per league/tournament for
+  everyone in it (players, organizer, watchers). "Chat" button in every
+  round's top bar (Results, Enter scores, Manage) with a red dot for
+  unread (latest message checked every 20 s vs the last one seen on this
+  phone, localStorage). Opens full screen over the round so scores being
+  entered stay put; polls every 4 s while open. RLS: members only, post
+  as yourself, blocked people hidden both ways, delete your own (the
+  commissioner any). Tap a message: Delete / Report (league_chat_reports,
+  write-only) / Block. 500 characters max. No notifications.
 - Payouts by place (`league/payouts.js`, tested; UI `Payouts.jsx`): purse =
   entry x entrants, or a fixed purse; percent per place (presets winner /
   60-40 / 50-30-20 / 40-30-20-10 / 35-25-18-13-9, or custom; scaled to pay

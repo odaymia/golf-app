@@ -19,6 +19,7 @@ import { useKeypad } from './useKeypad.js';
 import { byStretch, defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
 import FoursomeGames from './FoursomeGames.jsx';
+import LeagueChat, { ChatButton, useChatUnread } from './LeagueChat.jsx';
 import { matchSummary } from '../lib/games/match.js';
 import { recapFacts } from '../lib/roundRecap.js';
 import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
@@ -38,6 +39,8 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack, initial
     setTabState(t);
     onTab(t);
   };
+  const [chat, setChat] = useState(false);
+  const chatUnread = useChatUnread(data.league?.id, me?.userId, chat);
   if (!event) return null;
   const result = computed.results[event.id];
   const { settings } = computed;
@@ -51,8 +54,18 @@ export default function LeagueEvent({ data, eventId, me, reload, onBack, initial
           ‹ {settings.kind === 'tournament' ? 'Tournament' : 'League'}
         </button>
         <h1>{event.name}</h1>
-        <span />
+        {me ? <ChatButton unread={chatUnread} onClick={() => setChat(true)} /> : <span />}
       </div>
+      {chat && (
+        <LeagueChat
+          leagueId={data.league.id}
+          title={data.league.name}
+          people={data.people ?? data.members}
+          me={me}
+          isAdmin={isAdmin}
+          onClose={() => setChat(false)}
+        />
+      )}
       {tab !== 'score' && (
         <>
           <p className="muted center">
