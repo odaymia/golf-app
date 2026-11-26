@@ -16,7 +16,9 @@ import { Seg, Toggle } from './controls.jsx';
 
 // Commissioner: how this round is paired (manual, random, last round,
 // standings), group size, and tee times or a shotgun start.
-export default function PairingsEditor({ data, event, computed, playable, roundFormat, busy, onSave, setError }) {
+// teeTimesOnly: Ryder Cup rounds (foursomes come from the matches in Ryder Cup
+// setup), so only tee times are set here.
+export default function PairingsEditor({ data, event, computed, playable, roundFormat, busy, onSave, setError, teeTimesOnly = false }) {
   const { settings } = computed;
   const members = data.members;
   const name = (id) => members.find((m) => m.id === id)?.name ?? '?';
@@ -87,6 +89,13 @@ export default function PairingsEditor({ data, event, computed, playable, roundF
 
   return (
     <section className="card pairings">
+      {teeTimesOnly ? (
+        <>
+          <h3>Tee times</h3>
+          <p className="hint">Foursomes come from the matches you set in Ryder Cup setup → Matches.</p>
+        </>
+      ) : (
+        <>
       <h3>Pairings</h3>
       <p className="hint">Players can only enter scores for their own group, and everyone sees their tee time.</p>
 
@@ -141,7 +150,10 @@ export default function PairingsEditor({ data, event, computed, playable, roundF
         </>
       )}
 
-      <h3 className="pairings-sub">Tee times</h3>
+        </>
+      )}
+
+      {!teeTimesOnly && <h3 className="pairings-sub">Tee times</h3>}
       <Seg
         value={sheet.mode}
         options={[
@@ -205,7 +217,7 @@ export default function PairingsEditor({ data, event, computed, playable, roundF
       )}
       {groups.length === 0 && rows.length > 0 && <p className="hint">Each match plays as its own group.</p>}
 
-      {free.length > 0 && (method === 'manual' || groups.length > 0) && (
+      {!teeTimesOnly && free.length > 0 && (method === 'manual' || groups.length > 0) && (
         <>
           <p className="hint">{groups.length ? 'Not in a group yet:' : 'Tap up to four players, then add the group.'}</p>
           <div className="chips">

@@ -471,6 +471,12 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   Enter scores. Enter scores opens straight on your own foursome's card (at
   the first hole the group hasn't finished). Players score only their own
   foursome (no group switcher); commissioners get Change group (any group).
+  Ryder Cup rounds: foursomes come only from the matches (Ryder Cup setup →
+  Matches): Enter scores never asks "Who's in your foursome?" (no matches
+  yet: "No matches yet" pointing to Set up → Matches) and Manage shows only
+  tee times (`PairingsEditor teeTimesOnly`). One-ball holes (scramble,
+  foursomes, or a split stretch of one) show one row per team even with no
+  match covering them, grouped by `member.team`.
   Not in a foursome yet: a player goes straight to their own card; the
   commissioner gets "Who's in your foursome?" (`FoursomeStart`, you
   preselected, up to 4, "Score a different group" for the old picker), which

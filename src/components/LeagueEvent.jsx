@@ -393,7 +393,19 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       );
     }
     const groups = event.groups ?? [];
-    if (!anyGroup)
+    // Ryder Cup: foursomes come only from the matches (Ryder Cup setup).
+    const ryder = settings.unit === 'ryder';
+    if (ryder && !event.matchups?.length)
+      return (
+        <section className="card">
+          <h3>No matches yet</h3>
+          <p className="hint">
+            This round’s foursomes come from its matches. Set them in Ryder Cup setup → Matches (the Set up tab on the tournament
+            page), then come back to enter scores.
+          </p>
+        </section>
+      );
+    if (!anyGroup && !ryder)
       return (
         <FoursomeStart
           me={me}
@@ -431,7 +443,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
             ))}
           </div>
         )}
-        <GroupPicker members={data.members.filter((m) => m.active)} onDone={setPicked} />
+        {!ryder && <GroupPicker members={data.members.filter((m) => m.active)} onDone={setPicked} />}
       </section>
     );
   }
@@ -456,10 +468,17 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   // Rows to score: one per player, or one per team in one-ball formats.
   const rows = [];
   const seen = new Set();
+  // This hole's format when no match covers it (matches not set yet): a
+  // one-ball hole (scramble, foursomes) still gets one row per team.
+  const holeFormat = isSplit(event.matchFormat)
+    ? parseSplit(event.matchFormat, holes.length).find((x) => hole >= x.from && hole <= x.to)?.format
+    : event.matchFormat;
+  const oneBall = !!MATCH_FORMATS[holeFormat]?.teamBall;
   for (const p of people) {
     if (seen.has(p.id)) continue;
     const m = matchFor(p.id);
-    const side = m?.teamBall ? m.sides.find((sd) => sd.includes(p.id)) : null;
+    const byTeam = !m && oneBall && p.team ? people.filter((x) => x.team === p.team).map((x) => x.id) : null;
+    const side = m?.teamBall ? m.sides.find((sd) => sd.includes(p.id)) : byTeam && byTeam.length > 1 ? byTeam : null;
     const ids = side ?? [p.id];
     ids.forEach((id) => seen.add(id));
     rows.push({
@@ -467,7 +486,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
       ids,
       team: !!side,
       name: ids.map((id) => data.members.find((x) => x.id === id)?.name).join(' & '),
-      format: m?.teamBall ? MATCH_FORMATS[m.format].short : null,
+      format: m?.teamBall ? MATCH_FORMATS[m.format].short : side ? MATCH_FORMATS[holeFormat]?.short ?? null : null,
     });
   }
   const rowScore = (row, i) => cards[row.ids[0]][i] ?? scored[row.ids[0]]?.[i] ?? null;
@@ -978,6 +997,7 @@ function Manage({ data, event, computed, reload, onDeleted }) {
         roundFormat={roundFormat}
         busy={busy}
         setError={setError}
+        teeTimesOnly={settings.unit === 'ryder'}
         onSave={(patch) => act(() => updateEvent(event.id, patch))}
       />
 
