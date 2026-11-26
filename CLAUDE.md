@@ -218,6 +218,7 @@ supabase/course_ratings.sql  course_ratings (5 categories, 1-5), course_rating_s
                     round_recaps (shared league recaps)
 supabase/functions/round-recap/index.ts  Edge Function: AI round recap via Claude
                     (secret ANTHROPIC_API_KEY lives only in Supabase)
+supabase/course_backup.sql  course_backup (every picked course, full detail) + save_course_backup()
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -772,6 +773,16 @@ saved on the phone show. Not used (Nov 2026, the owner's call): our own copy
 of the open data, `public.courses` + `search_courses()` in Supabase
 (supabase/courses.sql, still loaded): the open data has no tee ratings or
 slopes. Turning it back on would mean searching it in courseSearch.js.
+- Shared course backup (supabase/course_backup.sql, `lib/courseBackup.js`,
+  tested): every course picked from OpenGolfAPI is saved (the API's full
+  answer, via `save_course_backup()`, signed-in only, openly readable per
+  ODbL). When OpenGolfAPI fails, `searchCourses` searches the backup and
+  `fetchCourse` loads from it (same ids, so `oga-<id>` keys, ratings and
+  photos still line up); with nothing in the backup the "isn't responding"
+  message shows as before. Grows with the courses members play (no bulk
+  download: the open data dump has no ratings/slopes). GHIN (USGA) has
+  ratings/slopes for every rated course; that's the long-term source once
+  licensed (server-side only).
 - When OpenGolfAPI is down (it returns 500/522 after ~20 s), requests give
   up after 8 s and say the course database isn't responding (not a status
   code). CourseSearch always lists matching courses saved on the phone

@@ -2,9 +2,12 @@
 // Search and course detail need no API key (per-device daily limit), so no
 // key ships in the app: anything in a public PWA is readable by anyone.
 // (Our own copy in Supabase, supabase/courses.sql, is not used: the open
-// data has no tee ratings or slopes.)
+// data has no tee ratings or slopes.) Every course picked is also saved to
+// the shared backup (courseBackup.js); when OpenGolfAPI is down, search and
+// course loading fall back to it.
 import { courseFromApi } from './courseImport.js';
 import { keyWords, matchScore, rankClose } from './fuzzy.js';
+import { backupCourse, loadBackup, searchBackup } from './courseBackup.js';
 
 const BASE = 'https://api.opengolfapi.org/api/v1';
 // When the course database is down its requests hang ~20 s; give up sooner.
@@ -78,6 +81,19 @@ async function rawSearch(q, limit, signal) {
 export async function searchCourses(query, { signal } = {}) {
   const q = query.trim();
   if (q.length < 3) return [];
+  try {
+    return await searchApi(q, signal);
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    // OpenGolfAPI down: courses members have played, from the shared backup.
+    const saved = await searchBackup(q).catch(() => []);
+    if (!saved.length) throw e;
+    const ranked = matchSaved(q, saved);
+    return (ranked.length ? ranked : saved).slice(0, 15);
+  }
+}
+
+async function searchApi(q, signal) {
   const exact = await rawSearch(q, 15, signal);
   if (exact.length >= 5) return exact;
   const parts = [...new Set(keyWords(q).filter((w) => w.length >= 3))].sort((a, b) => b.length - a.length).slice(0, 3);
@@ -91,6 +107,15 @@ export async function searchCourses(query, { signal } = {}) {
 
 // { course, warnings } ready for the setup screen.
 export async function fetchCourse(id, { signal } = {}) {
-  const detail = await get(`/courses/${encodeURIComponent(id)}`, signal);
+  let detail;
+  try {
+    detail = await get(`/courses/${encodeURIComponent(id)}`, signal);
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    detail = await loadBackup(id).catch(() => null);
+    if (!detail) throw e;
+    return courseFromApi(detail);
+  }
+  backupCourse(id, detail); // keep the shared backup fresh (never blocks)
   return courseFromApi(detail);
 }
