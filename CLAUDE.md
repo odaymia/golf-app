@@ -736,7 +736,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   dots in the action row for carousels; double-tap shows a heart burst),
   action row (like, comment, share left; save right), then likes, caption
   with the bold username (captions over 110 characters fold with "more"),
-  "View all N comments" and `timeAgoLong` ("3 hours ago"). Profiles: avatar
+  "View all N comments" and `timeAgoLong` ("3 hours ago" for the first
+  24 hours, then "Yesterday", then the date posted). Profiles: avatar
   + Posts/Followers/Following counts, bio, small grey buttons, a tab strip
   (grid; your own profile adds a bookmark tab that opens Saved), then the
   3-across square grid.

@@ -38,8 +38,9 @@ export function timeAgo(iso, now = Date.now()) {
   return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// Under a feed post: "Just now", "5 minutes ago", "3 hours ago", "2 days ago",
-// "3 weeks ago", then the date ("March 4", with the year if not this year).
+// Under a feed post: "Just now", "5 minutes ago", "3 hours ago" for the
+// first 24 hours, then "Yesterday" (posted on yesterday's date), then the
+// date it was posted ("March 4", with the year if not this year).
 export function timeAgoLong(iso, now = Date.now()) {
   const t = new Date(iso).getTime();
   const s = Math.max(0, Math.round((now - t) / 1000));
@@ -49,10 +50,10 @@ export function timeAgoLong(iso, now = Date.now()) {
   if (m < 60) return ago(m, 'minute');
   const h = Math.floor(m / 60);
   if (h < 24) return ago(h, 'hour');
-  const d = Math.floor(h / 24);
-  if (d < 7) return ago(d, 'day');
-  if (d < 35) return ago(Math.floor(d / 7), 'week');
   const date = new Date(t);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
   const sameYear = date.getFullYear() === new Date(now).getFullYear();
   return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
 }

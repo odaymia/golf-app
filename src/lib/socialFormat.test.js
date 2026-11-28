@@ -30,20 +30,32 @@ describe('usernames', () => {
 });
 
 describe('timeAgoLong', () => {
-  const now = new Date('2026-11-14T12:00:00Z').getTime();
+  // Local times, so "yesterday" means the phone's own calendar.
+  const now = new Date(2026, 10, 14, 18, 0).getTime(); // Nov 14, 6 pm
   const ago = (sec) => new Date(now - sec * 1000).toISOString();
-  it('spelled-out relative times, singular and plural', () => {
+  it('minutes and hours for the first 24 hours', () => {
     expect(timeAgoLong(ago(20), now)).toBe('Just now');
     expect(timeAgoLong(ago(60), now)).toBe('1 minute ago');
     expect(timeAgoLong(ago(5 * 60), now)).toBe('5 minutes ago');
     expect(timeAgoLong(ago(3600), now)).toBe('1 hour ago');
-    expect(timeAgoLong(ago(3 * 3600), now)).toBe('3 hours ago');
-    expect(timeAgoLong(ago(2 * 86400), now)).toBe('2 days ago');
-    expect(timeAgoLong(ago(15 * 86400), now)).toBe('2 weeks ago');
+    expect(timeAgoLong(ago(23 * 3600), now)).toBe('23 hours ago');
   });
-  it('older posts show the date, with the year only when it differs', () => {
-    expect(timeAgoLong(ago(60 * 86400), now)).not.toMatch(/2026/);
-    expect(timeAgoLong(ago(400 * 86400), now)).toMatch(/2025/);
+  it('then Yesterday, for a post on yesterday\'s date', () => {
+    expect(timeAgoLong(new Date(2026, 10, 13, 9, 0).toISOString(), now)).toBe('Yesterday');
+    expect(timeAgoLong(new Date(2026, 10, 13, 0, 5).toISOString(), now)).toBe('Yesterday');
+  });
+  it('then the date it was posted, with the year only when it differs', () => {
+    const d = timeAgoLong(new Date(2026, 10, 12, 20, 0).toISOString(), now);
+    expect(d).toBe(new Date(2026, 10, 12).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }));
+    expect(d).not.toMatch(/2026/);
+    expect(timeAgoLong(new Date(2025, 2, 4).toISOString(), now)).toMatch(/2025/);
+  });
+  it('just after midnight, a post from 23 hours ago still shows hours', () => {
+    const early = new Date(2026, 10, 14, 0, 30).getTime();
+    expect(timeAgoLong(new Date(2026, 10, 13, 1, 30).toISOString(), early)).toBe('23 hours ago');
+    expect(timeAgoLong(new Date(2026, 10, 12, 23, 0).toISOString(), early)).toBe(
+      new Date(2026, 10, 12).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }),
+    );
   });
 });
 
