@@ -70,8 +70,9 @@ describe('buildGames', () => {
   });
 
   it('which games work for how many players', () => {
-    expect(MAX_PLAYERS).toBe(24);
-    expect(gameAvailable('skins', 24)).toBe(true);
+    expect(MAX_PLAYERS).toBe(8);
+    expect(gameAvailable('skins', 8)).toBe(true);
+    expect(gameAvailable('skins', 24)).toBe(true); // league/tournament side games
     expect(gameAvailable('skins', 1)).toBe(false);
     expect(gameAvailable('nassau', 6)).toBe(true);
     expect(gameAvailable('nassau', 7)).toBe(false);
@@ -81,15 +82,15 @@ describe('buildGames', () => {
     expect(gameLimitText('skins')).toBe('needs 2+ players');
   });
 
-  it('a 24-player round: skins pot, stroke and Stableford all net to zero', () => {
-    const players = Array.from({ length: 24 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, index: (i * 7) % 30 }));
+  it('an 8-player round: skins pot, stroke and Stableford all net to zero', () => {
+    const players = Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, index: (i * 7) % 30 }));
     const s = defaultSettings();
     s.skins.on = true;
     s.skins.mode = 'pot';
     s.skins.buyIn = 10;
     s.stroke.on = true;
     s.stableford.on = true;
-    s.nassau.on = true; // not available for 24: left out
+    s.nassau.on = true; // not available for 8: left out
     const course = { ...blankCourse(), name: 'Big Day' };
     const round = newRound({ course, tee: course.tees[0], players, settings: s });
     expect(round.games.map((g) => g.type)).toEqual(['skins', 'stroke', 'stableford']);

@@ -301,7 +301,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
         {players.length > 4 && (
           <p className="hint big-group">
             The round shows up on every player's phone. Each foursome keeps its own score (pick the groups below), and side games
-            can include everyone. Want a leaderboard with flights and payouts? Try a one-day tournament (from Home).
+            can include everyone. Up to 8 players; more than that, or want a leaderboard and payouts? Try a one-day tournament (from Home).
           </p>
         )}
         {players.map((p, i) => (

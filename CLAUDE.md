@@ -275,7 +275,7 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   (members only, so all new ones) are `round.shared` with `ownerId`;
   older rounds without accounts stay on the one phone as before.
 - Foursomes: 5+ players get a "Foursomes" card in Setup (even split in
-  player order, `defaultGroups`: 5 -> 3+2, 10 -> 4+3+3; move anyone with
+  player order, `defaultGroups`: 5 -> 3+2, 8 -> 4+4; move anyone with
   the group dropdown; 4 at most per group). Saved as `round.groups`.
   **Each player keeps score only for their own foursome** (`myGroupIds`;
   enforced by `can_score_casual()` in `put_casual_entries`); the other
@@ -841,9 +841,9 @@ docs/instructors.md.
 - New round starts blank: tapping the empty course search shows Recent
   courses (saved on the phone, last played first); typing shows results,
   with misspellings matched under "Similar names". No games start selected.
-  Casual rounds take 1–24 players (`MAX_PLAYERS`, a "How many players"
+  Casual rounds take 1–8 players (`MAX_PLAYERS`, a "How many players"
   dropdown); games are limited by `GAME_LIMITS` (Nassau/match 2–6, skins/
-  stroke/Stableford 2–24, Wolf/Vegas 4). Skins can be a pot (buy-in split by
+  stroke/Stableford 2+ (any field size, so league side games work), Wolf/Vegas 4). Skins can be a pot (buy-in split by
   skins won). 5+ players get the Foursomes card (each group scores on its
   own phone; see Shared casual rounds) and a tip pointing to one-day
   tournaments for leaderboards.

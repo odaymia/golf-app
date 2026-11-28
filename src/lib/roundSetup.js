@@ -149,17 +149,21 @@ export function usesTeams(settings, playerCount) {
   );
 }
 
-// A casual round has 1 to MAX_PLAYERS players; each foursome scores on its own phone.
-export const MAX_PLAYERS = 24;
+// A casual round has 1 to MAX_PLAYERS players (two foursomes at most); each
+// foursome scores on its own phone. Bigger groups: a one-day tournament.
+export const MAX_PLAYERS = 8;
+// Field-wide games (skins, stroke, Stableford) have no real upper limit:
+// league/tournament side games use the same engine for big fields.
+const ANY = 999;
 
 // How many players each game works for. Pairwise games (Nassau, match play)
 // grow fast (everyone vs everyone), so they stop at 6.
 export const GAME_LIMITS = {
   nassau: [2, 6],
   match: [2, 6],
-  skins: [2, MAX_PLAYERS],
-  stroke: [2, MAX_PLAYERS],
-  stableford: [2, MAX_PLAYERS],
+  skins: [2, ANY],
+  stroke: [2, ANY],
+  stableford: [2, ANY],
   wolf: [4, 4],
   vegas: [4, 4],
 };
@@ -173,7 +177,7 @@ export function gameAvailable(type, playerCount) {
 export function gameLimitText(type) {
   const [min, max] = GAME_LIMITS[type] ?? [2, 4];
   if (min === max) return `needs ${min} players`;
-  if (max >= MAX_PLAYERS) return `needs ${min}+ players`;
+  if (max >= ANY) return `needs ${min}+ players`;
   return `${min}–${max} players`;
 }
 
