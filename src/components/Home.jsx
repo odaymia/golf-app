@@ -5,6 +5,7 @@ import { GAME_INFO, formatIndex } from '../lib/roundSetup.js';
 import { JoinCode, LeagueDropdowns, useMyLeagues } from './LeaguesSection.jsx';
 import HomeLeagueCards from './HomeLeagueCards.jsx';
 import Dropdown from './Dropdown.jsx';
+import RunningTabs from './RunningTabs.jsx';
 
 const greeting = (h = new Date().getHours()) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
 
@@ -95,6 +96,7 @@ export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpen
             );
           })}
         </Dropdown>
+        <RunningTabs me={userId} myName={profile.name} />
       </section>
 
       <JoinCode profile={profile} onOpen={onOpenLeague} />

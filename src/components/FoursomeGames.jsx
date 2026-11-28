@@ -5,6 +5,8 @@ import { GAME_INFO } from '../lib/roundSetup.js';
 import GamePicker from './GamePicker.jsx';
 import MoneyView, { Payments, Totals } from './MoneyView.jsx';
 import { gameTitle } from './gameSummary.js';
+import { AddToTab } from './RunningTabs.jsx';
+import { tabRows } from '../lib/tab.js';
 
 const holesText = (s, n) => (s.from === 1 && s.to === n ? `All ${n} holes` : `Holes ${s.from}–${s.to}`);
 
@@ -16,7 +18,7 @@ const holesText = (s, n) => (s.from === 1 && s.to === n ? `All ${n} holes` : `Ho
 // players: my foursome [{ id, name, index }] in score-entry order; field:
 // everyone in the round (incl. my foursome); scores: { id: gross[] } for the
 // field; indexes / handicap: this round's.
-export default function FoursomeGames({ event, players, field = players, scores, indexes, handicap, onBack }) {
+export default function FoursomeGames({ event, players, field = players, scores, indexes, handicap, meId, onBack }) {
   const n = event.course.holes.length;
   const myIds = useMemo(() => players.map((p) => p.id), [players]);
   const key = groupKey(myIds);
@@ -104,6 +106,17 @@ export default function FoursomeGames({ event, players, field = players, scores,
           <Payments players={inMoney} payments={result.payments} />
           <Totals players={inMoney} totals={result.totals} />
         </section>
+      )}
+      {/* Running tab: each set goes on once (sets can be shared by two foursomes). */}
+      {allDone && (
+        <AddToTab
+          me={meId}
+          items={result.sets.map((x) => ({
+            source: `set:${event.id}:${x.set.id}`,
+            label: `${event.name || 'Round'} · ${event.course.name}`,
+            rows: tabRows(x.computed.payments, everyone),
+          }))}
+        />
       )}
 
       {visible.map(({ set: raw, own, owner }) => {

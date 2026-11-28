@@ -292,7 +292,7 @@ export default function App() {
   if (screen === 'play' && round)
     return <Play round={round} setRound={setRound} meId={userId} onSettle={() => setScreen('settle')} onHome={goHome} />;
   if (screen === 'settle' && round)
-    return <Settle round={round} setRound={setRound} onBack={() => setScreen('play')} onHome={goHome} />;
+    return <Settle round={round} setRound={setRound} meId={userId} onBack={() => setScreen('play')} onHome={goHome} />;
   return withNav(
     <>
       {joinError && (

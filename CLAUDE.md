@@ -131,6 +131,9 @@ src/
                     close names (fuzzy.js, tested) marked `similar`
     fuzzy.js        Close-match scoring for course names (typos, filler words)
     searchHistory.js Recent searches (device, per account) + post ranking
+    tab.js          Pure: running tabs (settle-up -> tab rows, balances per
+                    friend, typed amounts; tested)
+    moneyTab.js     The only tab_entries code (load, add, mark paid, undo)
     notifications.js The only notifications code: list, unread count, mark read
     roundRecap.js   Pure: round -> recap facts for the AI recap (tested),
                     rating categories, rateableKey, overallStars
@@ -230,6 +233,8 @@ supabase/course_backup.sql  course_backup (every picked course, full detail) + s
 supabase/casual_rounds.sql  Shared casual rounds: casual_rounds, casual_round_players
                     (foursome per player), casual_entries, create_casual_round(),
                     put_casual_entries(), hide_casual_round()
+supabase/money_tab.sql  Running tabs: tab_entries, add_to_tab(), tab_sources_added(),
+                    mark_tab_paid()
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -308,6 +313,26 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
   the creator's ✕ deletes it for everyone; anyone else's ✕ removes it from
   their own list (`hide_casual_round`). Both need signal once the round
   has reached the server.
+
+## Running tabs
+
+- Friends who play each other for months and cash out now and then
+  (supabase/money_tab.sql, `lib/tab.js` tested, `lib/moneyTab.js`, UI
+  `RunningTabs.jsx`). Opt-in per round: settle screens show
+  **+ Add to running tab** (casual Settle for shared rounds once every hole
+  is in; league/tournament Side games once every set is done). It adds that
+  settle-up's payments (`tabRows`, by account) to each pair's tab, once per
+  source: `casual:<roundId>`, or `set:<eventId>:<setId>` per side-games
+  set (two foursomes can share a set, so it never counts twice). Anyone in
+  the round can add it; `add_to_tab()` checks everyone named is in it.
+  Then it shows "✓ On the running tab" and "Overall: Mike owes you $42".
+- Home → **Running tabs** dropdown (only when you have one): each friend
+  with +/− total (`tabSummary`; + = they owe you), tap for the history and
+  **Mark paid** (all or part, `mark_tab_paid()` refuses more than owed).
+  Only the person getting paid can mark it (and Undo their own "paid");
+  the one who owes sees "When you pay Mike, Mike marks it paid here".
+  Only the two people in an entry can read it. The tab replaces paying
+  every round; Scribble never holds or moves money.
 
 ## Round recap and course ratings
 

@@ -7,8 +7,10 @@ import { saveRound } from '../lib/storage.js';
 import { trackLocal } from '../lib/casualRounds.js';
 import { casualRecapFacts } from '../lib/roundRecap.js';
 import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
+import { AddToTab } from './RunningTabs.jsx';
+import { tabRows } from '../lib/tab.js';
 
-export default function Settle({ round, setRound, onBack, onHome }) {
+export default function Settle({ round, setRound, meId, onBack, onHome }) {
   const computed = useMemo(() => computeRound(round), [round]);
   const [copied, setCopied] = useState(false);
   const names = nameMap(round.players);
@@ -85,6 +87,20 @@ export default function Settle({ round, setRound, onBack, onHome }) {
           Fewest payments to square everyone up. The app never moves money — pay each other however you like.
         </p>
       </section>
+
+      {/* Running tab: shared rounds, once every hole is in. */}
+      {round.shared && computed.finished && (
+        <AddToTab
+          me={meId}
+          items={[
+            {
+              source: `casual:${round.id}`,
+              label: `${round.course.name} · ${new Date(round.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+              rows: tabRows(computed.payments, round.players),
+            },
+          ]}
+        />
+      )}
 
       <Totals players={round.players} totals={computed.totals} />
 

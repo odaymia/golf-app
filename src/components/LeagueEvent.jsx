@@ -637,7 +637,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   if (sideGames) {
     // Side games can include anyone playing this round, not just my foursome.
     const field = roundField(event, data.members, scored, picked);
-    const asPlayer = (p) => ({ id: p.id, name: p.name, index: indexes?.[p.id] ?? p.index ?? 0 });
+    const asPlayer = (p) => ({ id: p.id, name: p.name, index: indexes?.[p.id] ?? p.index ?? 0, userId: p.userId ?? null });
     return (
       <FoursomeGames
         event={event}
@@ -646,6 +646,7 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
         scores={Object.fromEntries(field.map((p) => [p.id, merged(p.id)]))}
         indexes={indexes ?? {}}
         handicap={settings.handicap ?? {}}
+        meId={myUserId}
         onBack={() => setSideGames(false)}
       />
     );

@@ -4121,3 +4121,18 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .gg-score:disabled { cursor: default; }
 .other-groups-hint, .sync-pending { margin: 8px 4px 0; }
 .sync-pending { color: #7a5a0c; }
+
+/* Running tabs (Home) and Add to running tab (settle screens) */
+.tab-item .hg-item { display: flex; align-items: center; gap: 10px; width: 100%; }
+.tab-amount { font-family: 'Fraunces', serif; font-weight: 700; font-size: 17px; white-space: nowrap; }
+.tab-amount.plus, .tab-history .plus { color: var(--green, #065025); }
+.tab-amount.minus, .tab-history .minus { color: #b23a2e; }
+.tab-detail { padding: 6px 8px 12px; }
+.tab-headline { font-weight: 700; margin: 4px 0 10px; }
+.tab-pay { display: flex; align-items: flex-end; gap: 10px; }
+.tab-pay .field { flex: 1; margin: 0; }
+.tab-pay .btn { min-height: 44px; }
+.tab-history { list-style: none; margin: 12px 0 6px; padding: 0; }
+.tab-history li { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.tab-history .small-link { margin-left: 8px; }
+.add-tab .tab-on { font-weight: 700; color: var(--green, #065025); margin: 0 0 4px; }
