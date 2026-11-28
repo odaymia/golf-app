@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { listFeed } from '../../lib/social.js';
 import { unreadCount } from '../../lib/messages.js';
 import PostCard from './PostCard.jsx';
+import { useUnreadNotifications } from '../useUnreadNotifications.js';
 
-// The feed: everyone's posts ("For you") or people you follow.
+// The feed: everyone's posts ("For you") or people you follow, under a
+// slim pinned bar (logo; search, notifications, messages).
 export default function Feed({ meId, nav }) {
   const [mode, setMode] = useState('all');
   const [posts, setPosts] = useState(null);
@@ -11,6 +13,7 @@ export default function Feed({ meId, nav }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [unread, setUnread] = useState(0);
+  const alerts = useUnreadNotifications(meId);
 
   // Unread conversations, for the badge on the messages button.
   useEffect(() => {
@@ -47,32 +50,41 @@ export default function Feed({ meId, nav }) {
 
   return (
     <div className="screen feed-screen">
-      <div className="feed-top">
-        <img className="feed-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
-        <button className="inbox-btn" onClick={() => nav('inbox')} aria-label={unread ? `Messages, ${unread} unread` : 'Messages'}>
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-            <path d="M21 3 3 10.5l7 2.5 2.5 7z M21 3 10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-          </svg>
-          {unread > 0 && <span className="inbox-badge">{unread > 9 ? '9+' : unread}</span>}
-        </button>
-      </div>
-      <button className="feed-search" onClick={() => nav('search')}>
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        Search golfers, courses, posts
-      </button>
-      <div className="tabs wide-tabs" role="tablist">
-        {[
-          ['all', 'For you'],
-          ['following', 'Following'],
-        ].map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <header className="feed-bar">
+        <div className="feed-bar-row">
+          <img className="feed-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Scribble Golf Club" />
+          <div className="feed-icons">
+            <button className="feed-icon" onClick={() => nav('search')} aria-label="Search golfers, courses, posts">
+              <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="1.9" />
+                <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button className="feed-icon" onClick={() => nav('activity')} aria-label={alerts ? `Notifications, ${alerts} new` : 'Notifications'}>
+              <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
+                <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+              {alerts > 0 && <span className="inbox-badge">{alerts > 9 ? '9+' : alerts}</span>}
+            </button>
+            <button className="feed-icon" onClick={() => nav('inbox')} aria-label={unread ? `Messages, ${unread} unread` : 'Messages'}>
+              <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
+                <path d="M21 3 3 10.5l7 2.5 2.5 7z M21 3 10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+              {unread > 0 && <span className="inbox-badge">{unread > 9 ? '9+' : unread}</span>}
+            </button>
+          </div>
+        </div>
+        <div className="feed-tabs" role="tablist">
+          {[
+            ['all', 'For you'],
+            ['following', 'Following'],
+          ].map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </header>
       {error && <div className="card warn-box">{error}</div>}
       {posts === null && <p className="muted center">Loading…</p>}
       {posts?.length === 0 && !error && (

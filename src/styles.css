@@ -1760,23 +1760,12 @@ tr.clickable {
   padding-right: 0;
 }
 
-.feed-screen > .tabs,
 .feed-screen > .card,
 .feed-screen > p,
 .feed-screen > .btn {
   margin-left: 16px;
   margin-right: 16px;
   width: auto;
-}
-
-.feed-top {
-  display: flex;
-  justify-content: center;
-  padding: 4px 0 2px;
-}
-
-.feed-logo {
-  width: 140px;
 }
 
 .empty-feed {
@@ -2881,12 +2870,6 @@ tr.clickable {
 .tee-lines .tee-names { text-align: left !important; font-size: inherit; }
 
 /* Share, save, folders, messages */
-.feed-top { position: relative; }
-.inbox-btn {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  width: 44px; height: 44px; display: grid; place-items: center;
-  background: none; border: none; color: var(--green-deep);
-}
 .inbox-badge {
   position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 9px; background: #b8466f; color: #fff; font-size: 11px; font-weight: 700;
@@ -2991,11 +2974,6 @@ tr.clickable {
 }
 
 /* Search */
-.feed-search {
-  display: flex; align-items: center; gap: 8px; width: calc(100% - 24px); margin: 6px 12px 8px;
-  padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff;
-  color: var(--muted); font: inherit; text-align: left;
-}
 .search-top { display: flex; align-items: center; gap: 4px; padding: 8px 8px 6px; position: sticky; top: 0; z-index: 5; background: var(--bg); }
 .search-top > .btn { font-size: 26px; padding: 0 10px; }
 .search-field {
@@ -3443,18 +3421,6 @@ a:focus-visible {
 
 /* Refresh touch-ups */
 .card.round-item { padding: 0; }
-.feed-search {
-  border: none;
-  background: var(--fill);
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 12px;
-}
-.feed-screen > .tabs {
-  display: flex;
-  width: auto;
-}
-.feed-screen > .tabs button { flex: 1; }
 .profile-counts { align-items: center; }
 .profile-counts > * {
   display: flex;
@@ -3468,8 +3434,7 @@ a:focus-visible {
 .profile-counts strong { line-height: 1.1; }
 .settings-list { border: none; box-shadow: var(--shadow); }
 .settings-row { border-bottom-color: var(--hairline); }
-.wide-tabs,
-.feed-screen > .tabs { justify-self: stretch; }
+.wide-tabs { justify-self: stretch; }
 
 /* Player search in round setup */
 .player-search { position: relative; min-width: 0; }
@@ -4136,3 +4101,122 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 .tab-history li { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .tab-history .small-link { margin-left: 8px; }
 .add-tab .tab-on { font-weight: 700; color: var(--green, #065025); margin: 0 0 4px; }
+
+/* =========================================================================
+   Social feed layout: slim pinned bar, edge-to-edge posts, action row,
+   profile header + 3-across grid. Our own icons, palette and fonts.
+   ========================================================================= */
+.feed-screen { padding-top: 0; }
+.feed-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding-top: env(safe-area-inset-top);
+  background: rgb(244 238 223 / 88%);
+  backdrop-filter: saturate(1.5) blur(16px);
+  -webkit-backdrop-filter: saturate(1.5) blur(16px);
+  border-bottom: 1px solid var(--hairline);
+}
+.feed-bar-row { display: flex; align-items: center; justify-content: space-between; height: 50px; padding: 0 4px 0 14px; }
+.feed-logo { width: 112px; height: auto; display: block; }
+.feed-icons { display: flex; align-items: center; }
+.feed-icon {
+  position: relative; width: 42px; height: 42px; padding: 0; display: grid; place-items: center;
+  background: none; border: none; color: var(--text);
+}
+.feed-icon:active { opacity: 0.6; }
+.feed-icon .inbox-badge { top: 3px; right: 1px; border: 2px solid var(--bg); }
+.feed-tabs { display: flex; justify-content: center; gap: 32px; height: 34px; }
+.feed-tabs button {
+  background: none; border: none; border-bottom: 2px solid transparent; padding: 0 2px;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--muted);
+}
+.feed-tabs button.on { color: var(--text); border-bottom-color: var(--text); }
+.feed-screen > .empty-feed { margin-top: 16px; }
+
+/* Posts: no card, full width, separated by space. */
+.post-card { background: none; border: none; margin: 0 0 20px; }
+.feed-screen .post-card:first-of-type { margin-top: 4px; }
+.post-head { min-height: 54px; padding: 8px 2px 8px 12px; }
+.post-author { gap: 10px; min-width: 0; }
+.post-author strong { font-size: 14px; font-weight: 700; line-height: 1.2; }
+.post-place { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.post-more {
+  width: 42px; height: 42px; padding: 0; display: grid; place-items: center;
+  background: none; border: none; color: var(--text);
+}
+.post-media { background: #101411; }
+.media-count {
+  position: absolute; top: 12px; right: 12px; padding: 3px 9px; border-radius: 12px;
+  background: rgb(16 20 17 / 62%); color: #fff; font-size: 12px; font-weight: 600; pointer-events: none;
+}
+.like-burst {
+  position: absolute; top: 50%; left: 50%; width: 96px; height: 96px; margin: -48px 0 0 -48px;
+  fill: #fff; filter: drop-shadow(0 4px 14px rgb(0 0 0 / 35%));
+  pointer-events: none; opacity: 0; animation: like-pop 0.9s ease-out;
+}
+@keyframes like-pop {
+  0% { transform: scale(0.2); opacity: 0; }
+  15% { transform: scale(1.15); opacity: 0.95; }
+  30% { transform: scale(0.95); opacity: 0.95; }
+  45% { transform: scale(1); opacity: 0.95; }
+  80% { transform: scale(1); opacity: 0.95; }
+  100% { transform: scale(0.85) translateY(-20px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .like-burst { display: none; } }
+.post-actions { position: relative; gap: 0; padding: 2px 4px 0; align-items: center; }
+.post-actions button { width: 42px; height: 42px; }
+.post-actions button:active svg { transform: scale(0.88); }
+.post-actions .media-dots { top: 50%; bottom: auto; transform: translateY(-50%); gap: 4px; }
+.post-actions .media-dots span { background: var(--fill-2); }
+.post-actions .media-dots span.on { background: var(--green); }
+.post-body { padding: 0 14px; }
+.post-body p { font-size: 14px; line-height: 1.4; margin: 3px 0; }
+.post-likes { font-size: 14px; }
+.caption-name, .caption-more {
+  background: none; border: none; padding: 0; font: inherit; color: inherit; display: inline;
+}
+.caption-name { font-weight: 700; }
+.caption-more { color: var(--muted); }
+.post-comments {
+  display: block; background: none; border: none; padding: 2px 0; margin: 2px 0;
+  font: inherit; font-size: 14px; color: var(--muted); text-align: left;
+}
+.post-time { font-size: 12px !important; text-transform: none; letter-spacing: 0; margin-top: 4px !important; }
+.save-toast { margin: 4px 12px 6px; }
+
+/* ⋯ options: a bottom sheet of plain rows. */
+.sheet.post-menu {
+  position: relative; top: auto; right: auto; min-width: 0; z-index: auto;
+  display: flex; flex-direction: column; gap: 0; overflow-y: auto;
+  border: none; border-radius: 22px 22px 0 0; background: var(--bg);
+  padding: 26px 12px max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 18%);
+}
+.sheet.post-menu button {
+  background: var(--card); border: none; border-bottom: 1px solid var(--hairline);
+  padding: 15px 16px; text-align: center; font: inherit; font-size: 16px; font-weight: 600; color: var(--text);
+}
+.sheet.post-menu button:first-child { border-radius: 14px 14px 0 0; }
+.sheet.post-menu button:nth-last-child(2) { border-radius: 0 0 14px 14px; border-bottom: none; }
+.sheet.post-menu button:first-child:nth-last-child(2) { border-radius: 14px; }
+.sheet.post-menu button:last-child { margin-top: 10px; border-radius: 14px; border-bottom: none; color: var(--text); }
+.sheet.post-menu .danger { color: var(--down); }
+
+/* Profile: photo + counts, bio, small buttons, tabs, square grid. */
+.profile-head { gap: 26px; margin-top: 4px; }
+.profile-counts strong { font-family: 'Montserrat', system-ui, sans-serif; font-size: 17px; font-weight: 700; }
+.profile-counts span { font-size: 13px; color: var(--text); }
+.profile-bio { font-size: 14px; line-height: 1.4; margin: 12px 0; }
+.profile-bio strong { font-size: 14px; }
+.profile-bio .home-course-link { font-size: 14px; }
+.profile-buttons { gap: 6px; }
+.profile-buttons .btn { min-height: 34px; padding: 6px 12px; font-size: 14px; font-weight: 600; border-radius: 9px; }
+.profile-buttons .btn.outline { border: none; background: var(--fill-2); color: var(--text); }
+.profile-tabs { display: flex; margin: 14px -16px 0; border-top: 1px solid var(--hairline); }
+.profile-tabs > * {
+  flex: 1; height: 44px; display: grid; place-items: center; background: none; border: none;
+  border-top: 1.5px solid transparent; margin-top: -1px; color: var(--muted); padding: 0;
+}
+.profile-tabs .on { color: var(--text); border-top-color: var(--text); }
+.profile-tabs + .post-grid { margin-top: 0; }

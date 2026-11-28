@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { likePost, unlikePost, deletePost, reportPost, blockUser, savePost, unsavePost } from '../../lib/social.js';
-import { countLabel, timeAgo } from '../../lib/socialFormat.js';
+import { countLabel, timeAgoLong } from '../../lib/socialFormat.js';
 import Avatar from './Avatar.jsx';
 import FeedVideo from './FeedVideo.jsx';
 import ShareSheet from './ShareSheet.jsx';
@@ -11,8 +11,12 @@ import { toggleSound } from './feedSound.js';
 // outside that range is fitted inside without cropping.
 const TALLEST = 9 / 16;
 const WIDEST = 1.91;
+// Captions longer than this start folded, with "more".
+const SHORT_CAPTION = 110;
 
-// One post: author, location, photos/videos (swipe), like, comments, caption.
+// One post, edge to edge: header (avatar, name, course, ⋯), full-width
+// photos/videos (swipe), action row (like, comment, share; save on the
+// right), then likes, caption, comments link and time.
 export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
   const [liked, setLiked] = useState(post.likedByMe);
   const [likes, setLikes] = useState(post.likeCount);
@@ -23,6 +27,8 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
   const [sheet, setSheet] = useState(null); // 'share' | 'folders'
   const toastTimer = useRef(null);
   const [error, setError] = useState('');
+  const [burst, setBurst] = useState(0); // double-tap heart, keyed to replay
+  const [open, setOpen] = useState(false); // long caption unfolded
   const track = useRef(null);
   const lastTap = useRef(0);
   // The box takes the first item's shape: from upload, or measured on load.
@@ -55,7 +61,10 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
     const double = now - lastTap.current < 300;
     lastTap.current = double ? 0 : now;
     if (m.kind === 'video') toggleSound();
-    if (double) toggleLike(true);
+    if (double) {
+      setBurst((n) => n + 1);
+      toggleLike(true);
+    }
   }
 
   async function toggleSave() {
@@ -115,7 +124,7 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
     <article className="post-card">
       <header className="post-head">
         <button className="post-author" onClick={() => nav('user', { userId: post.userId })}>
-          <Avatar profile={post.author} size={36} />
+          <Avatar profile={post.author} size={34} />
           <span>
             <strong>{post.author.username || post.author.displayName}</strong>
             {post.course && (
@@ -128,29 +137,35 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
                   if (post.course.key) nav('course', { course: post.course });
                 }}
               >
-                📍 {post.course.name}
+                {post.course.name}
               </span>
             )}
           </span>
         </button>
-        <button className="btn btn-ghost btn-small post-more" onClick={() => setMenu((m) => !m)} aria-label="More">
-          ⋯
+        <button className="post-more" onClick={() => setMenu(true)} aria-label="More">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <circle cx="5" cy="12" r="1.7" fill="currentColor" />
+            <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+            <circle cx="19" cy="12" r="1.7" fill="currentColor" />
+          </svg>
         </button>
         {menu && (
-          <div className="post-menu">
-            {mine ? (
-              <button className="danger" onClick={remove}>
-                Delete post
-              </button>
-            ) : (
-              <>
-                <button onClick={report}>Report post</button>
-                <button className="danger" onClick={block}>
-                  Block {post.author.username ? `@${post.author.username}` : 'user'}
+          <div className="sheet-backdrop" onClick={() => setMenu(false)}>
+            <div className="sheet post-menu" role="dialog" aria-modal="true" aria-label="Post options" onClick={(e) => e.stopPropagation()}>
+              {mine ? (
+                <button className="danger" onClick={remove}>
+                  Delete post
                 </button>
-              </>
-            )}
-            <button onClick={() => setMenu(false)}>Cancel</button>
+              ) : (
+                <>
+                  <button onClick={report}>Report post</button>
+                  <button className="danger" onClick={block}>
+                    Block {post.author.username ? `@${post.author.username}` : 'user'}
+                  </button>
+                </>
+              )}
+              <button onClick={() => setMenu(false)}>Cancel</button>
+            </div>
           </div>
         )}
       </header>
@@ -186,18 +201,28 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
             ))}
           </div>
           {post.media.length > 1 && (
-            <div className="media-dots" aria-hidden="true">
-              {post.media.map((_, i) => (
-                <span key={i} className={i === slide ? 'on' : ''} />
-              ))}
-            </div>
+            <span className="media-count" aria-hidden="true">
+              {slide + 1}/{post.media.length}
+            </span>
+          )}
+          {burst > 0 && (
+            <svg key={burst} className="like-burst" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 20s-7-4.4-9.2-8.6C1.3 8.4 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3C14.3 6.1 15.6 5 17.6 5 21 5 22.7 8.4 21.2 11.4 19 15.6 12 20 12 20z" />
+            </svg>
           )}
         </div>
       )}
 
       <div className="post-actions">
+        {post.media.length > 1 && (
+          <div className="media-dots" aria-hidden="true">
+            {post.media.map((_, i) => (
+              <span key={i} className={i === slide ? 'on' : ''} />
+            ))}
+          </div>
+        )}
         <button className={`like-btn ${liked ? 'on' : ''}`} onClick={() => toggleLike()} aria-pressed={liked} aria-label={liked ? 'Unlike' : 'Like'}>
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
             <path
               d="M12 20s-7-4.4-9.2-8.6C1.3 8.4 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3C14.3 6.1 15.6 5 17.6 5 21 5 22.7 8.4 21.2 11.4 19 15.6 12 20 12 20z"
               fill={liked ? 'currentColor' : 'none'}
@@ -208,17 +233,17 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
           </svg>
         </button>
         <button className="comment-btn" onClick={() => nav('post', { postId: post.id })} aria-label="Comments">
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
             <path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </button>
         <button className="share-btn" onClick={() => setSheet('share')} aria-label="Share">
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
             <path d="M21 3 3 10.5l7 2.5 2.5 7z M21 3 10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </button>
         <button className={`save-btn ${saved ? 'on' : ''}`} onClick={toggleSave} aria-pressed={saved} aria-label={saved ? 'Unsave' : 'Save'}>
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true">
             <path d="M6 3h12v18l-6-5-6 5z" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </button>
@@ -244,15 +269,27 @@ export default function PostCard({ post, meId, nav, onChanged, onDeleted }) {
         {post.hideLikes && !mine && liked && <p className="post-likes">You liked this</p>}
         {post.caption && (
           <p className="post-caption">
-            <strong>{post.author.username}</strong> {post.caption}
+            <button className="caption-name" onClick={() => nav('user', { userId: post.userId })}>
+              {post.author.username || post.author.displayName}
+            </button>{' '}
+            {open || post.caption.length <= SHORT_CAPTION ? (
+              post.caption
+            ) : (
+              <>
+                {post.caption.slice(0, SHORT_CAPTION - 10).trimEnd()}…{' '}
+                <button className="caption-more" onClick={() => setOpen(true)}>
+                  more
+                </button>
+              </>
+            )}
           </p>
         )}
         {post.commentCount > 0 && (
-          <button className="link post-comments" onClick={() => nav('post', { postId: post.id })}>
-            View {countLabel(post.commentCount, 'comment')}
+          <button className="post-comments" onClick={() => nav('post', { postId: post.id })}>
+            {post.commentCount === 1 ? 'View 1 comment' : `View all ${post.commentCount} comments`}
           </button>
         )}
-        <p className="post-time">{timeAgo(post.createdAt)}</p>
+        <p className="post-time">{timeAgoLong(post.createdAt)}</p>
         {error && <p className="search-error">{error}</p>}
       </div>
     </article>

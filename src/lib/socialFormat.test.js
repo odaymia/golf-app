@@ -4,6 +4,7 @@ import {
   usernameProblem,
   suggestUsername,
   timeAgo,
+  timeAgoLong,
   courseTag,
   countLabel,
   compactCount,
@@ -25,6 +26,24 @@ describe('usernames', () => {
     expect(suggestUsername('Omar Daymia')).toBe('omardaymia');
     expect(usernameProblem(suggestUsername('Al'))).toBe(null);
     expect(usernameProblem(suggestUsername(''))).toBe(null);
+  });
+});
+
+describe('timeAgoLong', () => {
+  const now = new Date('2026-11-14T12:00:00Z').getTime();
+  const ago = (sec) => new Date(now - sec * 1000).toISOString();
+  it('spelled-out relative times, singular and plural', () => {
+    expect(timeAgoLong(ago(20), now)).toBe('Just now');
+    expect(timeAgoLong(ago(60), now)).toBe('1 minute ago');
+    expect(timeAgoLong(ago(5 * 60), now)).toBe('5 minutes ago');
+    expect(timeAgoLong(ago(3600), now)).toBe('1 hour ago');
+    expect(timeAgoLong(ago(3 * 3600), now)).toBe('3 hours ago');
+    expect(timeAgoLong(ago(2 * 86400), now)).toBe('2 days ago');
+    expect(timeAgoLong(ago(15 * 86400), now)).toBe('2 weeks ago');
+  });
+  it('older posts show the date, with the year only when it differs', () => {
+    expect(timeAgoLong(ago(60 * 86400), now)).not.toMatch(/2026/);
+    expect(timeAgoLong(ago(400 * 86400), now)).toMatch(/2025/);
   });
 });
 

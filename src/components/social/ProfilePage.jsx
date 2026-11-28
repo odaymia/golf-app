@@ -221,9 +221,6 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
                 <button className="btn btn-ghost full outline" onClick={() => setEditing(true)}>
                   Edit profile
                 </button>
-                <button className="btn btn-ghost full outline" onClick={() => nav('saved')}>
-                  Saved
-                </button>
               </>
             ) : (
               <>
@@ -253,7 +250,23 @@ export default function ProfilePage({ userId, meId, account, nav, back, onSettin
                   : 'Follow this account to see their photos and videos.'}
               </p>
             </section>
-          ) : posts === null ? (
+          ) : (
+            <div className="profile-tabs" role="tablist">
+              <span className="on" role="tab" aria-selected="true" aria-label="Posts">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path d="M4 4h16v16H4zM9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                </svg>
+              </span>
+              {mine && (
+                <button role="tab" aria-selected="false" aria-label="Saved" onClick={() => nav('saved')}>
+                  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                    <path d="M6 3h12v18l-6-5-6 5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+          {lockedPrivate ? null : posts === null ? (
             <p className="muted center">Loading…</p>
           ) : (
             <PostGrid

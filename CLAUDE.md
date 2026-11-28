@@ -727,6 +727,19 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Bottom tab bar (`BottomNav`): Golf (rounds/leagues/tournaments), Feed, +
   (new post), Profile. Social screens live in `components/social/` under
   `Social.jsx`, which keeps its own back stack.
+- Layout (Instagram-like, our own icons/brand; styles in the "Social feed
+  layout" block at the end of src/styles.css): the Feed has a slim pinned
+  bar (logo left; search, notifications bell and messages icons right, with
+  badges) and For you / Following tabs under it. Posts are edge to edge (no
+  card): header (avatar, username, course tag, ⋯ which opens a bottom sheet:
+  Delete / Report / Block / Cancel), full-width media (a "1/3" counter and
+  dots in the action row for carousels; double-tap shows a heart burst),
+  action row (like, comment, share left; save right), then likes, caption
+  with the bold username (captions over 110 characters fold with "more"),
+  "View all N comments" and `timeAgoLong` ("3 hours ago"). Profiles: avatar
+  + Posts/Followers/Following counts, bio, small grey buttons, a tab strip
+  (grid; your own profile adds a bookmark tab that opens Saved), then the
+  3-across square grid.
 - Data (`lib/social.js`, the only code touching these tables and the
   `media` storage bucket): `public_profiles` (username, display name, bio,
   avatar, home course; readable by all signed-in users; handicap/GHIN stay
@@ -735,7 +748,7 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   review in the Supabase dashboard). Schema + RLS + bucket in
   supabase/social.sql. Members can only upload/delete in their own
   `<userId>/` folder.
-- Search (`Search.jsx`, from the bar at the top of the Feed): recent
+- Search (`Search.jsx`, from the magnifier in the Feed's top bar): recent
   searches until Enter (typed searches plus profiles/courses opened from
   search; stored on the device per account in `lib/searchHistory.js`, max
   20, "Clear search history"). Enter shows three tabs: For you
@@ -751,7 +764,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   removed on unlike), comment, follow (removed on unfollow), message (one
   row per conversation with an unread count; reading the chat clears it),
   swing review sent/answered. None for your own actions or between blocked
-  people. Bell with unread badge on your own profile and a badge on the
+  people. Bell with unread badge in the Feed's top bar and on your own
+  profile, and a badge on the
   Profile tab (`useUnreadNotifications`: every 30 s, on foreground, and on
   the `scribble:notifications-changed` event). Opening Notifications marks
   all read; grouped Today / This week / Earlier; tap goes to the post,
@@ -798,7 +812,7 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Saving (private to you): the bookmark saves to `saved_posts` ("All
   saved"); "Add to folder" puts it in your `save_folders` via
   `save_folder_posts` (adding also saves; unsaving also leaves every folder;
-  deleting a folder keeps the saves). Own profile -> Saved shows All saved +
+  deleting a folder keeps the saves). Own profile -> bookmark tab (Saved) shows All saved +
   folders (create, rename, delete).
 - Sharing: the paper plane opens `ShareSheet`: send the post to golfers by
   DM (search or recent chats, optional note), the phone's share sheet
@@ -807,7 +821,7 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Direct messages (`lib/messages.js`, the only code touching the DM
   tables): one-to-one conversations (`start_dm` reuses an existing one;
   tables allow groups later). Members-only RLS; blocked people can't start
-  or send. Inbox from the paper plane on the Feed (unread badge, checked
+  or send. Inbox from the paper plane in the Feed's top bar (unread badge, checked
   every 30 s); Message button on other profiles. Threads poll every 4 s
   (no realtime yet); tapping your own bubble offers Unsend. Read receipts:
   "Sent" / "Seen 2m ago" under your latest message and "· Seen" in the inbox,
