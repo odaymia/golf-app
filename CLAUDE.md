@@ -371,13 +371,16 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
 
 ## Pricing (not live)
 
-Plan in docs/pricing.md: casual free up to 4 players; tournament $19.99
-(rounds within 7 days); league $199/season (15 played rounds or 12 months,
-add-on rounds); club $299/yr; $9.99/mo unlimited tournaments. Limits in
-`lib/plans.js` (tested) behind `PLANS_LIVE = false`; checked in casual
-Setup (player count) and every add-round screen (phone Add round, desktop
-Schedule, Ryder Cup Rounds). Turn on together with Stripe + server-side
-checks (see the doc).
+Plan in docs/pricing.md (organizers pay, players never do; priced by field
+size): casual free up to 8 players; Crew $49/yr (recurring group, not
+built); tournament free up to 8 / $19.99 up to 40 / $49 up to 144, first
+one free, rounds within 7 days; league $99 up to 16 / $199 up to 60 / $349
+for 61+ per season (15 played rounds or 12 months, add-on rounds); club
+$999/yr ($499 founding). Limits and prices (cents) in `lib/plans.js`
+(tested) behind `PLANS_LIVE = false`; checked in casual Setup (player
+count) and every add-round screen (phone Add round, desktop Schedule, Ryder
+Cup Rounds). `fieldSizeProblem` is not wired yet. Turn on together with
+Stripe + server-side checks (see the doc).
 
 ## Owner dashboard
 

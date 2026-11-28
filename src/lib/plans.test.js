@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LIMITS, addRoundProblem, casualMaxPlayers, leagueRoundProblem, playedRounds, tournamentDateProblem } from './plans.js';
+import { LIMITS, addRoundProblem, casualMaxPlayers, fieldSizeProblem, leagueRoundProblem, playedRounds, tierFor, tournamentDateProblem } from './plans.js';
 
 describe('plan limits', () => {
   it('are off until payments go live', () => {
@@ -8,8 +8,33 @@ describe('plan limits', () => {
     expect(leagueRoundProblem({ events: Array(40).fill({ status: 'final' }) })).toBe(null);
   });
 
-  it('casual rounds: 4 players when live', () => {
+  it('casual rounds: 8 players (two foursomes) when live', () => {
     expect(casualMaxPlayers(24, true)).toBe(LIMITS.casualPlayers);
+    expect(LIMITS.casualPlayers).toBe(8);
+  });
+
+  it('field-size tiers', () => {
+    expect(tierFor('tournament', 8).cents).toBe(0);
+    expect(tierFor('tournament', 9).cents).toBe(1999);
+    expect(tierFor('tournament', 40).key).toBe('up40');
+    expect(tierFor('tournament', 144).cents).toBe(4900);
+    expect(tierFor('tournament', 145)).toBe(null);
+    expect(tierFor('league', 16).cents).toBe(9900);
+    expect(tierFor('league', 17).cents).toBe(19900);
+    expect(tierFor('league', 500).key).toBe('unlimited');
+  });
+
+  it('field size: off until live; free, first free, paid, upgrade, club', () => {
+    expect(fieldSizeProblem({ kind: 'tournament', players: 500 })).toBe(null);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 8 }, true)).toBe(null);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 20 }, true)).toMatch(/Free tournaments are up to 8.*\$19\.99/);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 100, firstFree: true }, true)).toBe(null);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 200, firstFree: true }, true)).toMatch(/club plan/);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 40, paidTier: 'up40' }, true)).toBe(null);
+    expect(fieldSizeProblem({ kind: 'tournament', players: 41, paidTier: 'up40' }, true)).toMatch(/up to 40.*\$49\.00/);
+    expect(fieldSizeProblem({ kind: 'league', players: 10 }, true)).toMatch(/is \$99\.00/);
+    expect(fieldSizeProblem({ kind: 'league', players: 300, paidTier: 'unlimited' }, true)).toBe(null);
+    expect(fieldSizeProblem({ kind: 'league', players: 300, club: true }, true)).toBe(null);
   });
 
   it('tournaments: every round within 7 days of the first', () => {

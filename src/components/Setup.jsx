@@ -29,7 +29,7 @@ const newPlayer = (from) => ({
 });
 
 export default function Setup({ profile, meId, onStart, onCancel }) {
-  // Free casual rounds: one foursome once plans are live (lib/plans.js).
+  // Free casual rounds: two foursomes once plans are live (lib/plans.js).
   const maxPlayers = casualMaxPlayers(MAX_PLAYERS);
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(blankCourse);

@@ -6,11 +6,58 @@
 export const PLANS_LIVE = false;
 
 export const LIMITS = {
-  casualPlayers: 4, // free casual rounds: one foursome
+  casualPlayers: 8, // free casual rounds: two foursomes
   tournamentDays: 7, // every round within 7 days of the first
   leagueRounds: 15, // played rounds per league season (+ add-ons)
   leagueMonths: 12, // season length from creation
 };
+
+// Prices in integer cents. Field-size tiers: the cheapest tier whose
+// maxPlayers covers the field (null = no cap). Tournaments free up to 8.
+export const TOURNAMENT_TIERS = [
+  { key: 'free', maxPlayers: 8, cents: 0 },
+  { key: 'up40', maxPlayers: 40, cents: 1999 },
+  { key: 'up144', maxPlayers: 144, cents: 4900 },
+];
+export const LEAGUE_TIERS = [
+  { key: 'up16', maxPlayers: 16, cents: 9900 },
+  { key: 'up60', maxPlayers: 60, cents: 19900 },
+  { key: 'unlimited', maxPlayers: null, cents: 34900 },
+];
+export const PRICES = {
+  crewYear: 4900, // a regular group's recurring game (Crew features not built yet)
+  clubYear: 99900, // every league + tournament at a venue
+  clubFoundingYear: 49900, // first 50 clubs
+  leagueAddOnRound: 1000,
+  leagueAddOnTen: 4900,
+};
+
+const tiersFor = (kind) => (kind === 'tournament' ? TOURNAMENT_TIERS : LEAGUE_TIERS);
+
+// The tier a field of `players` needs, or null when it's bigger than any
+// tier (a tournament over 144: club plan).
+export function tierFor(kind, players) {
+  return tiersFor(kind).find((t) => t.maxPlayers == null || players <= t.maxPlayers) ?? null;
+}
+
+// A message when `players` won't fit the tier paid for, else null.
+// paidTier: the tier key bought (none = free; leagues have no free tier).
+// firstFree: the organizer's first tournament, free at any size up to 144.
+// club: the venue's club plan covers every size.
+export function fieldSizeProblem({ kind = 'league', players, paidTier = null, firstFree = false, club = false }, live = PLANS_LIVE) {
+  if (!live || club) return null;
+  const need = tierFor(kind, players);
+  if (!need) return `${players} players is more than any ${kind} plan covers. A club plan covers any size.`;
+  if (kind === 'tournament' && firstFree) return null;
+  const tiers = tiersFor(kind);
+  const paid = tiers.find((t) => t.key === paidTier) ?? (kind === 'tournament' ? tiers[0] : null);
+  if (paid && (paid.maxPlayers == null || players <= paid.maxPlayers)) return null;
+  const price = `$${(need.cents / 100).toFixed(2)}`;
+  if (paid?.cents === 0) return `Free ${kind}s are up to ${paid.maxPlayers} players. A ${kind} of ${players} players is ${price}.`;
+  return paid
+    ? `This ${kind} is paid for up to ${paid.maxPlayers} players. Upgrade to fit ${players} (${price}).`
+    : `A ${kind} of ${players} players is ${price}.`;
+}
 
 const DAY = 86400000;
 const dayNum = (iso) => Math.round(Date.parse(`${iso}T12:00:00Z`) / DAY);
