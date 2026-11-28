@@ -4110,3 +4110,14 @@ tbody.expanded .lb2-row td { background: #eef3ea; border-bottom: none; }
 
 /* Score entry: Clear hole (wipes this hole for the group on every phone) */
 .clear-hole { display: block; margin: 4px auto 10px; }
+
+/* Shared casual rounds: foursomes in setup, other groups on the Score tab */
+.foursomes .foursome { margin-top: 12px; }
+.foursomes .foursome h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.foursome-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.foursome-row .grow { flex: 1 1 auto; min-width: 0; }
+.foursomes .foursome-row select { min-height: 40px; width: 136px; flex: 0 0 136px; }
+.gg-table.other-group { margin-top: 14px; opacity: 0.85; }
+.gg-score:disabled { cursor: default; }
+.other-groups-hint, .sync-pending { margin: 8px 4px 0; }
+.sync-pending { color: #7a5a0c; }

@@ -149,7 +149,7 @@ export function usesTeams(settings, playerCount) {
   );
 }
 
-// A casual round is scored on one phone, for 1 to MAX_PLAYERS players.
+// A casual round has 1 to MAX_PLAYERS players; each foursome scores on its own phone.
 export const MAX_PLAYERS = 24;
 
 // How many players each game works for. Pairwise games (Nassau, match play)
@@ -279,7 +279,7 @@ export function buildGames(settings, players) {
   return games;
 }
 
-export function newRound({ course, tee, players, settings }) {
+export function newRound({ course, tee, players, settings, groups }) {
   const now = Date.now();
   return {
     id: makeId(),
@@ -289,7 +289,9 @@ export function newRound({ course, tee, players, settings }) {
     currentHole: 1,
     course: { id: course.id, name: course.name.trim(), holes: course.holes.map((h) => ({ ...h })) },
     tee: { ...tee },
-    players: players.map((p) => ({ id: p.id, name: p.name.trim(), index: p.index })),
+    players: players.map((p) => ({ id: p.id, name: p.name.trim(), index: p.index, ...(p.userId ? { userId: p.userId } : {}) })),
+    // Foursomes: each group keeps its own score (shared rounds, lib/casualSync.js).
+    ...(groups?.length ? { groups: groups.map((g) => [...g]) } : {}),
     handicap: { ...settings.handicap },
     games: buildGames(settings, players),
     scores: Object.fromEntries(players.map((p) => [p.id, course.holes.map(() => null)])),

@@ -26,8 +26,8 @@ Two pages from one Vite build: the website at `/` (`index.html`, static HTML
 React 18 (plain JS, no router) as an offline-first PWA
 (`vite-plugin-pwa`, service worker precaches the app). Rounds and courses live
 on the device in IndexedDB. Supabase project `qdnrmeipmggpxynggsnl` holds
-accounts, profiles, saved players and leagues (casual-round sync and realtime
-leaderboards come later). Capacitor later for App Store / Play Store.
+accounts, profiles, saved players, leagues and shared casual rounds
+(realtime leaderboards come later). Capacitor later for App Store / Play Store.
 
 ## Commands
 
@@ -140,6 +140,10 @@ src/
                     payments.js (PAYMENTS_LIVE=false; Stripe hooks in here)
     courseImport.js Pure: API course -> our course shape, with warnings
     storage.js      The only IndexedDB code (rounds + saved courses)
+    casualSync.js   Pure: shared casual rounds: foursomes, entries, merge
+                    (newest per key wins), setup for the server (tested)
+    casualRounds.js The only casual_rounds/casual_entries code: offline
+                    queue, flush, pull one round / my rounds, delete/hide
     league/         Pure league engine. No React, network or storage.
       format.js     Builder options, valid combinations, defaults, labels
       event.js      One round: handicaps, stroke/Stableford board, matches,
@@ -223,6 +227,9 @@ supabase/course_ratings.sql  course_ratings (5 categories, 1-5), course_rating_s
 supabase/functions/round-recap/index.ts  Edge Function: AI round recap via Claude
                     (secret ANTHROPIC_API_KEY lives only in Supabase)
 supabase/course_backup.sql  course_backup (every picked course, full detail) + save_course_backup()
+supabase/casual_rounds.sql  Shared casual rounds: casual_rounds, casual_round_players
+                    (foursome per player), casual_entries, create_casual_round(),
+                    put_casual_entries(), hide_casual_round()
 supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
                     search_courses(); loaded but NOT used by the app
 ```
@@ -260,6 +267,47 @@ supabase/courses.sql  Our copy of the open OpenGolfAPI course data (ODbL) +
     is two bets (first vs first, second vs second). Paid as of now like every
     match. Setup: "Split the round" switch under Match play (2 vs 2 teams);
     no scramble/alternate shot in casual rounds (scores are per player).
+
+## Shared casual rounds
+
+- A casual round goes to every player's phone (supabase/casual_rounds.sql,
+  run in the SQL Editor). Rounds where every player has an account
+  (members only, so all new ones) are `round.shared` with `ownerId`;
+  older rounds without accounts stay on the one phone as before.
+- Foursomes: 5+ players get a "Foursomes" card in Setup (even split in
+  player order, `defaultGroups`: 5 -> 3+2, 10 -> 4+3+3; move anyone with
+  the group dropdown; 4 at most per group). Saved as `round.groups`.
+  **Each player keeps score only for their own foursome** (`myGroupIds`;
+  enforced by `can_score_casual()` in `put_casual_entries`); the other
+  groups show read-only under yours on the Score tab. **Side games include
+  everyone** in the round (skins, stroke, Stableford across groups), and
+  Money/Settle show the whole field. Presses show for matches your
+  foursome is in. Next hole / hole dots go by your foursome.
+- Sync model (lib/casualSync.js, tested): the setup (course, tee, players,
+  games, groups) is fixed at tee-off and sent once (`create_casual_round`).
+  Everything that changes is an entry, one per key: `s:<player>:<hole>`
+  score (null = cleared, so it can't come back), `w:<game>:<hole>` Wolf
+  pick, `p:<game>:<matchup>:<segment>:<hole>` press, `status` (Final),
+  `recap`, `pr:<name>`. Each carries `at` (phone clock, ms); newest wins per
+  key on the phone (`mergeServer`) and on the server (the upsert only
+  replaces an older `at`), so one phone's edits never wipe another's and a
+  change that sat offline can't undo a newer one. Each phone keeps
+  `known` per round in localStorage (`golf-app:casual-known:<id>`); App
+  diffs the round against it on every change (`trackLocal`) and queues the
+  differences (`golf-app:casual-queue`), sent 0.4 s later or when signal
+  returns. Only a refusal by our SQL (P0001: not a player, round deleted)
+  drops queued changes; no signal, an expired sign-in or a missing SQL
+  function keeps them. Current hole and "rated" stay per phone.
+- Other phones: Play/Settle pull the round every 20 s, on foreground and
+  when back online (`pullRound`); Home pulls every round I'm in
+  (`pullMyRounds`: new ones saved, changed ones merged, deleted/hidden ones
+  removed). A shared round opened for the first time starts at the first
+  hole your foursome hasn't finished. "Saved on this phone. N changes will
+  send when there's signal." shows on the Score tab while any wait.
+- Anyone in the round can mark it Final (and fix scores after). Delete:
+  the creator's ✕ deletes it for everyone; anyone else's ✕ removes it from
+  their own list (`hide_casual_round`). Both need signal once the round
+  has reached the server.
 
 ## Round recap and course ratings
 
@@ -796,7 +844,9 @@ docs/instructors.md.
   Casual rounds take 1–24 players (`MAX_PLAYERS`, a "How many players"
   dropdown); games are limited by `GAME_LIMITS` (Nassau/match 2–6, skins/
   stroke/Stableford 2–24, Wolf/Vegas 4). Skins can be a pot (buy-in split by
-  skins won). 5+ players shows a tip pointing to one-day tournaments.
+  skins won). 5+ players get the Foursomes card (each group scores on its
+  own phone; see Shared casual rounds) and a tip pointing to one-day
+  tournaments for leaderboards.
   The Teams card (4 players) shows below Games only when a chosen game plays
   2 vs 2 (`usesTeams`: Nassau/match/Stableford set to teams, or Vegas).
   Tees: a dropdown ("Blue · 6,850 yds · 72.4/131", plus "+ Add a tee…");

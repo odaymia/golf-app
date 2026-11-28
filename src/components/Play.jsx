@@ -9,8 +9,10 @@ import MatchCard from './MatchCard.jsx';
 import { stretchLabel } from './gameSummary.js';
 import { HoleBar, HoleDots, Keypad, ScoreBox } from './ScoreKeypad.jsx';
 import { useKeypad } from './useKeypad.js';
+import { myGroupIds, roundGroups } from '../lib/casualSync.js';
+import { pendingCount } from '../lib/casualRounds.js';
 
-export default function Play({ round, setRound, onSettle, onHome }) {
+export default function Play({ round, setRound, meId, onSettle, onHome }) {
   const [tab, setTab] = useState('score');
   const computed = useMemo(() => computeRound(round), [round]);
   const hole = round.currentHole ?? 1;
@@ -18,6 +20,16 @@ export default function Play({ round, setRound, onSettle, onHome }) {
   const info = round.course.holes[h];
   const names = nameMap(round.players);
   const last = round.course.holes.length;
+  // Shared rounds: I keep score only for my own foursome; the other groups
+  // score on their phones (shown read-only). Side games count everyone.
+  const mine = myGroupIds(round, meId);
+  const myPlayers = round.players.filter((p) => mine.includes(p.id));
+  const otherGroups = round.shared
+    ? roundGroups(round)
+        .map((ids, i) => ({ ids, n: i + 1 }))
+        .filter((g) => !g.ids.some((id) => mine.includes(id)))
+    : [];
+  const pending = round.shared ? pendingCount(round.id) : 0;
 
   const update = (fn) => setRound((r) => fn(structuredClone(r)));
   const keypad = useKeypad(hole);
@@ -29,7 +41,7 @@ export default function Play({ round, setRound, onSettle, onHome }) {
   // This hole's scores as they were when it opened, for Undo changes.
   const snap = useRef({ hole: null, values: {} });
   useEffect(() => {
-    snap.current = { hole, values: Object.fromEntries(round.players.map((p) => [p.id, round.scores[p.id][hole - 1]])) };
+    snap.current = { hole, values: Object.fromEntries(myPlayers.map((p) => [p.id, round.scores[p.id][hole - 1]])) };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the hole changes
   }, [hole]);
 
@@ -49,10 +61,10 @@ export default function Play({ round, setRound, onSettle, onHome }) {
 
   const wolf = round.games.find((g) => g.type === 'wolf');
   const nassau = round.games.find((g) => g.type === 'nassau');
-  const holeScored = round.players.every((p) => round.scores[p.id][h] != null);
+  const holeScored = myPlayers.every((p) => round.scores[p.id][h] != null);
   const wolfMissing = wolf && !wolf.decisions[hole];
   const kp = keypad(
-    round.players.map((p) => p.id),
+    myPlayers.map((p) => p.id),
     (id, v) => setScore(id, v),
   );
   const go = (n) => {
@@ -124,7 +136,7 @@ export default function Play({ round, setRound, onSettle, onHome }) {
           <HoleDots
             count={last}
             hole={hole}
-            done={(i) => round.players.every((p) => round.scores[p.id][i] != null)}
+            done={(i) => myPlayers.every((p) => round.scores[p.id][i] != null)}
             onGo={go}
           />
 
@@ -172,7 +184,7 @@ export default function Play({ round, setRound, onSettle, onHome }) {
               <span>Net</span>
               <span>Total</span>
             </div>
-            {round.players.map((p) => {
+            {myPlayers.map((p) => {
               const sc = round.scores[p.id][h];
               const strokes = computed.strokes[p.id][h];
               const t = toPar(p.id);
@@ -199,8 +211,46 @@ export default function Play({ round, setRound, onSettle, onHome }) {
             })}
           </div>
 
+          {otherGroups.map((g) => (
+            <div key={g.n} className="gg-table other-group">
+              <div className="gg-head">
+                <span>Group {g.n}</span>
+                <span>Score</span>
+                <span>Net</span>
+                <span>Total</span>
+              </div>
+              {g.ids.map((id) => {
+                const p = round.players.find((x) => x.id === id);
+                const sc = round.scores[id][h];
+                const strokes = computed.strokes[id][h];
+                const t = toPar(id);
+                return (
+                  <div key={id} className="gg-row">
+                    <div className="gg-name">
+                      <strong>
+                        {p.name}
+                        <span className="gg-hcp"> ({computed.playing[id]})</span>
+                      </strong>
+                    </div>
+                    <ScoreBox value={sc} par={info.par} strokes={strokes} label={`${p.name} score`} readOnly />
+                    <span className="gg-pts">{sc != null && strokes !== 0 ? sc - strokes : ''}</span>
+                    <span className={`gg-total ${t.startsWith('-') ? 'under' : ''}`}>{t}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {otherGroups.length > 0 && (
+            <p className="hint other-groups-hint">Each group keeps its own score on its own phone. Their scores show up here as they go.</p>
+          )}
+          {pending > 0 && (
+            <p className="hint sync-pending" role="status">
+              Saved on this phone. {pending === 1 ? '1 change' : `${pending} changes`} will send when there's signal.
+            </p>
+          )}
+
           {nassau && (
-            <PressPanel nassau={nassau} hole={hole} names={names} updateGame={updateGame} computed={computed} />
+            <PressPanel nassau={nassau} hole={hole} names={names} updateGame={updateGame} computed={computed} mine={mine} />
           )}
 
           {!kp.open && (
@@ -248,7 +298,7 @@ function WolfButton({ wolf, hole, choice, updateGame, children }) {
   );
 }
 
-function PressPanel({ nassau, hole, names, updateGame, computed }) {
+function PressPanel({ nassau, hole, names, updateGame, computed, mine }) {
   const segment = segmentForHole(hole);
   const segStart = segment === 'front' ? 1 : 10;
   if (hole === segStart) return null; // a press on the first hole of a nine is just the main bet
@@ -258,6 +308,8 @@ function PressPanel({ nassau, hole, names, updateGame, computed }) {
       <h3>Press ({segment === 'front' ? 'front 9' : 'back 9'}) starting this hole</h3>
       <div className="stack">
         {nassau.matchups.map(([a, b], mi) => {
+          // Presses only for matches my foursome is in.
+          if (![...a, ...b].some((id) => mine.includes(id))) return null;
           const label = `${a.map((id) => names[id]).join(' & ')} vs ${b.map((id) => names[id]).join(' & ')}`;
           const exists = (nassau.presses ?? []).some(
             (p) => p.matchup === mi && p.segment === segment && p.hole === hole,

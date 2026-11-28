@@ -15,6 +15,7 @@ import CourseSearch from './CourseSearch.jsx';
 import { NumberField, Toggle } from './controls.jsx';
 import GamePicker from './GamePicker.jsx';
 import { casualMaxPlayers } from '../lib/plans.js';
+import { defaultGroups, groupProblems } from '../lib/casualSync.js';
 
 import PlayerSearch from './PlayerSearch.jsx';
 import { listRecentGolfers, rememberGolfers } from '../lib/recentGolfers.js';
@@ -41,6 +42,9 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState([]);
   const [courseNotes, setCourseNotes] = useState([]);
+  // Foursomes (5+ players): player id -> group number picked by hand;
+  // everyone else follows the even split in player order.
+  const [groupOf, setGroupOf] = useState({});
 
 
   useEffect(() => {
@@ -54,6 +58,12 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
   const tee = course.tees[teeIdx] ?? course.tees[0];
   const par = course.holes.reduce((s, h) => s + h.par, 0);
   const named = players.map((p, i) => ({ ...p, name: p.name.trim() || `Player ${i + 1}` }));
+  const evenSplit = defaultGroups(players.map((p) => p.id));
+  const groupCount = Math.max(evenSplit.length, ...players.map((p) => (groupOf[p.id] ?? 0) + 1));
+  const groupIndex = (id) => groupOf[id] ?? evenSplit.findIndex((g) => g.includes(id));
+  const groups = Array.from({ length: groupCount }, (_, g) => players.filter((p) => groupIndex(p.id) === g).map((p) => p.id)).filter(
+    (g) => g.length,
+  );
 
   const setTee = (field, value) =>
     setCourse((c) => ({ ...c, tees: c.tees.map((t, i) => (i === teeIdx ? { ...t, [field]: value } : t)) }));
@@ -125,6 +135,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
           : `Pick a Scribble member for every player spot (or lower the number of players).`,
       );
     }
+    problems.push(...groupProblems(groups, Object.fromEntries(named.map((p) => [p.id, p.name]))));
     parsed.forEach((p) => {
       if (p.index === null) problems.push(`${p.name}: handicap index should be a number like 12.4 or +2.1.`);
     });
@@ -140,7 +151,7 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
     };
     await saveCourse(cleanCourse).catch(() => {});
     if (meId) rememberGolfers(meId, players.filter((p) => p.userId && !p.me).map((p) => ({ id: p.userId, name: p.name, username: p.username, avatarUrl: p.avatarUrl, index: parseIndex(p.indexText) })));
-    onStart(newRound({ course: cleanCourse, tee: numericTee, players: parsed, settings }));
+    onStart(newRound({ course: cleanCourse, tee: numericTee, players: parsed, settings, groups }));
   }
 
   return (
@@ -289,8 +300,8 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
         </label>
         {players.length > 4 && (
           <p className="hint big-group">
-            Everyone in this round is scored on this phone. Playing in several groups? A one-day tournament (from Home) lets each
-            group score on its own phone, with a live leaderboard and side games.
+            The round shows up on every player's phone. Each foursome keeps its own score (pick the groups below), and side games
+            can include everyone. Want a leaderboard with flights and payouts? Try a one-day tournament (from Home).
           </p>
         )}
         {players.map((p, i) => (
@@ -393,6 +404,48 @@ export default function Setup({ profile, meId, onStart, onCancel }) {
           />
         </div>
       </section>
+
+      {players.length > 4 && (
+        <section className="card foursomes">
+          <h2>Foursomes</h2>
+          <p className="hint">Each group keeps score for itself on its own phone. Up to 4 per group.</p>
+          {groups.map((g, gi) => (
+            <div key={gi} className="foursome">
+              <h3>
+                Group {gi + 1} <span className="muted">· {g.length} player{g.length === 1 ? '' : 's'}</span>
+              </h3>
+              {g.map((id) => {
+                const p = named.find((x) => x.id === id);
+                return (
+                  <div key={id} className="foursome-row">
+                    <span className="grow">
+                      {p.name}
+                      {p.me && <span className="muted"> (you)</span>}
+                    </span>
+                    <select
+                      value={gi}
+                      aria-label={`${p.name}'s group`}
+                      onChange={(e) => {
+                        // Save everyone's group as shown (no gaps), with this player moved.
+                        const next = {};
+                        groups.forEach((x, i) => x.forEach((pid) => (next[pid] = i)));
+                        next[id] = Number(e.target.value);
+                        setGroupOf(next);
+                      }}
+                    >
+                      {Array.from({ length: groups.length + 1 }, (_, n) => (
+                        <option key={n} value={n}>
+                          {n < groups.length ? `Group ${n + 1}` : 'New group'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </section>
+      )}
 
       <GamePicker settings={settings} setSettings={setSettings} players={named} holeCount={course.holes.length} />
 

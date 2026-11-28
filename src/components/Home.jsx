@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { listRounds, deleteRound } from '../lib/storage.js';
+import { pullMyRounds, removeSharedRound } from '../lib/casualRounds.js';
 import { GAME_INFO, formatIndex } from '../lib/roundSetup.js';
 import { JoinCode, LeagueDropdowns, useMyLeagues } from './LeaguesSection.jsx';
 import HomeLeagueCards from './HomeLeagueCards.jsx';
@@ -18,11 +19,27 @@ export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpen
     listRounds()
       .then(setRounds)
       .catch(() => setRounds([]));
-  }, []);
+    // Rounds other players started with me in them (and their latest scores).
+    pullMyRounds(userId)
+      .then((changed) => changed && listRounds().then(setRounds))
+      .catch(() => {}); // no signal: the phone's copy is fine
+  }, [userId]);
 
-  async function remove(id) {
-    if (!confirm('Delete this round? This cannot be undone.')) return;
-    await deleteRound(id);
+  async function remove(r) {
+    if (r.shared) {
+      const owner = r.ownerId === userId;
+      if (!confirm(owner ? 'Delete this round for everyone in it? This cannot be undone.' : 'Remove this round from your list? It stays for the other players.'))
+        return;
+      try {
+        await removeSharedRound(r, userId);
+      } catch (e) {
+        alert(e.message);
+        return;
+      }
+    } else {
+      if (!confirm('Delete this round? This cannot be undone.')) return;
+      await deleteRound(r.id);
+    }
     setRounds(await listRounds());
   }
 
@@ -71,7 +88,7 @@ export default function Home({ profile, userId, onProfile, onNew, onOpen, onOpen
                     <span>{r.games.map((g) => GAME_INFO[g.type]?.name).join(', ') || 'No games'}</span>
                   </span>
                 </button>
-                <button className="hg-del" onClick={() => remove(r.id)} aria-label="Delete round">
+                <button className="hg-del" onClick={() => remove(r)} aria-label={r.shared && r.ownerId !== userId ? 'Remove round from my list' : 'Delete round'}>
                   ✕
                 </button>
               </div>

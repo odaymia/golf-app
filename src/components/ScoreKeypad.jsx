@@ -53,12 +53,13 @@ function keepAboveKeypad(el) {
 }
 
 // One score box: tap to type into it with the keypad.
-export function ScoreBox({ value, par, strokes = 0, active, unconfirmed = false, label, onClick }) {
+export function ScoreBox({ value, par, strokes = 0, active, unconfirmed = false, label, onClick, readOnly = false }) {
   const diff = value == null ? null : value - par;
   return (
     <button
       className={`gg-score ${diff == null ? 'empty' : diff < 0 ? 'under' : diff > 0 ? 'over' : 'par'} ${unconfirmed ? 'unconfirmed' : ''} ${active ? 'active' : ''}`}
       onClick={onClick}
+      disabled={readOnly}
       aria-label={label}
       aria-pressed={active}
       ref={active ? keepAboveKeypad : undefined}

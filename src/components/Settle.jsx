@@ -4,6 +4,7 @@ import { formatMoney } from '../lib/games/money.js';
 import { Payments, Totals } from './MoneyView.jsx';
 import { gameTitle, nameMap } from './gameSummary.js';
 import { saveRound } from '../lib/storage.js';
+import { trackLocal } from '../lib/casualRounds.js';
 import { casualRecapFacts } from '../lib/roundRecap.js';
 import { RoundRecap, PlayerRecaps, RateCourse } from './RoundRecap.jsx';
 
@@ -46,6 +47,7 @@ export default function Settle({ round, setRound, onBack, onHome }) {
     // Save before leaving: going home clears the round from state.
     const finished = { ...round, status: 'final' };
     await saveRound(finished).catch((e) => console.error('Save failed', e));
+    trackLocal(finished); // shared round: Final goes to every player's phone
     setRound(finished);
     onHome();
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Home from './components/Home.jsx';
 import Setup from './components/Setup.jsx';
 import Play from './components/Play.jsx';
@@ -13,6 +13,9 @@ import Settings from './components/settings/Settings.jsx';
 import { useUnreadNotifications } from './components/useUnreadNotifications.js';
 import Social from './components/social/Social.jsx';
 import { getRound, saveRound } from './lib/storage.js';
+// Shared casual rounds: every player's phone, each foursome scoring its own.
+import { forget, pullRound, shareRound, trackLocal } from './lib/casualRounds.js';
+import { applyEntries, firstOpenHole, myGroupIds } from './lib/casualSync.js';
 import { getSession, loadProfile, onAuthChange } from './lib/account.js';
 // Where the player is (a casual round, or a league/tournament round they're
 // scoring), kept on the phone so closing the app and opening it again goes
@@ -109,10 +112,51 @@ export default function App() {
     setScreen('social');
   }, [ready, linkedPost]);
 
-  // Every change to the round is written to the device right away.
+  // Every change to the round is written to the device right away, and a
+  // shared round queues what changed for the other phones.
   useEffect(() => {
-    if (round) saveRound(round).catch((e) => console.error('Save failed', e));
+    if (!round) return;
+    saveRound(round).catch((e) => console.error('Save failed', e));
+    trackLocal(round);
   }, [round]);
+
+  // A shared round on screen: pick up the other phones' scores every 20 s,
+  // when the app comes back to the front, and when signal returns.
+  const roundRef = useRef(round);
+  roundRef.current = round;
+  const syncing = round?.shared && (screen === 'play' || screen === 'settle') ? round.id : null;
+  useEffect(() => {
+    if (!syncing) return;
+    let stopped = false;
+    const tick = () => {
+      const r = roundRef.current;
+      if (!r || r.id !== syncing || document.visibilityState === 'hidden') return;
+      pullRound(r)
+        .then((res) => {
+          if (stopped) return;
+          if (res.gone) {
+            forget(syncing).catch(() => {});
+            alert('This round was deleted by the player who created it.');
+            setRound(null);
+            setScreen('home');
+            return;
+          }
+          if (Object.keys(res.changed).length)
+            setRound((cur) => (cur?.id === syncing ? applyEntries(cur, res.changed) : cur));
+        })
+        .catch(() => {}); // no signal: try again next time
+    };
+    tick();
+    const timer = setInterval(tick, 20000);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('online', tick);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('online', tick);
+    };
+  }, [syncing]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -144,13 +188,21 @@ export default function App() {
   }, [roundId, screen]);
 
   async function openRound(id) {
-    const r = await getRound(id);
+    let r = await getRound(id);
     if (!r) return;
+    // A shared round opened here for the first time starts where my foursome is.
+    if (r.shared && !r.openedHere) r = { ...r, openedHere: true, currentHole: firstOpenHole(r, myGroupIds(r, userId)) };
     setRound(r);
     setScreen(r.status === 'final' ? 'settle' : 'play');
   }
 
   function startRound(r) {
+    // Everyone has an account (members only), so the round goes to every
+    // player's phone; older-style rounds without accounts stay on this one.
+    if (r.players.every((p) => p.userId)) {
+      r = { ...r, shared: true, ownerId: userId, openedHere: true };
+      shareRound(r);
+    }
     setRound(r);
     setScreen('play');
     logEvent('round_started');
@@ -238,7 +290,7 @@ export default function App() {
     );
   if (screen === 'setup') return <Setup profile={profile} meId={userId} onStart={startRound} onCancel={goHome} />;
   if (screen === 'play' && round)
-    return <Play round={round} setRound={setRound} onSettle={() => setScreen('settle')} onHome={goHome} />;
+    return <Play round={round} setRound={setRound} meId={userId} onSettle={() => setScreen('settle')} onHome={goHome} />;
   if (screen === 'settle' && round)
     return <Settle round={round} setRound={setRound} onBack={() => setScreen('play')} onHome={goHome} />;
   return withNav(
