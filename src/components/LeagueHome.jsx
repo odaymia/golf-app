@@ -384,8 +384,6 @@ function Members({ data, computed, me, isAdmin, reload }) {
   const [busy, setBusy] = useState(false);
   const usesTeams = settings.unit !== 'individual';
   const teamNames = settings.unit === 'ryder' ? settings.sides : [...new Set(members.map((m) => m.team).filter(Boolean))];
-  const lastEvent = data.events[data.events.length - 1];
-  const leagueIdx = lastEvent ? computed.indexes[lastEvent.id] : null;
 
   async function save() {
     if (!editing.name.trim()) return setError('Enter a name.');
@@ -462,9 +460,6 @@ function Members({ data, computed, me, isAdmin, reload }) {
                     </strong>
                     <span className="muted">
                       {m.index == null ? 'No index' : `Index ${formatIndex(m.index)}`}
-                      {settings.handicap.mode === 'league' && leagueIdx?.[m.id] != null && leagueIdx[m.id] !== m.index
-                        ? ` · league ${formatIndex(leagueIdx[m.id])}`
-                        : ''}
                       {m.userId ? (m.pending ? ' · waiting to accept' : '') : m.inviteEmail ? ' · invited, waiting to join' : ' · needs an account'}
                     </span>
                   </button>

@@ -254,38 +254,7 @@ export default function LeagueBuilder({ league, kind: newKind = 'league', onSave
       {s.net && (
         <section className="card">
           <h2>{step(4)}. Handicaps</h2>
-          <OptionCards
-            value={s.handicap.mode}
-            options={{
-              index: { label: "Each player's own index", help: 'Uses the index on their profile (GHIN once connected).' },
-              league: {
-                label: 'League handicap',
-                help: 'Worked out from league rounds: average of the best scores of their recent rounds. New players use their own index until they have enough rounds.',
-              },
-            }}
-            only={isTournament ? ['index'] : undefined}
-            onChange={(mode) => setH({ mode })}
-          />
-          {s.handicap.mode === 'league' && (
-            <div className="row3">
-              <label className="field">
-                <span>Best</span>
-                <input inputMode="numeric" value={s.handicap.best} onChange={(e) => setH({ best: numberOrNull(e.target.value) ?? 1 })} />
-              </label>
-              <label className="field">
-                <span>of last</span>
-                <input inputMode="numeric" value={s.handicap.of} onChange={(e) => setH({ of: numberOrNull(e.target.value) ?? 1 })} />
-              </label>
-              <label className="field">
-                <span>Rounds needed</span>
-                <input
-                  inputMode="numeric"
-                  value={s.handicap.minRounds}
-                  onChange={(e) => setH({ minRounds: numberOrNull(e.target.value) ?? 1 })}
-                />
-              </label>
-            </div>
-          )}
+          <p className="hint">Everyone plays off their own handicap index from their profile (GHIN once connected), with the allowance and cap below.</p>
           <div className="row2">
             <label className="field">
               <span>Allowance</span>

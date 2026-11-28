@@ -4,7 +4,6 @@ import { addMember, addMembers, inviteLink, removeMember, setMemberRole, updateM
 import { looksLikeEmail } from '../../lib/account.js';
 import { formatIndex, parseIndex } from '../../lib/roundSetup.js';
 import { parseRoster, splitNew } from '../../lib/league/pro.js';
-import { orderEvents } from '../../lib/league/season.js';
 
 const statusOf = (m) => (m.active ? (m.pending ? 'Waiting to accept' : 'Active') : m.inviteEmail ? 'Invited' : 'Needs account');
 const idx = (n) => (n == null ? '' : formatIndex(n));
@@ -15,8 +14,6 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
   const { settings } = computed;
   const usesTeams = settings.unit !== 'individual';
   const teamNames = settings.unit === 'ryder' ? settings.sides : [...new Set(members.map((m) => m.team).filter(Boolean))].sort();
-  const lastEvent = orderEvents(data.events).at(-1);
-  const leagueIdx = settings.handicap.mode === 'league' && lastEvent ? computed.indexes[lastEvent.id] : null;
 
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState({ key: 'name', dir: 1 });
@@ -191,7 +188,6 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
               {th('name', 'Name')}
               {th('status', 'Status')}
               {th('index', 'Index')}
-              {leagueIdx && <th>League index</th>}
               <th>GHIN</th>
               {usesTeams && th('team', settings.unit === 'ryder' ? 'Side' : 'Team')}
               <th>Role</th>
@@ -200,11 +196,11 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
           </thead>
           <tbody>
             {editing === 'new' && (
-              <EditRow form={form} setForm={setForm} usesTeams={usesTeams} teamNames={teamNames} ryder={settings.unit === 'ryder'} leagueIdx={!!leagueIdx} admin={isAdmin} busy={busy} onSave={saveEdit} onCancel={() => setEditing(null)} />
+              <EditRow form={form} setForm={setForm} usesTeams={usesTeams} teamNames={teamNames} ryder={settings.unit === 'ryder'} admin={isAdmin} busy={busy} onSave={saveEdit} onCancel={() => setEditing(null)} />
             )}
             {rows.map((m) =>
               editing === m.id ? (
-                <EditRow key={m.id} form={form} setForm={setForm} usesTeams={usesTeams} teamNames={teamNames} ryder={settings.unit === 'ryder'} leagueIdx={!!leagueIdx} admin={isAdmin} busy={busy} onSave={saveEdit} onCancel={() => setEditing(null)} />
+                <EditRow key={m.id} form={form} setForm={setForm} usesTeams={usesTeams} teamNames={teamNames} ryder={settings.unit === 'ryder'} admin={isAdmin} busy={busy} onSave={saveEdit} onCancel={() => setEditing(null)} />
               ) : (
                 <tr key={m.id} className={m.active ? '' : 'pending'}>
                   {isAdmin && usesTeams && (
@@ -221,7 +217,6 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
                     {!m.active && m.inviteEmail && <span className="muted small"> {m.inviteEmail}</span>}
                   </td>
                   <td>{idx(m.index) || <span className="muted">–</span>}</td>
-                  {leagueIdx && <td>{leagueIdx[m.id] != null ? idx(leagueIdx[m.id]) : '–'}</td>}
                   <td className="muted">{m.ghinNumber || '–'}</td>
                   {usesTeams && <td>{m.team || <span className="muted">–</span>}</td>}
                   <td className="muted">{m.role === 'commissioner' ? 'Commissioner' : 'Player'}</td>
@@ -261,7 +256,7 @@ export default function ProPlayers({ data, computed, me, isAdmin, reload }) {
   );
 }
 
-function EditRow({ form, setForm, usesTeams, teamNames, ryder, leagueIdx, admin, busy, onSave, onCancel }) {
+function EditRow({ form, setForm, usesTeams, teamNames, ryder, admin, busy, onSave, onCancel }) {
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   return (
     <tr className="editing">
@@ -279,7 +274,6 @@ function EditRow({ form, setForm, usesTeams, teamNames, ryder, leagueIdx, admin,
       <td>
         <input className="narrow" inputMode="decimal" value={form.indexText} placeholder="12.4" onChange={(e) => set('indexText', e.target.value)} />
       </td>
-      {leagueIdx && <td />}
       <td>
         <input className="narrow" inputMode="numeric" value={form.ghinNumber} placeholder="GHIN" onChange={(e) => set('ghinNumber', e.target.value.replace(/\D/g, ''))} />
       </td>

@@ -11,7 +11,7 @@ deploy, own Supabase project.
 
 1. Foursome MVP: pick course, add players, pick games, hole-by-hole scoring,
    live settle-up ("Mike owes Dave $14"). **Built (Phase 1).**
-2. Leagues: season schedule, pairings, standings, points, league handicaps.
+2. Leagues: season schedule, pairings, standings, points.
    **Built:** league builder, invite codes, rounds, matches, standings.
 3. Tournaments: flights, shotgun/tee times, big leaderboard, side pots, payouts.
    **Built:** tournaments (one-day or multi-round; stroke, Stableford, teams,
@@ -152,8 +152,8 @@ src/
       event.js      One round: handicaps, stroke/Stableford board, matches,
                     points by finish (ties split), W/L/T, Ryder Cup points
       season.js     computeLeague + standings per season type, round robin
-      leagueHandicap.js  Adjusted gross (net double bogey), differentials,
-                    league index (best N of last M), per-event indexes
+      leagueHandicap.js  Each player's own index per event + playing handicap
+                    (no handicap of our own: see "GHIN rules" below)
       pro.js        League Pro helpers: roster paste/CSV parsing, duplicate
                     check, season dates, standings -> CSV rows
       pairings.js   Pairing order (manual/random/last round/standings,
@@ -411,6 +411,15 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - `profiles` (one per user) and `saved_players` (private to the owner) are
   protected by row level security in `supabase/schema.sql`. Schema changes go
   in that file; the user runs it in the SQL Editor.
+- GHIN rules (USGA Golfer Product Access, Nov 2026: $6,000/yr, U.S. only,
+  signed agreement): an app may not calculate its own handicap value or
+  anything that looks like a Handicap Index, so Scribble never works out an
+  index from scores (the old "league handicap" mode was removed; saved
+  leagues fall back to each player's own index). Keep USGA marks (Handicap
+  Index®, Course Handicap™, Playing Handicap™, Slope Rating®, WHS™) out of
+  our own feature names ("League index" etc.). Course/playing handicap from
+  a player's index is an allowed use once approved. Open question for the
+  agreement: storing course ratings/slopes (built-in courses, course backup).
 - Never ship the service_role/secret key. GHIN: handicap index and GHIN number
   are self-reported until the USGA approves an integration; that integration
   must run server-side (e.g. a Supabase Edge Function), never in the app.
@@ -493,8 +502,8 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
   / DORMIE / 4 & 3) and `MatchCard` shows it with hole-by-hole dots, on the
   scoring screen (from the phone's own cards, before sending) and on league
   Results, which re-fetch every 20 s while a round is open. Ryder Cup
-  Results add a points board and who's leading on the course. Handicaps: own index or
-  league index from earlier final rounds only; allowance %, max handicap,
+  Results add a points board and who's leading on the course. Handicaps: each player's
+  own index (no league handicap, see "GHIN rules"); allowance %, max handicap,
   strokes off the low player per match.
 - Scores go to a localStorage queue first and are sent when online
   (`flushScores`); refused cards are dropped so they can't block the queue.
@@ -691,8 +700,7 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - A tournament is a league with `settings.kind = 'tournament'` (same tables,
   invite codes, rounds, scoring screens; no schema change). `rounds` is the
   planned number of rounds. Scoring: stroke or Stableford for players/teams,
-  match play for Ryder Cup. Handicaps: own index + allowance/max/off-low (no
-  league-handicap mode).
+  match play for Ryder Cup. Handicaps: own index + allowance/max/off-low.
 - Standings are live: `tournamentStandings` counts every round as it is
   played, final or not. Stroke/Stableford rows: total (to par or points),
   today, thru, and each round (a round in progress shows score so far with

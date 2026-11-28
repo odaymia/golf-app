@@ -110,13 +110,10 @@ export function defaultLeagueSettings() {
     bestOf: null, // count only the best N weeks (points / cumulative)
     record: { win: 2, tie: 1, loss: 0 },
     handicap: {
-      mode: 'index', // index | league
+      mode: 'index', // each player's own index (the only mode; see leagueHandicap.js)
       allowance: 100,
       maxHandicap: null,
       offLow: true, // match play: strokes off the low player in each match
-      best: 4, // league handicap: average of best N...
-      of: 8, // ...of the last M league rounds
-      minRounds: 3, // until then use the player's own index
     },
   };
 }
@@ -138,7 +135,7 @@ export function normalizeSettings(s) {
   if (!seasonOptions(out.unit, out.scoring, kind).includes(out.season))
     out.season = seasonOptions(out.unit, out.scoring, kind)[0];
   out.rounds = Math.max(1, Math.min(10, Math.round(out.rounds ?? 1)));
-  if (kind === 'tournament' && out.handicap.mode === 'league') out.handicap.mode = 'index';
+  out.handicap.mode = 'index'; // old 'league' handicaps are gone (leagueHandicap.js)
   if (out.unit !== 'teams') out.teamSize = 2;
   if (![2, 4].includes(out.teamSize)) out.teamSize = 2;
   // Keep one points row per finishing place.

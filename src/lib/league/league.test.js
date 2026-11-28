@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { PARS, HCPS } from '../games/test-helpers.js';
 import { stablefordPoints, naturalBonus, holeStableford, rank, awardPoints, computeEvent } from './event.js';
 import { standings, computeLeague, roundRobinWeek } from './season.js';
-import { adjustedGross, differential, leagueIndexFrom, indexesByEvent, playingHandicap } from './leagueHandicap.js';
+import { indexesByEvent, playingHandicap } from './leagueHandicap.js';
 import {
   defaultLeagueSettings,
   leagueSettings,
@@ -384,31 +384,14 @@ describe('season standings', () => {
   });
 });
 
-describe('league handicaps', () => {
-  it('adjusted gross caps holes at net double bogey', () => {
-    // scratch: a 10 on a par 4 counts as 6
-    expect(adjustedGross(card({ 1: 10 }), course.holes, 0, course.tee)).toBe(74);
-    // 18 index gets a stroke: cap is 7
-    expect(adjustedGross(card({ 1: 10 }), course.holes, 18, course.tee)).toBe(75);
-  });
-
-  it('differential', () => {
-    expect(differential(85, { rating: 71.2, slope: 128 })).toBe(12.2);
-  });
-
-  it('best N of last M, null until enough rounds', () => {
-    expect(leagueIndexFrom([10, 12], { minRounds: 3 })).toBe(null);
-    expect(leagueIndexFrom([10, 12, 14, 8, 20], { best: 2, of: 4, minRounds: 3 })).toBe(10);
-  });
-
-  it('league mode uses only earlier final rounds', () => {
+describe('handicaps', () => {
+  it('everyone plays off their own index; old league mode is ignored', () => {
     const members = [mem('a', { index: 20 })];
     const evs = ['e1', 'e2', 'e3', 'e4'].map((id, i) => ({ id, date: `2026-05-0${i + 1}`, status: 'final', course }));
-    const sc = Object.fromEntries(evs.map((e) => [e.id, { a: card({ 1: 6 }) }])); // 74 every week -> diff 2
+    const sc = Object.fromEntries(evs.map((e) => [e.id, { a: card({ 1: 6 }) }]));
     const idx = indexesByEvent(evs, sc, members, { mode: 'league', best: 4, of: 8, minRounds: 3 });
-    expect([idx.e1.a, idx.e2.a, idx.e3.a, idx.e4.a]).toEqual([20, 20, 20, 2]);
-    const own = indexesByEvent(evs, sc, members, { mode: 'index' });
-    expect(own.e4.a).toBe(20);
+    expect([idx.e1.a, idx.e2.a, idx.e3.a, idx.e4.a]).toEqual([20, 20, 20, 20]);
+    expect(leagueSettings({ handicap: { mode: 'league' } }).handicap.mode).toBe('index');
   });
 });
 

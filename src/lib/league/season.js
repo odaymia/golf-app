@@ -4,7 +4,7 @@ import { indexesByEvent } from './leagueHandicap.js';
 
 // Every event's result, with the handicap each member played off.
 export function computeLeague({ settings, members, events, scores }) {
-  const indexes = indexesByEvent(events, scores, members, settings.handicap);
+  const indexes = indexesByEvent(events, scores, members);
   const results = {};
   for (const ev of events) {
     results[ev.id] = computeEvent({

@@ -20,7 +20,7 @@ export default function Scorecard({ round, computed, onPickHole }) {
           strokes: computed.strokes[p.id],
         }))}
       />
-      <p className="hint">Dots are handicap strokes; the number after a name is their playing handicap. Tap a score to go to that hole.</p>
+      <p className="hint">Dots are handicap strokes; the number after a name is their strokes for the round. Tap a score to go to that hole.</p>
     </section>
   );
 }
