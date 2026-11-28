@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { computeFoursomeGames, groupKey, holeChoices, newSet, normalizeSet, teamBallHoles } from '../lib/league/foursomeGames.js';
-import { loadGroupGames, saveGroupGames } from '../lib/leagueApi.js';
+import { computeFoursomeGames, groupKey, holeChoices, newSet, normalizeSet, setsForGroup, teamBallHoles } from '../lib/league/foursomeGames.js';
+import { loadEventGames, saveGroupGames } from '../lib/leagueApi.js';
 import { GAME_INFO } from '../lib/roundSetup.js';
 import GamePicker from './GamePicker.jsx';
 import MoneyView, { Payments, Totals } from './MoneyView.jsx';
@@ -8,15 +8,20 @@ import { gameTitle } from './gameSummary.js';
 
 const holesText = (s, n) => (s.from === 1 && s.to === n ? `All ${n} holes` : `Holes ${s.from}–${s.to}`);
 
-// A foursome's own side games in a league/tournament round, played off the
-// scores they're entering (lib/league/foursomeGames.js). Anyone in the group
-// can add or change them; the leaderboard isn't affected.
-// players: the group [{ id, name, index }] in score-entry order (teammates
-// together); scores: { id: gross[] }; indexes / handicap: this round's.
-export default function FoursomeGames({ event, players, scores, indexes, handicap, onBack }) {
+// Side games in a league/tournament round, played off everyone's scores
+// (lib/league/foursomeGames.js). A foursome sets them up and can include any
+// player in the round; anyone in that foursome can change them. Other
+// groups' games that include one of us show here too (theirs to change).
+// The leaderboard isn't affected.
+// players: my foursome [{ id, name, index }] in score-entry order; field:
+// everyone in the round (incl. my foursome); scores: { id: gross[] } for the
+// field; indexes / handicap: this round's.
+export default function FoursomeGames({ event, players, field = players, scores, indexes, handicap, onBack }) {
   const n = event.course.holes.length;
-  const key = groupKey(players.map((p) => p.id));
-  const [sets, setSets] = useState(null);
+  const myIds = useMemo(() => players.map((p) => p.id), [players]);
+  const key = groupKey(myIds);
+  const [rows, setRows] = useState(null); // every group's saved sets
+  const sets = rows === null ? null : (rows.find((r) => r.group_key === key)?.sets ?? []);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); // a set being added or changed
   const [busy, setBusy] = useState(false);
@@ -24,22 +29,27 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
 
   useEffect(() => {
     let live = true;
-    loadGroupGames(event.id, key)
-      .then((s) => live && setSets(s))
+    loadEventGames(event.id)
+      .then((r) => live && setRows(r))
       .catch((e) => {
         if (!live) return;
         setError(e.message);
-        setSets([]);
+        setRows([]);
       });
     return () => {
       live = false;
     };
   }, [event.id, key]);
 
+  // My foursome first, then everyone else in the round.
+  const everyone = useMemo(() => [...players, ...field.filter((p) => !myIds.includes(p.id))], [players, field, myIds]);
+  const visible = useMemo(() => setsForGroup(rows ?? [], myIds), [rows, myIds]);
   const result = useMemo(
-    () => computeFoursomeGames({ event, members: players, scores, indexes, handicap, sets: sets ?? [] }),
-    [event, players, scores, indexes, handicap, sets],
+    () => computeFoursomeGames({ event, members: everyone, scores, indexes, handicap, sets: visible.map((x) => x.set) }),
+    [event, everyone, scores, indexes, handicap, visible],
   );
+  const inMoney = everyone.filter((p) => result.involved.includes(p.id));
+  const nameOf = (id) => everyone.find((p) => p.id === id)?.name ?? '?';
   const allDone = result.sets.length > 0 && result.sets.every((x) => x.computed.finished);
 
   const persist = async (next) => {
@@ -47,7 +57,7 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
     setError('');
     try {
       await saveGroupGames(event.id, key, next);
-      setSets(next);
+      setRows((rs) => [...(rs ?? []).filter((r) => r.group_key !== key), { group_key: key, sets: next }]);
       setEditing(null);
     } catch (e) {
       setError(e.message);
@@ -61,6 +71,7 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
       <SetEditor
         event={event}
         players={players}
+        others={everyone.filter((p) => !myIds.includes(p.id))}
         set={editing}
         busy={busy}
         error={error}
@@ -81,7 +92,7 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
         <span />
       </div>
       <p className="hint">
-        Your foursome’s own games, on any holes you like, played off the scores you’re entering. They don’t change the
+        Games on any holes you like, with anyone playing this round, played off everyone’s scores. They don’t change the
         leaderboard. Scribble never holds or moves money.
       </p>
       {error && <div className="card warn-box">{error}</div>}
@@ -90,15 +101,16 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
       {result.sets.length > 0 && (
         <section className="card settle-card">
           <h3>{allDone ? 'Who pays who' : 'If it ended now'}</h3>
-          <Payments players={players} payments={result.payments} />
-          <Totals players={players} totals={result.totals} />
+          <Payments players={inMoney} payments={result.payments} />
+          <Totals players={inMoney} totals={result.totals} />
         </section>
       )}
 
-      {(sets ?? []).map((raw) => {
-        const set = normalizeSet(raw, n, players.map((p) => p.id));
+      {visible.map(({ set: raw, own, owner }) => {
+        const set = normalizeSet(raw, n, everyone.map((p) => p.id));
         const ran = result.sets.find((x) => x.set.id === set.id);
-        const names = players.filter((p) => set.players.includes(p.id)).map((p) => p.name);
+        const names = everyone.filter((p) => set.players.includes(p.id)).map((p) => p.name);
+        const sameAsUs = names.length === players.length && players.every((p) => set.players.includes(p.id));
         const games = Object.keys(GAME_INFO).filter((t) => set.settings[t]?.on);
         return (
           <section key={set.id} className="card fg-set">
@@ -109,11 +121,18 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
                   {' '}
                   · {ran ? ran.computed.games.map((g) => gameTitle(g.game)).join(', ') : games.map((t) => GAME_INFO[t].name).join(', ') || 'No games on'}
                 </span>
-                {names.length < players.length && <p className="muted small fg-who">{names.join(', ')}</p>}
+                {!sameAsUs && <p className="muted small fg-who">{names.join(', ')}</p>}
+                {!own && (
+                  <p className="muted small fg-who">
+                    Set up by {owner.split(',').map(nameOf).map((x) => x.split(' ')[0]).join(', ')}
+                  </p>
+                )}
               </div>
-              <button className="btn btn-ghost btn-small" onClick={() => setEditing(structuredClone(set))}>
-                Edit
-              </button>
+              {own && (
+                <button className="btn btn-ghost btn-small" onClick={() => setEditing(structuredClone(set))}>
+                  Edit
+                </button>
+              )}
             </div>
             {ran && (
               <>
@@ -132,10 +151,10 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
           + Add side games
         </button>
       )}
-      {sets?.length === 0 && (
+      {visible.length === 0 && sets !== null && (
         <p className="hint center">
-          Mix it up: skins on the back nine, a Nassau on all 18, Wolf on the holes after the scramble. Each set of games can
-          cover different holes and players.
+          Mix it up: skins on the back nine with the group behind you, a Nassau on all 18, Wolf on the holes after the
+          scramble. Each set of games can cover different holes and players.
         </p>
       )}
     </section>
@@ -143,16 +162,17 @@ export default function FoursomeGames({ event, players, scores, indexes, handica
 }
 
 // Add or change one set of games: which holes, who's in, which games.
-function SetEditor({ event, players, set: initial, busy, error, onCancel, onSave, onDelete }) {
+function SetEditor({ event, players, others = [], set: initial, busy, error, onCancel, onSave, onDelete }) {
   const n = event.course.holes.length;
   const [set, setSet] = useState(initial);
   const choices = holeChoices(event);
-  const inPlayers = players.filter((p) => set.players.includes(p.id));
+  const all = [...players, ...others];
+  const inPlayers = all.filter((p) => set.players.includes(p.id));
   const count = set.to - set.from + 1;
   const shared = teamBallHoles(event, set.from, set.to);
   const setSettings = (fn) => setSet((s) => ({ ...s, settings: typeof fn === 'function' ? fn(s.settings) : fn }));
   const toggle = (id) =>
-    setSet((s) => ({ ...s, players: s.players.includes(id) ? s.players.filter((x) => x !== id) : players.map((p) => p.id).filter((x) => x === id || s.players.includes(x)) }));
+    setSet((s) => ({ ...s, players: s.players.includes(id) ? s.players.filter((x) => x !== id) : all.map((p) => p.id).filter((x) => x === id || s.players.includes(x)) }));
   const anyOn = Object.keys(GAME_INFO).some((t) => set.settings[t]?.on);
   return (
     <section className="foursome-games">
@@ -216,6 +236,18 @@ function SetEditor({ event, players, set: initial, busy, error, onCancel, onSave
             </button>
           ))}
         </div>
+        {others.length > 0 && (
+          <>
+            <p className="muted small fg-others">Anyone else playing this round</p>
+            <div className="chips">
+              {others.map((p) => (
+                <button key={p.id} className={`chip ${set.players.includes(p.id) ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         {inPlayers.length < 2 && <p className="search-error">Pick at least 2 players.</p>}
       </section>
 

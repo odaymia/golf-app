@@ -612,11 +612,20 @@ joined, last opened, active days in 30, leagues; search, sort, CSV.
 - Foursome side games (league/tournament rounds; `lib/league/foursomeGames.js`,
   tested; UI `FoursomeGames.jsx` from the **Side games** button next to Card
   on Enter scores; supabase/foursome_games.sql `group_side_games`, one row
-  per round + foursome key = sorted member ids; anyone in the group or a
-  commissioner can edit, viewers can't, league members can read): the
+  per round + foursome key = sorted member ids of the group that set them
+  up; anyone in that group or a commissioner can edit, viewers can't,
+  league members can read): the
   group adds sets of casual games, each with its own holes (all, a split
   stretch like "1–6 Scramble", "7–18" after a one-ball stretch, or any
-  from/to) and players, picked with the shared `GamePicker` (casual setup's
+  from/to) and players. **Players can be anyone in the round** (`roundField`:
+  players in its groups/matches or with a score; the whole field when
+  nobody's grouped), not just the foursome: "Who's in?" lists your
+  foursome, then "Anyone else playing this round". Each group still scores
+  only its own card; the games use everyone's scores. The screen loads every
+  group's sets (`loadEventGames`) and shows yours (Edit) plus other groups'
+  sets that include one of your players ("Set up by …", read-only;
+  `setsForGroup`). Money/settle-up lists only players in a set being
+  played (`involved`). Picked with the shared `GamePicker` (casual setup's
   games list, extracted from Setup). Played off the round's scores via
   `computeRound(round, { from, to })` (strokes from the full 18;
   `sliceContext`), money summed across sets with fewest payments; Nassau

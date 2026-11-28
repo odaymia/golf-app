@@ -1,12 +1,15 @@
 // Foursome side games in a league or tournament round: the players in one
 // group set up their own casual games (skins, match play, Nassau, Wolf,
 // Vegas, stroke play, Stableford) on any stretch of holes, played off the
-// scores they're already entering for the round. Pure: the casual engine
+// scores everyone's already entering for the round. A set can include any
+// player in the round, not just the foursome that set it up (each group
+// scores its own card; the games use everyone's). Pure: the casual engine
 // (games/round.js) does the scoring, so the integer-cents, zero-sum rules
 // are the same. Separate from the commissioner's round side games
 // (sideGames.js) and from the official leaderboard.
 //
-// Saved per group (supabase/foursome_games.sql, group_side_games.sets):
+// Saved per group that set them up (supabase/foursome_games.sql,
+// group_side_games.sets; only that group or a commissioner may change them):
 //   [{ id, from, to, players: [memberId], settings }]   settings = roundSetup
 //   defaultSettings() shape (game switches, stakes, teamsIndex).
 // Stakes are dollars as typed; the engine works in cents.
@@ -75,9 +78,39 @@ export function teamBallHoles(event, from, to) {
   return out;
 }
 
+// Everyone playing this round (who side games can include): players in its
+// groups or matches, or with a score; a round with neither is the whole
+// field. members: data.members; scored: { memberId: gross[] }.
+export function roundField(event, members, scored = {}, extra = []) {
+  const ids = new Set([
+    ...(event.groups ?? []).flat(),
+    ...(event.matchups ?? []).flatMap((mu) => mu.sides.flat()),
+    ...Object.keys(scored).filter((id) => scored[id]?.some((g) => g != null)),
+    ...extra,
+  ]);
+  const active = members.filter((m) => m.active !== false);
+  const grouped = (event.groups ?? []).length || (event.matchups ?? []).length;
+  return grouped ? active.filter((m) => ids.has(m.id)) : active;
+}
+
+// The sets a foursome sees: the ones it set up (own: true, it can change
+// them) and any other group's sets that include one of its players.
+// rows: [{ group_key, sets }] for the whole round; group: my foursome's ids.
+export function setsForGroup(rows, group) {
+  const key = groupKey(group);
+  const out = [];
+  for (const row of rows ?? []) {
+    const own = row.group_key === key;
+    for (const set of row.sets ?? []) {
+      if (own || (set.players ?? []).some((id) => group.includes(id))) out.push({ set, own, owner: row.group_key });
+    }
+  }
+  return out;
+}
+
 const anyOn = (settings, n) => Object.keys(settings).some((k) => settings[k]?.on && gameAvailable(k, n));
 
-// Run every set. members: the group's players [{ id, name, index }];
+// Run every set. members: everyone the sets may include [{ id, name, index }];
 // scores: { id: gross[] }; indexes: { id: handicap index this round };
 // handicap: { allowance, offLow }. Returns { sets: [{ set, round, computed }],
 // totals, payments } (totals/payments across all sets, fewest payments).
@@ -112,5 +145,7 @@ export function computeFoursomeGames({ event, members, scores = {}, indexes = {}
     };
     out.push({ set, round: view, computed });
   }
-  return { sets: out, totals, payments: settle(totals, ids) };
+  // Who's in at least one set that's being played (for the money screens).
+  const involved = ids.filter((id) => out.some((x) => x.round.players.some((p) => p.id === id)));
+  return { sets: out, totals, payments: settle(totals, ids), involved };
 }

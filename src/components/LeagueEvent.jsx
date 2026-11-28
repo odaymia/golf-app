@@ -19,6 +19,7 @@ import { useKeypad } from './useKeypad.js';
 import { byStretch, defaultSplit, discrepancies, discrepancyHoles, isSplit, matchLabel, parseSplit, resplitMatchups, roundFormatText, splitMatchups, splitProblem, splitText } from '../lib/league/ryder.js';
 import SplitEditor from './SplitEditor.jsx';
 import FoursomeGames from './FoursomeGames.jsx';
+import { roundField } from '../lib/league/foursomeGames.js';
 import LeagueChat, { ChatButton, useChatUnread } from './LeagueChat.jsx';
 import { matchSummary } from '../lib/games/match.js';
 import { recapFacts } from '../lib/roundRecap.js';
@@ -634,11 +635,15 @@ function ScoreEntry({ data, event, me, result, indexes, settings, reload }) {
   };
 
   if (sideGames) {
+    // Side games can include anyone playing this round, not just my foursome.
+    const field = roundField(event, data.members, scored, picked);
+    const asPlayer = (p) => ({ id: p.id, name: p.name, index: indexes?.[p.id] ?? p.index ?? 0 });
     return (
       <FoursomeGames
         event={event}
-        players={people.map((p) => ({ id: p.id, name: p.name, index: indexes?.[p.id] ?? p.index ?? 0 }))}
-        scores={Object.fromEntries(people.map((p) => [p.id, holes.map((_, i) => cards[p.id]?.[i] ?? scored[p.id]?.[i] ?? null)]))}
+        players={people.map(asPlayer)}
+        field={field.map(asPlayer)}
+        scores={Object.fromEntries(field.map((p) => [p.id, merged(p.id)]))}
         indexes={indexes ?? {}}
         handicap={settings.handicap ?? {}}
         onBack={() => setSideGames(false)}

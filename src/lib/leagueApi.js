@@ -521,6 +521,17 @@ export async function loadGroupGames(eventId, groupKey) {
   return data?.sets ?? [];
 }
 
+// Every group's side games in a round: [{ group_key, sets }] (a set can
+// include players from other foursomes, so each group reads them all).
+export async function loadEventGames(eventId) {
+  const { data, error } = await supabase.from('group_side_games').select('group_key, sets').eq('event_id', eventId);
+  if (error) {
+    if (/group_side_games/.test(error.message)) throw new Error('Side games aren’t set up yet (run supabase/foursome_games.sql).');
+    throw new Error(error.message);
+  }
+  return data ?? [];
+}
+
 export function saveGroupGames(eventId, groupKey, sets) {
   return call(supabase.from('group_side_games').upsert({ event_id: eventId, group_key: groupKey, sets }, { onConflict: 'event_id,group_key' }));
 }

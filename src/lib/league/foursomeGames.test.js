@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeFoursomeGames, groupKey, holeChoices, newSet, normalizeSet, teamBallHoles } from './foursomeGames.js';
+import { computeFoursomeGames, groupKey, holeChoices, newSet, normalizeSet, roundField, setsForGroup, teamBallHoles } from './foursomeGames.js';
 import { computeRound } from '../games/round.js';
 import { PARS, HCPS, parCard } from '../games/test-helpers.js';
 
@@ -66,5 +66,36 @@ describe('foursome side games', () => {
     const s = normalizeSet({ from: 0, to: 40, players: ['a', 'zz'], settings: { skins: { on: true } } }, 18, ['a', 'b']);
     expect(s).toMatchObject({ from: 1, to: 18, players: ['a'] });
     expect(s.settings.skins).toMatchObject({ on: true, stake: 1 });
+  });
+
+  it('plays games with players from other foursomes, off everyone\'s scores', () => {
+    // a and b in one foursome, e and f in another; skins between a and e.
+    const field = ['a', 'b', 'e', 'f'].map((id) => ({ id, name: id.toUpperCase(), index: 0 }));
+    const set = newSet([field[0], field[2]], 18);
+    set.settings.skins = { ...set.settings.skins, on: true, stake: 5, net: false, carryover: false, mode: 'perSkin' };
+    const scores = parCard(['a', 'b', 'e', 'f'], { e: { 3: 2 } });
+    const r = computeFoursomeGames({ event: { course }, members: field, scores, sets: [set] });
+    expect(r.totals).toEqual({ a: -500, b: 0, e: 500, f: 0 });
+    expect(r.involved).toEqual(['a', 'e']);
+    expect(r.payments).toEqual([{ from: 'a', to: 'e', cents: 500 }]);
+  });
+
+  it('a foursome sees its own sets plus other groups\' sets that include its players', () => {
+    const rows = [
+      { group_key: 'a,b,c,d', sets: [{ id: 's1', players: ['a', 'b'] }, { id: 's2', players: ['a', 'e'] }] },
+      { group_key: 'e,f,g,h', sets: [{ id: 's3', players: ['e', 'f'] }, { id: 's4', players: ['f', 'b'] }] },
+    ];
+    const mine = setsForGroup(rows, ['d', 'c', 'b', 'a']);
+    expect(mine.map((x) => [x.set.id, x.own])).toEqual([['s1', true], ['s2', true], ['s4', false]]);
+    expect(mine[2].owner).toBe('e,f,g,h');
+    const theirs = setsForGroup(rows, ['e', 'f', 'g', 'h']);
+    expect(theirs.map((x) => [x.set.id, x.own])).toEqual([['s2', false], ['s3', true], ['s4', true]]);
+  });
+
+  it('the round\'s field: grouped/matched/scored players, or everyone when nobody is grouped', () => {
+    const members = ['a', 'b', 'c', 'd', 'x'].map((id) => ({ id, name: id, active: id !== 'd' }));
+    expect(roundField({ groups: [['a', 'b']] }, members, { c: [4, null] }).map((m) => m.id)).toEqual(['a', 'b', 'c']);
+    expect(roundField({ matchups: [{ sides: [['a'], ['x']] }] }, members).map((m) => m.id)).toEqual(['a', 'x']);
+    expect(roundField({}, members).map((m) => m.id)).toEqual(['a', 'b', 'c', 'x']); // d has no account
   });
 });
